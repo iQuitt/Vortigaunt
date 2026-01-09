@@ -17,7 +17,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 
 ### Model Exports
 - **LTB to SMD** - Export LithTech Models to Valve SMD with Animations and Bone [Watch Video](https://youtu.be/I2yra8eqjds?t=18)
-- **GR2 to SMD** - Export Lithtech Models to Valve SMD with  Animations, Bone and Texture [Watch Video](https://youtu.be/I2yra8eqjds?t=200)
+- **GR2 to SMD** - Export Granny2 Models to Valve SMD with  Animations, Bone and Texture [Watch Video](https://youtu.be/I2yra8eqjds?t=200)
   - Tested with Metin2 assets
   - More games coming soon
 - **Auto-Rig System** - Intelligent bone assignment using CS 1.6 skeleton reference [Watch Video](https://www.youtube.com/watch?v=dmAm790ER0c)
