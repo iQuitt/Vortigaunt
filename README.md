@@ -1,5 +1,5 @@
 
-# Vortigaunt <img align="right" width="256" height="256" src="https://i.ibb.co/ps8QRRs/yeerrrr.png" alt="VortigauntTool icon" />
+# Vortigaunt <img align="right" width="128" height="128" src="https://i.ibb.co/ps8QRRs/yeerrrr.png" alt="VortigauntTool icon" />
 
 [![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/iQuitt/Vortigaunt?style=social)](https://github.com/iQuitt/Vortigaunt)
