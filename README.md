@@ -54,7 +54,43 @@ If you find Vortigaunt useful and want to support its development:
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-yellow.svg?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/iQuitt)
 
+## Requires for building
+### Windows
 
+| Component | Details |
+|-----------|---------|
+| **Visual Studio 2019/2022/2026** | [Download](https://visualstudio.microsoft.com/downloads/) - Select "Desktop development with C++" |
+| **Qt 6.6+** | [Qt Online Installer](https://www.qt.io/download-qt-installer) - Select MSVC 2019/2022 64-bit + Qt Multimedia |
+| **CMake 3.15+** | [Download](https://cmake.org/download/) or included with Visual Studio |
+
+### Linux (Ubuntu/Debian)
+```bash
+sudo apt install -y \
+  build-essential cmake ninja-build \
+  qt6-base-dev qt6-tools-dev qt6-multimedia-dev \
+  qt6-l10n-tools libgl1-mesa-dev libxkbcommon-dev
+```
+
+
+## Building
+Clone The Source Code: ````git clone https://github.com/iQuitt/Vortigaunt````
+### Windows 
+```bash
+
+cmake -B build -G "Visual Studio 17 2022" -A x64
+
+cmake --build build --config Release
+
+````
+
+### Linux
+```bash
+mkdir build && cd build
+
+cmake .. -DCMAKE_BUILD_TYPE=Release
+
+cmake --build . -j$(nproc)
+````
 ## Planned Features
 
 - [ ] GTA:SA Asset Support
