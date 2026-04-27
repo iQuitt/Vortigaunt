@@ -1,0 +1,320 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install Qt6
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.6.*'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_msvc2019_64'
+        modules: 'qtmultimedia qtimageformats'
+    
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    
+    - name: Build
+      run: cmake --build build --config Release --parallel
+    
+    - name: Prepare Deployment
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path deploy
+        
+        Copy-Item -Path "build/src/Release/VortigauntTool_gui.exe" -Destination "deploy/" -ErrorAction SilentlyContinue
+        if (-not (Test-Path "deploy/VortigauntTool_gui.exe")) {
+          Copy-Item -Path "build/Release/VortigauntTool_gui.exe" -Destination "deploy/"
+        }
+        
+        windeployqt deploy/VortigauntTool_gui.exe --release --no-translations --no-opengl-sw
+        
+        New-Item -ItemType Directory -Force -Path deploy/translations
+        Copy-Item -Path "build/src/Release/translations/*.qm" -Destination "deploy/translations/" -ErrorAction SilentlyContinue
+        Copy-Item -Path "build/translations/*.qm" -Destination "deploy/translations/" -ErrorAction SilentlyContinue
+        
+        Copy-Item -Path "ThirdParty/granny2sdk/lib/win64/granny2_x64.dll" -Destination "deploy/"
+        Copy-Item -Path "ThirdParty/discord_social_sdk/bin/release/discord_partner_sdk.dll" -Destination "deploy/"
+        
+        Write-Host "Deployment contents:"
+        Get-ChildItem -Path deploy -Recurse | ForEach-Object { Write-Host $_.FullName }
+    
+    - name: Upload Windows Portable Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Vortigaunt-Windows-Portable-amd64
+        path: deploy/
+        retention-days: 3
+    
+    - name: Install WiX Toolset
+      run: |
+        choco install wixtoolset -y
+        echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" >> $env:GITHUB_PATH
+    
+    - name: Create MSI Installer
+      shell: pwsh
+      run: |
+        cd build
+        cpack -G WIX -C Release
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "CPack failed."
+          $logPath = "_CPack_Packages/win64/WIX/wix.log"
+          if (Test-Path $logPath) { Get-Content $logPath }
+          exit 1
+        }
+        Get-ChildItem -Filter "*.msi" | Move-Item -Destination "../"
+    
+    - name: Upload MSI Installer
+      uses: actions/upload-artifact@v4
+      with:
+        name: Vortigaunt-Installer-Windows-amd64
+        path: "*.msi"
+        retention-days: 3
+
+  build-windows-cli:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install Qt6
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.6.*'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_msvc2019_64'
+        modules: 'qtmultimedia qtimageformats'
+    
+    - name: Configure CMake (CLI only)
+      run: cmake -B build-cli -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF
+    
+    - name: Build CLI
+      run: cmake --build build-cli --target VortigauntTool --config Release --parallel
+    
+    - name: Prepare CLI Deployment
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path deploy-cli
+        
+        Copy-Item -Path "build-cli/src/Release/VortigauntTool.exe" -Destination "deploy-cli/" -ErrorAction SilentlyContinue
+        if (-not (Test-Path "deploy-cli/VortigauntTool.exe")) {
+          Copy-Item -Path "build-cli/Release/VortigauntTool.exe" -Destination "deploy-cli/"
+        }
+        
+        Copy-Item -Path "ThirdParty/granny2sdk/lib/win64/granny2_x64.dll" -Destination "deploy-cli/"
+        Copy-Item -Path "ThirdParty/discord_social_sdk/bin/release/discord_partner_sdk.dll" -Destination "deploy-cli/"
+        
+        Write-Host "CLI Deployment contents:"
+        Get-ChildItem -Path deploy-cli -Recurse | ForEach-Object { Write-Host $_.FullName }
+    
+    - name: Upload Windows CLI Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Vortigaunt-CLI-Windows-amd64
+        path: deploy-cli/
+        retention-days: 3
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          ninja-build \
+          libgl1-mesa-dev \
+          libxkbcommon-dev \
+          libxcb-cursor0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-randr0 \
+          libxcb-render-util0 \
+          libxcb-shape0 \
+          binutils \
+          fuse
+    
+    - name: Install Qt6
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.6.*'
+        host: 'linux'
+        target: 'desktop'
+        arch: 'gcc_64'
+        modules: 'qtmultimedia qtimageformats'
+    
+    - name: Configure CMake
+      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-march=x86-64 -mtune=generic" -DCMAKE_C_FLAGS="-march=x86-64 -mtune=generic"
+    
+    - name: Build
+      run: cmake --build build --config Release --parallel
+    
+    - name: Prepare AppImage Assets
+      run: |
+        mkdir -p AppDir/usr/bin
+        mkdir -p AppDir/usr/lib
+        mkdir -p AppDir/usr/share/applications
+        mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+        
+        cp build/src/VortigauntTool_gui AppDir/usr/bin/ || cp build/VortigauntTool_gui AppDir/usr/bin/
+        
+        cp ThirdParty/discord_social_sdk/lib/release/libdiscord_partner_sdk.so AppDir/usr/lib/
+        
+        cp src/resources/vortigaunt.desktop AppDir/usr/share/applications/
+        cp src/resources/app2.png AppDir/usr/share/icons/hicolor/256x256/apps/app2.png
+        
+        ln -sf usr/share/applications/vortigaunt.desktop AppDir/vortigaunt.desktop
+        ln -sf usr/share/icons/hicolor/256x256/apps/app2.png AppDir/app2.png
+
+    - name: Create AppImage
+      run: |
+        wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
+        chmod +x linuxdeployqt-continuous-x86_64.AppImage
+        
+        QT_PLUGIN_PATH="${Qt6_DIR}/plugins"
+        if [ -d "$QT_PLUGIN_PATH/wayland-shell-integration" ]; then
+          mkdir -p AppDir/usr/plugins/wayland-shell-integration
+          cp -r "$QT_PLUGIN_PATH/wayland-shell-integration/"* AppDir/usr/plugins/wayland-shell-integration/ || true
+        fi
+        if [ -d "$QT_PLUGIN_PATH/platforms" ] && [ -f "$QT_PLUGIN_PATH/platforms/libqwayland-generic.so" ]; then
+          mkdir -p AppDir/usr/plugins/platforms
+          cp "$QT_PLUGIN_PATH/platforms/libqwayland"*.so AppDir/usr/plugins/platforms/ || true
+        fi
+        
+        ./linuxdeployqt-continuous-x86_64.AppImage AppDir/usr/bin/VortigauntTool_gui \
+          -appimage \
+          -unsupported-allow-new-glibc \
+          -extra-plugins=platforms/libqwayland-generic.so,platforms/libqwayland-egl.so,wayland-shell-integration
+        
+        rm linuxdeployqt-continuous-x86_64.AppImage
+
+    - name: Upload Linux Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Vortigaunt-Linux-amd64
+        path: |
+          Vortigaunt*.AppImage
+        retention-days: 3
+
+  build-linux-cli:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake ninja-build
+    
+    - name: Install Qt6
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.6.*'
+        host: 'linux'
+        target: 'desktop'
+        arch: 'gcc_64'
+        modules: 'qtmultimedia qtimageformats'
+    
+    - name: Configure CMake (CLI only)
+      run: cmake -B build-cli -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF -DCMAKE_CXX_FLAGS="-march=x86-64 -mtune=generic" -DCMAKE_C_FLAGS="-march=x86-64 -mtune=generic"
+    
+    - name: Build CLI
+      run: cmake --build build-cli --target VortigauntTool --config Release --parallel
+    
+    - name: Prepare CLI Deployment
+      run: |
+        mkdir -p deploy-cli
+        cp build-cli/src/VortigauntTool deploy-cli/ || cp build-cli/VortigauntTool deploy-cli/
+        cp ThirdParty/discord_social_sdk/lib/release/libdiscord_partner_sdk.so deploy-cli/
+        chmod +x deploy-cli/VortigauntTool
+        ls -la deploy-cli/
+    
+    - name: Upload Linux CLI Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Vortigaunt-CLI-Linux-amd64
+        path: deploy-cli/
+        retention-days: 3
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, build-windows-cli, build-linux, build-linux-cli]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Download Windows Portable Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: Vortigaunt-Windows-Portable-amd64
+        path: windows-gui
+    
+    - name: Download Windows CLI Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: Vortigaunt-CLI-Windows-amd64
+        path: windows-cli
+    
+    - name: Download Linux GUI Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: Vortigaunt-Linux-amd64
+        path: linux-gui
+    
+    - name: Download Linux CLI Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: Vortigaunt-CLI-Linux-amd64
+        path: linux-cli
+    
+    - name: Download MSI Installer
+      uses: actions/download-artifact@v4
+      with:
+        name: Vortigaunt-Installer-Windows-amd64
+        path: msi
+    
+    - name: Create Release Archives
+      run: |
+        cd windows-gui && zip -r ../Vortigaunt-Windows-Portable-amd64.zip . && cd ..
+        cd windows-cli && zip -r ../Vortigaunt-CLI-Windows-amd64.zip . && cd ..
+        cd linux-cli && zip -r ../Vortigaunt-CLI-Linux-amd64.zip . && cd ..
+        mv linux-gui/*.AppImage ./
+        mv msi/*.msi ./
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        generate_release_notes: true
+        files: |
+          Vortigaunt-Windows-Portable-amd64.zip
+          Vortigaunt-CLI-Windows-amd64.zip
+          Vortigaunt-CLI-Linux-amd64.zip
+          Vortigaunt*.AppImage
+          *.msi

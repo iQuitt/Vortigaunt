@@ -1,0 +1,24 @@
+.vs
+.env
+*.env
+/out
+/CMakePresets.json
+/CMakeUserPresets.json
+/Scripts
+/effectstest
+/testchamber
+/install
+/build
+/Test
+
+.github
+
+# MSE (Metin2 Script Effect) not ready.
+src/core/MseLoader.h
+src/core/MseLoader.cpp
+src/core/MdeLoader.cpp
+src/core/MdeLoader.h
+src/ui/windows/MseViewerWindow.cpp
+src/ui/windows/MseViewerWindow.h
+src/ui/widgets/MseViewerWidget.cpp
+src/ui/widgets/MseViewerWidget.h

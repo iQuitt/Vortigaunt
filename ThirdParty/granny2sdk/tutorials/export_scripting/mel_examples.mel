@@ -1,0 +1,198 @@
+// ========================================================================
+// $File$
+// $DateTime$
+// $Change$
+// $Revision$
+//
+// $Notice: $
+// ========================================================================
+
+// Utility function to determine if an object is hidden.
+global proc int IsHidden (string $Object)
+{
+    int $Result = false;
+
+    if (`objectType -isType "transform" $Object`)
+    {
+        string $Attribute = $Object + ".visibility";
+        $Result = ((`getAttr $Attribute`) != true);
+    }
+    else
+    {
+        string $Parent[] = `listRelatives -path -parent $Object`;
+        if(size($Parent) > 0)
+        {
+            $Result = `IsHidden $Parent[0]`;
+        }
+    }
+
+    return($Result);
+}
+
+/* DEFTUTORIAL EXPGROUP(TutorialScriptingMaya) (TutorialScriptingMaya_Motivation, Motivation) */
+/* Scripting your export pipeline is a Very Good Idea.  In addition to making life easier
+   for Artists, it makes life easier for the coders, by reducing variability in your art
+   base, and eliminating a common source of (understandable!) errors.  We make sure that
+   if you can do it through the Granny interface that it can be automated with a script in
+   any tool that we support.
+   $-
+
+   We'll cover some simple scripts here that demonstrate a couple of common tasks that
+   you'll need to master in order to create an automated pipeline, including object
+   filtering and postprocessing exported files.  From here it's easy to imagine adding
+   automated version control handling, etc.  Any thing you can automate, you absolutely
+   should.  Better Living through Scripting!
+   $-
+
+   Don't forget to check out: $ExportingOverview_Scripting for more scripting
+   documentation.  The functions below can be found in your tutorials directory, in
+   "export_scripting/mel_examples.mel".
+ */
+
+/* DEFTUTORIAL EXPGROUP(TutorialScriptingMaya) (TutorialScriptingMaya_IgnoreHiddenChildren, IgnoreHiddenChildren) */
+/* IgnoreHiddenChildren takes a Maya object name as an argument, and loops through all the
+   child nodes.  For each node, it checks to see if the node has been hidden by the
+   artist, and if it has, it will instruct Granny to ignore the mesh, bone, and bone
+   animation data for the node.  It calls itself recursively, so it processes children's
+   children, and their children, and so on, until the entire tree origining from the
+   initial parent has been processed.
+   $-
+
+   Since we're illustrating the use of the GrannySetValue command here, you'll want to
+   look at $SetValueDocs_Maya for more information.  This is the most useful command in
+   Granny's script bindings, so you should definitely be familiar with it.
+*/
+global proc IgnoreHiddenChildren (string $Parent)
+{
+    string $Children[] = `listRelatives -path -allDescendents $Parent`;
+    for($Child in $Children)
+    {
+        if(IsHidden($Child))
+        {
+            //print ("Ignoring " + $Child + "\n");
+            GrannySetValue "include reference in export" false quiet true bone $Child;
+            GrannySetValue "include reference in export" false quiet true boneanim $Child;
+            GrannySetValue "include reference in export" false quiet true mesh $Child;
+            GrannySetValue "include reference in export" false quiet true model $Child;
+            GrannySetValue "include reference in export" false quiet true modelanim $Child;
+        }
+    }
+}
+
+/* DEFTUTORIAL EXPGROUP(TutorialScriptingMaya) (TutorialScriptingMaya_IgnoreHiddenObject, IgnoreHiddenObjects) */
+/* IgnoreHiddenObjects works identically to IgnoreHiddenChildren, but for the entire scene
+   instead of just on the descendants of a particular node.
+*/
+global proc IgnoreHiddenObjects()
+{
+    string $Children[] = `ls -l`;
+    for($Child in $Children)
+    {
+        print ($Child + "\n");
+        if(IsHidden($Child))
+        {
+            //print ("Ignoring " + $Child + "\n");
+            GrannySetValue "include reference in export" false quiet true bone $Child;
+            GrannySetValue "include reference in export" false quiet true boneanim $Child;
+            GrannySetValue "include reference in export" false quiet true model $Child;
+            GrannySetValue "include reference in export" false quiet true modelanim $Child;
+            GrannySetValue "include reference in export" false quiet true mesh $Child;
+        }
+    }
+}
+
+/* DEFTUTORIAL EXPGROUP(TutorialScriptingMaya) (TutorialScriptingMaya_IgnoreAllTextures, IgnoreAllTextures) */
+/* IgnoreAllTextures turns off texture exporting for the entire scene. */
+global proc IgnoreAllTextures()
+{
+    GrannySetValue "include data in export" false "global" "textures";
+}
+
+
+/* DEFTUTORIAL EXPGROUP(TutorialScriptingMaya) (TutorialScriptingMaya_ClearingSettings, Clearing Granny Settings) */
+/* Granny settings for a scene can be cleared, so that they revert to their defaults.  You
+   can do this on an entire scene like this:
+*/
+global proc ClearAllSettings()
+{
+    GrannyClearAllSettings;
+}
+
+/* Or, you can clear just a specific object's Granny settings:
+*/
+global proc ClearSettingsForObject(string $Object)
+{
+    GrannyClearSettings($Object);
+}
+
+
+/* DEFTUTORIAL EXPGROUP(TutorialScriptingMaya) (TutorialScriptingMaya_BatchExport, Batch Export) */
+/* Switching gears, BasicBatchExport demonstrates how to loop through all the files that
+   match a given wildcard string, and export them to a destination directory.  You would
+   call it like this:
+
+   $-
+   BasicBatchExport("d:/source_art/", "*.mb", "d:/exported_art")
+   $-
+
+   All the calls in this function are standard MEL functions except the GrannyExport
+   operation, which is a simple call that takes a single string argument (the file to
+   export to).
+*/
+global proc BasicBatchExport(string $SourceDir,
+                             string $Wildcard,
+                             string $DestDir)
+{
+    string $SourceFiles[] = `getFileList -folder $SourceDir -filespec $Wildcard`;
+    print ("// Batch exporting " + $SourceDir + " to " + $DestDir + "\n");
+    print ("// Found " + size($SourceFiles) + " file(s)" + "\n");
+    for ($SourceFile in $SourceFiles)
+    {
+        string $DestFile = $DestDir + "/" + $SourceFile + ".gr2";
+        print ("Converting " + $SourceFile + " to " + $DestFile + "..." + "\n");
+        file -force -prompt false -open ($SourceDir + $SourceFile);
+        GrannyExport $DestFile;
+    }
+}
+
+
+/* DEFTUTORIAL EXPGROUP(TutorialScriptingMaya) (TutorialScriptingMaya_AdvancedBatchExport, Advanced Batch Export) */
+/* AdvancedBatchExport demonstrates how to augment a simple batch exporter like
+   BasicBatchExport with extra features.  It takes two extra parameters: a Granny exporter
+   settings file to use for each export, and a user-supplied executable name that will be
+   run on each file after it is exported.  You would call it like this:
+
+   $-
+   AdvancedBatchExport("d:/source_art/", "*.mb" "d:/exported_art", "d:/source_art/standard_settings.ges", "d:/tools/postprocess.exe")
+   $-
+
+   In addition to the GrannyExport call, described previously, this function makes use of
+   the GrannyLoadSettings call, which takes a single argument which is the settings file
+   to load.  Although not demonstrated here, you can also make the corresponding call,
+   GrannySaveSettings, to save to a .ges file rather than load from it.
+*/
+global proc AdvancedBatchExport(string $SourceDir,
+                                string $Wildcard,
+                                string $DestDir,
+                                string $Settings,
+                                string $PostProcess)
+{
+    int $Index;
+    string $SourceFiles[] = `getFileList -folder $SourceDir -filespec $Wildcard`;
+    print("// Batch exporting " + $SourceDir + " to " + $DestDir + "\n");
+    print("// Using settings file " + $Settings + "\n");
+    print("// Using post-processor " + $PostProcess + "\n");
+    print("// Found " + size($SourceFiles) + " file(s)" + "\n");
+    for ($Index = 0; $Index < size($SourceFiles); $Index++)
+    {
+        string $SourceFile = $SourceFiles[$Index];
+        string $DestFile = $DestDir + "/" + $SourceFile + ".gr2";
+        print("Converting " + $SourceFile + " to " + $DestFile + "..." + "\n");
+        file -force -prompt false -open ($SourceDir + $SourceFile);
+        GrannyLoadSettings $Settings;
+        GrannyExport $DestFile;
+        system ($PostProcess + " " + $DestFile);
+    }
+}
+
+/* DEFTUTORIALEND */

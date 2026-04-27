@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gstate_test", "gstate_test.vcproj", "{F9107BF6-E60A-42AA-AD44-D5449A5DCB65}"
+	ProjectSection(ProjectDependencies) = postProject
+		{923725E1-A64F-40B5-B5A9-F1996B887BCA} = {923725E1-A64F-40B5-B5A9-F1996B887BCA}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gstate", "..\..\gstate\gstate.vcproj", "{923725E1-A64F-40B5-B5A9-F1996B887BCA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F9107BF6-E60A-42AA-AD44-D5449A5DCB65}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F9107BF6-E60A-42AA-AD44-D5449A5DCB65}.Debug|Win32.Build.0 = Debug|Win32
+		{F9107BF6-E60A-42AA-AD44-D5449A5DCB65}.Release|Win32.ActiveCfg = Release|Win32
+		{F9107BF6-E60A-42AA-AD44-D5449A5DCB65}.Release|Win32.Build.0 = Release|Win32
+		{923725E1-A64F-40B5-B5A9-F1996B887BCA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{923725E1-A64F-40B5-B5A9-F1996B887BCA}.Debug|Win32.Build.0 = Debug|Win32
+		{923725E1-A64F-40B5-B5A9-F1996B887BCA}.Release|Win32.ActiveCfg = Release|Win32
+		{923725E1-A64F-40B5-B5A9-F1996B887BCA}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

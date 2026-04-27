@@ -1,0 +1,406 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{d5d7dc07-64fa-47be-8911-46939d79b6e7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="gstate_additive_blend.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_aimat_ik.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_anim_source.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_anim_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_base.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_blend.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_blend_graph.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_character_info.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_character_instance.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_clamp_value.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_conditional.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_constant_velocity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_container.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_custom_remap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_event_mixer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_event_renamer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_event_source.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_event_triggered.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_ik_shared.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_input_map.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_linear_equation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_linear_remap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_lod_protect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_mask_invert.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_mask_source.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_mask_union.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_masked_combine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_mirror.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_node.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_node_visitor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_nodestate_condition.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_nway_blend.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_orient_match.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_orient_towards.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_parameters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_parent_condition.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_pose_storage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_position_ik.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_quick_vecs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_rest_pose.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_sample_recorder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_scalar_compare.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_selection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_state_machine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_timeclamp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_timeselect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_timeshift.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_token_context.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_tokenized.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_transition.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_transition_dynamic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_transition_lastresort.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_transition_onconditional.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_transition_onloop.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_transition_onrequest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_transition_onsubloop.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_twobone_ik.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gstate_telemetry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="client_node_header_list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client_node_type_list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_additive_blend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_aimat_ik.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_anim_source.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_anim_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_blend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_blend_graph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_character_info.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_character_instance.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_character_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_clamp_value.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_conditional.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_constant_velocity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_container.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_cpp_settings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_custom_remap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_event_mixer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_event_renamer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_event_source.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_event_triggered.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_exp_interface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_header_postfix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_header_prefix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_ik_shared.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_input_map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_linear_equation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_linear_remap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_lod_protect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_mask_invert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_mask_source.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_mask_union.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_masked_combine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_mirror.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_node.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_node_header_list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_node_macros.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_node_type_list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_node_visitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_nodestate_condition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_nway_blend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_orient_match.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_orient_towards.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_parameters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_parent_condition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_pose_storage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_position_ik.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_quick_vecs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_rest_pose.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_sample_recorder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_scalar_compare.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_selection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_snapshotutils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_state_machine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_telemetry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_timeclamp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_timeselect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_timeshift.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_token_context.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_tokenized.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_transition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_transition_dynamic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_transition_lastresort.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_transition_onconditional.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_transition_onloop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_transition_onrequest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_transition_onsubloop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gstate_twobone_ik.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\statement\ui_drawing_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+    <!-- REZ Archive (Lithtech) -->
+    <mime-type type="application/x-rez">
+        <comment>Lithtech REZ Archive</comment>
+        <glob pattern="*.rez"/>
+        <glob pattern="*.REZ"/>
+    </mime-type>
+
+    <!-- DTX Texture (Lithtech) -->
+    <mime-type type="application/x-dtx">
+        <comment>Lithtech Texture File</comment>
+        <glob pattern="*.dtx"/>
+        <glob pattern="*.DTX"/>
+    </mime-type>
+
+    <!-- Goldsrc and Lithtech (SPR) -->
+    <mime-type type="application/x-spr">
+        <comment>Sprite File</comment>
+        <glob pattern="*.spr"/>
+        <glob pattern="*.SPR"/>
+    </mime-type>
+
+    <!-- MSE (Metin2 Script Effect) -->
+    <mime-type type="application/x-mse">
+        <comment>MSE Effect File</comment>
+        <glob pattern="*.mse"/>
+        <glob pattern="*.MSE"/>
+    </mime-type>
+
+    <!-- XFS Archive (Xenesis) -->
+    <mime-type type="application/x-xfs">
+        <comment>Xenesis XFS Archive</comment>
+        <glob pattern="*.xfs"/>
+        <glob pattern="*.XFS"/>
+    </mime-type>
+
+    <!-- WAD Texture Pack (Half-Life) -->
+    <mime-type type="application/x-wad">
+        <comment>Half-Life WAD Texture Pack</comment>
+        <glob pattern="*.wad"/>
+        <glob pattern="*.WAD"/>
+    </mime-type>
+
+    <!-- PAK Archive (Counter Strike Online) -->
+    <mime-type type="application/x-pak">
+        <comment>Counter Strike Online PAK Archive</comment>
+        <glob pattern="*.pak"/>
+        <glob pattern="*.PAK"/>
+    </mime-type>
+</mime-info>
