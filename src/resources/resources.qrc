@@ -1,0 +1,10 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>app2.ico</file>
+        <file>app2.png</file>
+        <file>github.png</file>
+        <file>discord.png</file>
+        <file>autorigtip.png</file>
+    </qresource>
+</RCC>

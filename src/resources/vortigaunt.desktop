@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Vortigaunt
+GenericName=Game Asset Viewer
+Comment=A Porting Tool for GoldSrc
+Exec=VortigauntTool_gui %F
+Icon=app2
+Categories=Development;Graphics;
+Terminal=false
+MimeType=application/x-rez;application/x-dtx;application/x-spr;application/x-mse;application/x-xfs;application/x-wad;application/x-pak;

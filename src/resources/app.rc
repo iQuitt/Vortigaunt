@@ -1,0 +1,6 @@
+// Windows Resource file for application icon
+// This embeds the icon directly into the executable
+
+// IDI_ICON1 is the main application icon
+// The first icon in the file is used by Windows Explorer
+IDI_ICON1 ICON "app2.ico"

@@ -1,0 +1,307 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{923725E1-A64F-40B5-B5A9-F1996B887BCA}</ProjectGuid>
+    <RootNamespace>gstate</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>11.0.61030.0</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)_x64</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)_x64</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/wd4100 /MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\include;..\..\shared\radrtl;..\telemetry\full\win\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_HAS_EXCEPTIONS=0;BUILDING_GRANNY_STATIC=1;_CRT_SECURE_NO_WARNINGS;DEBUG=1;GSTATE_USE_SAMPLE_RECORDS=1;GSTATE_TELEMETRY3=0;GSTATE_TELEMETRY_NODE_NAMES=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <ExceptionHandling />
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader />
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalOptions>/wd4100 /MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\include;..\..\shared\radrtl;..\telemetry\full\win\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_HAS_EXCEPTIONS=0;BUILDING_GRANNY_STATIC=1;_CRT_SECURE_NO_WARNINGS;DEBUG=1;GSTATE_USE_SAMPLE_RECORDS=1;GSTATE_TELEMETRY3=0;GSTATE_TELEMETRY_NODE_NAMES=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <ExceptionHandling />
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <StructMemberAlignment>4Bytes</StructMemberAlignment>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader />
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName)_x64.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/wd4100 /MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <AdditionalIncludeDirectories>..\include;..\..\shared\radrtl;..\telemetry\full\win\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_HAS_EXCEPTIONS=0;BUILDING_GRANNY_STATIC=1;_CRT_SECURE_NO_WARNINGS;GSTATE_USE_SAMPLE_RECORDS=1;GSTATE_TELEMETRY3=0;GSTATE_TELEMETRY_NODE_NAMES=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling />
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader />
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalOptions>/wd4100 /MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <AdditionalIncludeDirectories>..\include;..\..\shared\radrtl;..\telemetry\full\win\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_HAS_EXCEPTIONS=0;BUILDING_GRANNY_STATIC=1;_CRT_SECURE_NO_WARNINGS;GSTATE_USE_SAMPLE_RECORDS=1;GSTATE_TELEMETRY3=0;GSTATE_TELEMETRY_NODE_NAMES=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling />
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <StructMemberAlignment>4Bytes</StructMemberAlignment>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader />
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName)_x64.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="gstate_additive_blend.cpp" />
+    <ClCompile Include="gstate_aimat_ik.cpp" />
+    <ClCompile Include="gstate_anim_source.cpp" />
+    <ClCompile Include="gstate_anim_utils.cpp" />
+    <ClCompile Include="gstate_base.cpp" />
+    <ClCompile Include="gstate_blend.cpp" />
+    <ClCompile Include="gstate_blend_graph.cpp" />
+    <ClCompile Include="gstate_character_info.cpp" />
+    <ClCompile Include="gstate_character_instance.cpp" />
+    <ClCompile Include="gstate_clamp_value.cpp" />
+    <ClCompile Include="gstate_conditional.cpp" />
+    <ClCompile Include="gstate_constant_velocity.cpp" />
+    <ClCompile Include="gstate_container.cpp" />
+    <ClCompile Include="gstate_custom_remap.cpp" />
+    <ClCompile Include="gstate_event_mixer.cpp" />
+    <ClCompile Include="gstate_event_renamer.cpp" />
+    <ClCompile Include="gstate_event_source.cpp" />
+    <ClCompile Include="gstate_event_triggered.cpp" />
+    <ClCompile Include="gstate_ik_shared.cpp" />
+    <ClCompile Include="gstate_input_map.cpp" />
+    <ClCompile Include="gstate_linear_equation.cpp" />
+    <ClCompile Include="gstate_linear_remap.cpp" />
+    <ClCompile Include="gstate_lod_protect.cpp" />
+    <ClCompile Include="gstate_mask_invert.cpp" />
+    <ClCompile Include="gstate_mask_source.cpp" />
+    <ClCompile Include="gstate_mask_union.cpp" />
+    <ClCompile Include="gstate_masked_combine.cpp" />
+    <ClCompile Include="gstate_mirror.cpp" />
+    <ClCompile Include="gstate_node.cpp" />
+    <ClCompile Include="gstate_node_visitor.cpp" />
+    <ClCompile Include="gstate_nodestate_condition.cpp" />
+    <ClCompile Include="gstate_nway_blend.cpp" />
+    <ClCompile Include="gstate_orient_match.cpp" />
+    <ClCompile Include="gstate_orient_towards.cpp" />
+    <ClCompile Include="gstate_parameters.cpp" />
+    <ClCompile Include="gstate_parent_condition.cpp" />
+    <ClCompile Include="gstate_pose_storage.cpp" />
+    <ClCompile Include="gstate_position_ik.cpp" />
+    <ClCompile Include="gstate_quick_vecs.cpp" />
+    <ClCompile Include="gstate_rest_pose.cpp" />
+    <ClCompile Include="gstate_sample_recorder.cpp" />
+    <ClCompile Include="gstate_scalar_compare.cpp" />
+    <ClCompile Include="gstate_selection.cpp" />
+    <ClCompile Include="gstate_state_machine.cpp" />
+    <ClCompile Include="gstate_telemetry.cpp" />
+    <ClCompile Include="gstate_timeclamp.cpp" />
+    <ClCompile Include="gstate_timeselect.cpp" />
+    <ClCompile Include="gstate_timeshift.cpp" />
+    <ClCompile Include="gstate_token_context.cpp" />
+    <ClCompile Include="gstate_tokenized.cpp" />
+    <ClCompile Include="gstate_transition.cpp" />
+    <ClCompile Include="gstate_transition_dynamic.cpp" />
+    <ClCompile Include="gstate_transition_lastresort.cpp" />
+    <ClCompile Include="gstate_transition_onconditional.cpp" />
+    <ClCompile Include="gstate_transition_onloop.cpp" />
+    <ClCompile Include="gstate_transition_onrequest.cpp" />
+    <ClCompile Include="gstate_transition_onsubloop.cpp" />
+    <ClCompile Include="gstate_twobone_ik.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="client_node_header_list.h" />
+    <ClInclude Include="client_node_type_list.h" />
+    <ClInclude Include="gstate.h" />
+    <ClInclude Include="gstate_additive_blend.h" />
+    <ClInclude Include="gstate_aimat_ik.h" />
+    <ClInclude Include="gstate_anim_source.h" />
+    <ClInclude Include="gstate_anim_utils.h" />
+    <ClInclude Include="gstate_base.h" />
+    <ClInclude Include="gstate_blend.h" />
+    <ClInclude Include="gstate_blend_graph.h" />
+    <ClInclude Include="gstate_character_info.h" />
+    <ClInclude Include="gstate_character_instance.h" />
+    <ClInclude Include="gstate_character_internal.h" />
+    <ClInclude Include="gstate_clamp_value.h" />
+    <ClInclude Include="gstate_conditional.h" />
+    <ClInclude Include="gstate_constant_velocity.h" />
+    <ClInclude Include="gstate_container.h" />
+    <ClInclude Include="gstate_cpp_settings.h" />
+    <ClInclude Include="gstate_custom_remap.h" />
+    <ClInclude Include="gstate_event_mixer.h" />
+    <ClInclude Include="gstate_event_renamer.h" />
+    <ClInclude Include="gstate_event_source.h" />
+    <ClInclude Include="gstate_event_triggered.h" />
+    <ClInclude Include="gstate_exp_interface.h" />
+    <ClInclude Include="gstate_header_postfix.h" />
+    <ClInclude Include="gstate_header_prefix.h" />
+    <ClInclude Include="gstate_ik_shared.h" />
+    <ClInclude Include="gstate_input_map.h" />
+    <ClInclude Include="gstate_linear_equation.h" />
+    <ClInclude Include="gstate_linear_remap.h" />
+    <ClInclude Include="gstate_lod_protect.h" />
+    <ClInclude Include="gstate_mask_invert.h" />
+    <ClInclude Include="gstate_mask_source.h" />
+    <ClInclude Include="gstate_mask_union.h" />
+    <ClInclude Include="gstate_masked_combine.h" />
+    <ClInclude Include="gstate_math.h" />
+    <ClInclude Include="gstate_mirror.h" />
+    <ClInclude Include="gstate_node.h" />
+    <ClInclude Include="gstate_node_header_list.h" />
+    <ClInclude Include="gstate_node_macros.h" />
+    <ClInclude Include="gstate_node_type_list.h" />
+    <ClInclude Include="gstate_node_visitor.h" />
+    <ClInclude Include="gstate_nodestate_condition.h" />
+    <ClInclude Include="gstate_nway_blend.h" />
+    <ClInclude Include="gstate_orient_match.h" />
+    <ClInclude Include="gstate_orient_towards.h" />
+    <ClInclude Include="gstate_parameters.h" />
+    <ClInclude Include="gstate_parent_condition.h" />
+    <ClInclude Include="gstate_pose_storage.h" />
+    <ClInclude Include="gstate_position_ik.h" />
+    <ClInclude Include="gstate_quick_vecs.h" />
+    <ClInclude Include="gstate_rest_pose.h" />
+    <ClInclude Include="gstate_sample_recorder.h" />
+    <ClInclude Include="gstate_scalar_compare.h" />
+    <ClInclude Include="gstate_selection.h" />
+    <ClInclude Include="gstate_snapshotutils.h" />
+    <ClInclude Include="gstate_state_machine.h" />
+    <ClInclude Include="gstate_telemetry.h" />
+    <ClInclude Include="gstate_timeclamp.h" />
+    <ClInclude Include="gstate_timeselect.h" />
+    <ClInclude Include="gstate_timeshift.h" />
+    <ClInclude Include="gstate_token_context.h" />
+    <ClInclude Include="gstate_tokenized.h" />
+    <ClInclude Include="gstate_transition.h" />
+    <ClInclude Include="gstate_transition_dynamic.h" />
+    <ClInclude Include="gstate_transition_lastresort.h" />
+    <ClInclude Include="gstate_transition_onconditional.h" />
+    <ClInclude Include="gstate_transition_onloop.h" />
+    <ClInclude Include="gstate_transition_onrequest.h" />
+    <ClInclude Include="gstate_transition_onsubloop.h" />
+    <ClInclude Include="gstate_twobone_ik.h" />
+    <ClInclude Include="..\statement\ui_drawing_utils.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

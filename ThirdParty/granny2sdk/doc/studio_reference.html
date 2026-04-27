@@ -1,0 +1,1175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+
+
+
+
+
+
+
+<style>
+body
+{
+font-family: Calibri,Helvetica,sans-serif;
+font-size: 13pt;
+margin-left: 25%;
+}
+div#toc
+{
+position: absolute;
+width: 20%;
+left: 2%;
+margin: 0px;
+padding: 0px;
+padding-left: 5px;
+border: solid 1px;
+}</p>
+<h1>toc p</h1>
+<p>{
+text-align: center;
+}
+div#toc ul
+{
+margin: 0px;
+padding: 0px;
+}
+img
+{
+display: block;
+margin-left: auto;
+margin-right: auto;
+border: none;
+}
+a
+{
+color: #3366AA;
+text-decoration: none;
+}
+a:hover
+{
+text-decoration: underline;
+}
+p
+{
+margin: 0.75em 1em 0em 1em
+}
+</style><title>Animation Studio: Reference</title></head>
+<body>
+<p></p>
+<div id="toc">
+<p><b>Table of Contents</b></p>
+<a href="#Introduction"><br>
+</a><a href="#Introduction">Introduction</a><br>
+<a href="#Time_Scrub_Tab">Time Scrub Tab</a><br>
+<a href="#File_and_Character_Tab">File and Character Tab</a><br>
+<a href="#Camera_Controls_Tab">Camera Controls Tab</a><br>
+<a href="#User_Macros_Tab">User Macros Tab</a><br>
+<a href="#Controller_Tab">Controller Tab</a><br><a href="studio_reference.html#Settings_Tab">Settings Tab</a><br>
+<a href="#Quick_Slots_Tab">Quick Slots Tab</a><br>
+<a href="#Animation_Set_Manager">Animation Set Manager</a><br>
+<a href="#Hotkeys">Hot Keys</a><br>
+<a href="#Node_And_Blend_Graph_Editing">Node and Blend
+Graph Editing</a><br>
+<a href="#Nodes">Nodes</a><br>
+<a href="#Transitions">Transitions</a><br>
+<br>
+</div>
+<h2 id="intro"><a name="Introduction"></a>Introduction</h2><ul><li>
+This document describes the Granny Animation Studio program in
+detail.&nbsp;</li><li>See the <a href="studio_quickstart.html">QUICK START GUIDE</a> to get up and running
+quickly!&nbsp;&nbsp;&nbsp; <br>
+</li></ul><h2 id="intro"><a name="Time_Scrub_Tab"></a>Time
+Scrub Tab</h2>
+<ul>
+  <li><strong style="font-weight: normal;"></strong>Click
+the <span style="font-style: italic; font-weight: bold;">time scrub</span>
+tab to enable time scrubbing.</li>
+
+<li>While time scrubbing the state machine cannot be edited. It
+will be grayed out.&nbsp;</li>
+<li>Drag the hash-marked timeline back and forth to scrub
+time.</li>
+<li>Press space-bar while scrubbed back to play forward from a
+historical point at normal speed.</li>
+<li>Click&nbsp;<span style="font-style: italic; font-weight: bold;">hide
+scrub</span> to resume normal playback.</li>
+</ul>
+<h2 id="intro"><a name="File_and_Character_Tab"></a>File
+and Character Tab</h2>
+<ul>
+<li><strong style="font-weight: normal;"></strong><span style="font-style: italic; font-weight: bold;">Load...</span>: Load a saved state machine.</li>
+<li><span style="font-style: italic; font-weight: bold;">Save</span>:
+Save the current state machine.</li>
+<li><span style="font-style: italic;"><span style="font-weight: bold;">Save As</span>:</span>
+Save the current state machine under a different
+name.</li>
+<li><span style="font-style: italic; font-weight: bold;">New</span>:
+Start a new, empty state machine.</li>
+<li><span style="font-style: italic; font-weight: bold;">Set Model...</span>:
+Choose the gr2 file that will contain models for
+the currently-loaded state machine.</li>
+  <ul>
+    <li><span style="font-style: italic; font-weight: bold;"></span>The dropdown lets you select a model from the loaded gr2 file. If the gr2
+contains multiple models, select one to work with from the
+dropdown. </li>
+  </ul>
+  <li><span style="font-style: italic; font-weight: bold;">Retarget</span>...:
+Choose the gr2 file that will contain models that have a skeleton from
+which to retarget. This is the skeleton to which your animations were
+authored, if differen from the one in Set Model above. <br>
+  </li>
+  <ul>
+<li><span style="font-style: italic; font-weight: bold;"></span>The dropdown lets you select a model from the loaded gr2 file. If the gr2
+contains multiple models, select one to work with from the
+dropdown. </li>
+  </ul>
+
+
+<li><span style="font-style: italic; font-weight: bold;">Animations...</span>: Open the <a href="#Animation_Set_Manager">Animation
+Set Manager.</a></li>
+  <ul>
+    <li><span style="font-style: italic; font-weight: bold;"></span>The dropdown lets you select which&nbsp; animation set to display.&nbsp;</li>
+  </ul>
+
+</ul>
+<h2 id="intro"><a name="Camera_Controls_Tab"></a>Camera
+Controls Tab</h2>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Sample character motion</span>: Apply root motion deltas from the
+running state machine to the display character. <br>
+</li>
+<li><span style="font-style: italic; font-weight: bold;">Camera track</span>:
+Make the camera track the character's root if
+it moves away from the origin.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Render character skeleton</span>: Turn off mesh display and
+instead render lines connecting the bones of the character skeleton.</li>
+<li><span style="font-style: italic; font-weight: bold;">Texturing</span>: Enable textured rendering. <br>
+ </li>
+<li><span style="font-style: italic; font-weight: bold;">Snap Camera
+to Character</span>: Move the camera to the character
+and point at it.</li>
+<li><span style="font-style: italic; font-weight: bold;">Reset Character Position</span>: Move the character to the origin.
+</li>
+</ul>
+<h2 id="intro"><a name="User_Macros_Tab"></a>User
+Macros Tab</h2>
+<ul>
+<li><strong style="font-weight: normal;"></strong>Because
+the Animation Studio UI is largely written in lua, it is
+possible to implement custom UI elements in lua.</li>
+<li>This menu is a place to put custom UI elements.&nbsp;</li>
+<li>To start running custom lua commands in the Animation
+Studio:</li>
+<ul>
+<li>Create a file called user_macros.lua and place it next to
+anim_studio.exe.</li>
+<li>Add 'function UserStartupCallback(command_line)'.</li>
+<li>Use the Edit_* commands defined in
+statement_editstate.cpp to control the Animation Studio.&nbsp;</li>
+</ul>
+<li>This is an advanced feature of the Animation Studio.
+Contact Granny support for more details.</li>
+</ul>
+<h2 id="intro"><a name="Controller_Tab"></a>Controller Tab</h2>
+<ul><li><strong style="font-weight: normal;"></strong>This
+menu is an interface
+for
+driving the state machine with an Xbox 360 or Xbox One controller (use
+of an Xbox One controller requires the appropriate drivers).</li><li><span style="font-weight: bold; font-style: italic;">+</span>:
+Add a new controller scheme.</li><li><span style="font-weight: bold; font-style: italic;">-</span>:
+Deletes the current controller scheme.</li><li>Assign
+the controller buttons to the functions listed in the dropdowns.<br></li></ul><h2 id="intro"><a name="Settings_Tab"></a>Options Tab</h2>
+<ul>
+<li><strong style="font-weight: normal;"></strong><span style="font-weight: bold; font-style: italic;">Debug Text</span>: Draw debug text to the character pane about the state of the current container</li><ul><li><span style="font-style: italic;">Conditionals</span>: shows the value of&nbsp;conditionals.</li>
+    <ul>
+      <li><span style="font-style: italic;">Show false conditionals</span>: if disabled, hides false conditionals for a cleaner display.</li>
+    </ul>
+<li><span style="font-style: italic;">Parameters</span>: shows the value of all parameters on parameter nodes.</li><li><span style="font-style: italic;">Scalar outputs</span>: shows the value of scalar outputs.</li><li><span style="font-style: italic;">Scalar inputs</span>: shows the value of scalar inputs.</li><li><span style="font-style: italic;">Event outputs</span>: when an event output is triggered, it will show for a few seconds.</li><li><span style="font-style: italic;">Event inputs</span>: when an input event is triggered, it will show for a few seconds.&nbsp;</li><li><span style="font-style: italic;">Morph channels:</span> shows the weight of each morph channels.</li>
+    <ul>
+      <li><span style="font-style: italic;">Show zero weight morph channels</span>: if disabled, hides zero weight channels for a cleaner display.</li>
+    </ul>
+</ul>
+  <li><strong style="font-weight: normal;"></strong><span style="font-weight: bold; font-style: italic;">Debug Draw</span>: Draw debug bars to the character pane about the state of the current container</li>
+  <ul>
+<li><span style="font-style: italic;">Animations</span>: Shows when animation and pose nodes begin and end evaluation.&nbsp;</li>
+    <li><span style="font-style: italic;">Events</span>: Shows when events occur. </li>
+    <li><span style="font-style: italic;">Time Window:</span> How far back in time to display debug draw for.&nbsp;</li>
+  </ul>
+  <li><strong style="font-weight: normal;"></strong><span style="font-weight: bold; font-style: italic;">Draw Highlights</span>: Highlight edges that feed into selected nodes in the blend graph display. <br>
+  </li>
+
+
+  <li><span style="font-weight: bold; font-style: italic;">Editor Settings</span>: Control the behavior of the editor</li>
+
+<ul><li><span style="font-style: italic;">Auto-link blend node outputs</span>:
+if true, when you connect a pose in a blend node, the editor will
+attempt to do a name wise match of the non-pose output automatically.&nbsp;</li>
+    <li><span style="font-style: italic;">Auto-add blend graph child outputs</span>:
+if true, when you add an output to a blend graph, it will automatically add that output to all its children. <br>
+ </li>
+    <ul>
+      <li><span style="font-style: italic;">Add corresponding inputs</span>: Also add corresponding inputs to the children that get outputs added above. <br>
+ </li>
+    </ul>
+    <li><span style="font-style: italic;">Load last file on startup</span>: Load the last gsf automatically.&nbsp;</li>
+    
+
+</ul>
+  <li><span style="font-style: italic; font-weight: bold;">Logs</span>: Path to a directory to store a text log of the current run.&nbsp;</li>
+  <ul>
+    <li><span style="font-style: italic;">Browse</span>: Set the log directory with the browse dialog.</li>
+    <li><span style="font-style: italic;">Explore</span>: Open the current log directory.</li>
+    <li><span style="font-style: italic;">Open</span>:&nbsp; Open the current log. <br>
+    </li>
+  </ul>
+
+</ul>
+<h2 id="intro"><a name="Quick_Slots_Tab"></a>Quick
+Slots Tab</h2>
+<ul>
+<li><strong style="font-weight: normal;"></strong>Quick
+slots is a&nbsp;searchable list of animation slots.&nbsp;</li>
+<li>Click a slot
+name to add it to the current container.&nbsp;</li>
+</ul>
+<h2 id="intro"><a name="Animation_Set_Manager"></a>Animation
+Set Manager</h2>
+<ul>
+<li><strong style="font-weight: normal;"></strong><span style="font-weight: bold;">Dropdown</span>:
+The current list of animation sets.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">+</span>:
+Add a new animation set.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">-</span>:
+Remove the current animation set.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Add
+Animation...</span>: Add a gr2 source file containing one or
+more animations.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Rebind</span>:
+If the animation is not bound, click 'rebind' to&nbsp;re-bind that
+animation if possible.&nbsp;</li><li><span style="font-style: italic; font-weight: bold;">Add slot</span>:&nbsp; Add a new, unbound
+slot.&nbsp;</li><li><span style="font-style: italic; font-weight: bold;">Rebind</span>: Attempts to bind all unbound slots.&nbsp;</li><li><span style="font-style: italic; font-weight: bold;">Sort</span>:
+Sort the slots alphabetically on the slot name.</li><li><span style="font-weight: bold;"><span style="font-style: italic;">Add all</span></span>: Adds slots for all animations.&nbsp;</li><li><span style="font-weight: bold;"><span style="font-style: italic;">Remove all</span></span>: Removes slots for all animations.&nbsp;</li><li>The Source File list shows the gr2 and the animations it
+contains.&nbsp;</li>
+<li>Drag a single animation into the slot pane to add a single
+animation.&nbsp;</li><li>Drag the entire gr2 to add slots for all the animations in that gr2
+at once.&nbsp;</li>
+<li>Mouse over a bound animation slot to show that animation in the
+preview window.&nbsp;</li>
+<li>Click the x next to an animation slot to remove it.&nbsp;</li><li>Right-click an animation binding to un-bind it.&nbsp;</li></ul>
+<h2 id="intro"><a name="Hotkeys"></a>Hotkeys</h2>
+<ul>
+<li><strong style="font-weight: normal;"></strong>Global</li>
+<ul>
+<li>?: Show the help page.&nbsp;</li>
+<li>Esc: Dismiss the help page.&nbsp;</li>
+</ul>
+<li>Character</li>
+<ul>
+<li>F: Frame the character in the viewport.&nbsp;</li>
+</ul>
+<li>Time Control</li>
+<ul>
+<li>Space or Play/Pause: Toggle playback in the preview
+window.&nbsp;</li>
+<li>Left: Run time backward (when scrubbing).&nbsp;</li>
+<li>Right: Run time forward (when scrubbing).&nbsp;</li>
+<li>Esc: Dismiss the time scrubber.&nbsp;</li>
+</ul>
+<li>Hierarchy</li>
+<ul>
+<li>Alt-Left or Back: Go back one level.&nbsp;</li>
+<li>Alt-Right or Forward: Go forward one level.&nbsp;</li>
+</ul>
+<li>State Machine</li>
+<ul>
+<li>Left: Align the selection left.&nbsp;</li>
+<li>Right: Align the selection right.&nbsp;</li>
+<li>Up: Align the selection up.&nbsp;</li>
+<li>Down: Align the selection down.&nbsp;</li>
+<li>Backspace/Delete: Delete the selection.&nbsp;</li>
+<li>Esc: Close all edit dialogs.&nbsp;</li>
+</ul>
+<li>Quick Slots</li>
+<ul>
+<li>Q: Open/Close Quick Slots tab.&nbsp;</li>
+</ul>
+<li>Application</li>
+<ul>
+<li>Ctrl-N: New machine</li>
+<li>Ctrl-O: Load</li>
+<li>Ctrl-S: Save</li>
+<li>Ctrl-Z: Undo</li>
+<li>Ctrl-D: Duplicate single node</li>
+<li>Ctrl-C: Copy single node</li>
+<li>Ctrl-V: Paste node</li>
+<li>Ctrl-A: Animation Set Editor</li>
+<li>`: Activate Console</li>
+</ul>
+</ul>
+<span style="font-weight: bold;"></span>
+<h2 id="intro"><a name="Node_And_Blend_Graph_Editing"></a>Node
+and Blend Graph Editing</h2>
+<ul>
+<li>Double-click anywhere on a blend graph or state machine to enter it. <br>
+</li>
+<li>Use left and right mouse buttons to go back and forth in
+containers, or left-click the target container in the navigation bar. <span style="font-weight: bold;">
+</span></li>
+<li>Right-click anywhere on a node to edit its properties in the node properties dialog.&nbsp;</li><li>To rename a node, select it and press the F2 key, or right click it to bring up its properties dialog and edit it there. </li>
+<li>To close the node properties dialog, press the escape key, click off of the dialog or click the 'X' close button.</li><li>To delete a node, press the delete key or right click the node and press the delete button.&nbsp; <br>
+</li>
+<li>Note:
+You can also edit the properties for a blend graph or state machine by descending into it
+and right-clicking its name in the navigation bar. <span style="font-weight: bold;"></span></li>
+<li>In a state machine:</li>
+<ul>
+<li>Left-click the icon on a node to activate or play that node.&nbsp;</li>
+    <ul>
+      <li>Note: Unlike at runtime, if a defined transition
+does not exist to a node, activating that node it will force a pop to that node.</li>
+    </ul>
+    <li>Right click the node and click the "Make Start" button to make that node the start node for that state machine.&nbsp; &nbsp;</li>
+
+</ul>
+<ul>
+
+<li>Create a <a href="animation_studio_reference.html#Transitions">transition</a>
+between nodes by left-clicking on the darkened border of one node and
+dragging a transition arrow to another node.</li>
+    <ul>
+      <li>You can also create a transition even faster by holding down the control
+key and dragging from anywhere in a node to anywhere in another node.
+&nbsp;</li>
+    </ul>
+
+<li>Delete transitions by right-clicking to highlight the
+transition, then pressing the delete or backspace keys.</li>
+<li>Edit a transition's properties by right-clicking the
+transition.&nbsp;</li>
+<li>Left-click a transition to follow it. </li>
+</ul>
+<li>In a blend graph:</li>
+<ul>
+<li>Create a connection by clicking on the output of one node
+and dragging it to the input on another node.&nbsp;</li>
+<li>Remove a connection by right-clicking on the input it is
+attached to.&nbsp;</li>
+<li>It is possible to send one output to multiple inputs by
+drawing multiple lines.<span style="font-weight: bold;"><br>
+</span></li>
+</ul>
+</ul>
+<h2 id="intro"><a name="Nodes"></a>Nodes</h2>
+<ul>
+
+<li><span style="font-weight: bold;">State Machine</span><span style="font-weight: bold;"> Node</span><br>
+A&nbsp;container
+for state nodes. From within a state machine node, ctrl-left-click its
+name in the navigation bar at the top of the screen to re-activate it
+or right-click
+to edit its properties:&nbsp;</li>
+  <ul>
+
+<li><span style="font-style: italic; font-weight: bold;">Always use anim events</span>:</li><ul><li>This option is global, and is shown only on the root state machine. </li></ul>
+<ul>
+<li>It specifies whether every animation in the state machine
+will generate the default <a href="#Animation_Events">animation
+events</a>), rather than having to activate them on each
+node.&nbsp;</li>
+<li>This option overrides the per-animation setting for Anim
+Events.</li><li>Events triggered by Always Use Anim Events only show up on the first Event output channel, so that they are not duplicated.</li>
+</ul>
+    <li><span style="font-style: italic;"><span style="font-weight: bold;">Retarget animation sources</span></span>:
+If a retargeting model is set, retarget at each animation evaluation,
+rather than once at the end. This is a little slower, but required if
+using any sort of node in the graph that relies on absolute positioning
+(like IK). <br>
+    </li>
+    <li><span style="font-style: italic; font-weight: bold;">TransExit</span>:
+Allow
+transitions to this state machine to be interrupted by another transition. <br>
+    </li>
+
+<li><span style="font-style: italic; font-weight: bold;">AnyTrans</span>:
+Allow
+a transition request to this state from any other state to
+succeed.&nbsp;</li>
+<ul><li>See <a href="#Transitions">Transitions</a> for a description of the options for the 'any' transition. These options apply to the generic 'any' transition to this state<span style="font-style: italic; font-weight: bold;">.&nbsp;</span></li></ul>
+    <ul>
+      <li><span style="font-style: italic; font-weight: bold;">Any transition conditionals</span>: If the conditionals are met, the 'any' transition to this state will be triggered automatically.&nbsp;</li>
+    </ul>
+    <ul>
+      <li><span style="font-style: italic; font-weight: bold;">Use last state on activation</span>: When this state machine is activated, make its start state&nbsp;the active state it was in when it was last left.&nbsp;</li>
+    </ul>
+
+<ul>
+      <ul>
+        <li>If the state has never been entered, it will use the
+default start state.&nbsp;</li>
+      </ul>
+
+      <ul>
+        <li>If the state was in a transition when it was last left,
+it will use the destination of that transition as its start state.&nbsp;</li>
+      </ul>
+
+      <ul>
+        <li>A&nbsp;transition to this state can override this option by setting the <a href="#End_Start_State">End Start State</a>.</li>
+      </ul>
+
+</ul>
+    <li><span style="font-style: italic; font-weight: bold;">Use random state on activation</span>:
+Randomly select a state in this state machine as the start state each
+time the state machine is activated. This tries to avoid a repeat of
+the last few states chosen (but will allow the occasional, rare repeat.
+  <br>
+    </li>
+
+<li><span style="font-style: italic; font-weight: bold;">Add Scalar</span>: Add a named scalar output channel.</li>
+<ul>
+      <li>Scalars
+can be sent to the output channel from a state machine <a href="#Parameters_Node">parameters node</a>
+or by binding an <a href="animation_studio_reference.html#Animation_Node">animation
+node</a>'s event track to that output name with
+the dropdown in the <a href="animation_studio_reference.html#Animation_Node">animation
+node</a>. </li>
+
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Add Event</span>: Add a named event output channel.</li>
+<ul>
+<li>Events
+can be sent to the output channel from a state machine's <a href="#Event_Source_Node">event source node</a>
+or by binding an <a href="#Animation_Node">animation node</a>'s
+event track to that output name with
+the dropdown in the <a href="#Animation_Node">animation
+node</a>. </li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Add Morph</span>: Add a named morph output channel for a given
+shape
+weight.</li><ul><li>The output name (left edit box) can be anything</li></ul>
+<ul>
+<li>The mesh/track name (right edit box) name must match the name of the mesh that the
+above weight will apply to.</li>
+</ul>
+<ul>
+<li>Morph
+shape weights are set to the output channel by binding an&nbsp;<a href="animation_studio_reference.html#Animation_Node">animation
+node</a>'s event track to that output name with
+the dropdown in the <a href="animation_studio_reference.html#Animation_Node">animation
+node</a>.</li>
+</ul><li><span style="font-style: italic; font-weight: bold;">Auto Link All Outputs</span>: Does a name wise match of all the blend nodes in the graph.&nbsp; </li>
+<li><span style="font-style: italic; font-weight: bold;">Add
+Conditional</span>: Add a logical conditional that <a href="animation_studio_reference.html#On_Conditional">conditional
+transitions</a>
+can sample.</li>
+<ul>
+<li>There are three types of conditional:</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Scalar
+Compare</span>:&nbsp;Compare a scalar parameter to a fixed
+value.</li>
+<ul>
+<li>The scalar compare can contain multiple comparisons.</li>
+<li>Checking&nbsp;<span style="font-style: italic; font-weight: bold;">all must be true</span> will require all
+the scalar comparisons to succeed before triggering the conditional.</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Event
+Triggered</span>: Trigger the conditional if the specified event is triggered.&nbsp;</li>
+<ul>
+<li>Conditional output goes on the specified output node if the state machine has an output node.&nbsp;</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">External Condition</span>: For using conditions defined in other state
+machines in the current state machine.&nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">State Machine</span>:
+The name of the other state machine in the graph on which the
+condition is defined.</li>
+</ul>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Track
+Condition</span>: The name of the condition to track
+from the above ancestor.</li>
+</ul><li><span style="font-weight: bold; font-style: italic;">Node State</span>: A condition suceeds if any of the the selected state information about the selected node is true.</li><ul><li><span style="font-weight: bold; font-style: italic;">Node</span>: The node to consider.</li><li><span style="font-weight: bold; font-style: italic;">TransitionTo</span>: If checked, condition will succeed if Node is being transitioned to.</li><li><span style="font-weight: bold; font-style: italic;">Active</span>:&nbsp;If checked, condition will succeed if Node is active.</li><li><span style="font-weight: bold; font-style: italic;">TransitionFrom</span>: If checked, condition will succeed if Node is being transitioned from.</li></ul>
+</ul>
+</ul><li>See <a href="animation_studio_reference.html#Node_And_Blend_Graph_Editing">Node and Blend Graph Editing</a> for more information on editing state machines. </li>
+  </ul>
+
+<li><span style="font-weight: bold;">Blend Graph</span><span style="font-weight: bold;"> Node</span><br>
+A&nbsp;container
+for animation blends. From within a blend
+graph,&nbsp;ctrl-left-click its name in the navigation bar at the top of the screen to re-activate it or right-click
+to edit its properties:<span style="font-weight: bold;"></span></li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">TransExit</span>:&nbsp;Allow
+transitions to this state machine to be interrupted by another transition.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">AnyTrans</span>:
+Allow
+a transition request to this state from any other state to
+succeed.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Duration</span>:
+Set the duration of the AnyTrans&nbsp;transition.&nbsp;</li>
+<li>Inside a blend
+graph there are inputs on the left and outputs on the
+right.&nbsp;</li><ul><li>Inputs
+appear if the container for the blend graph has input generators (like
+a Parameter node or Event source). &nbsp;</li><li>Outputs in addition to the pose output appear if the
+parent
+container has named scalar, event or morph outputs.&nbsp;</li></ul><li>See <a href="#Node_And_Blend_Graph_Editing">Node and Blend Graph Editing</a> for more information on editing blend graphs. </li>
+</ul>
+<li><span style="font-weight: bold;"><a name="Animation_Node"></a>Animation</span><span style="font-weight: bold;"> Node</span><br>
+An animation data source.</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Anim</span>:
+The animation slot this node will play.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Looped</span>:
+Make the animation play repeatedly. If not checked, animation will play once until
+the end, then freeze. <br>
+</li>
+<li><span style="font-style: italic; font-weight: bold;">Speed</span>:
+Scale the playback speed of the animation.</li>
+<li><span style="font-style: italic; font-weight: bold;">TransExit</span>:
+Allow
+transitions to this state machine to be interrupted if a
+transition out of this state machine is requested or becomes conditionally activated.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">AnyTrans</span>:
+Allow
+a transition request to this state from any other state to
+succeed.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Duration</span>:
+Set the duration of the AnyTrans&nbsp;transition.&nbsp;</li>
+<li>Scalar and Event Tracks</li>
+<ul>
+<li>These appear if there is a scalar, event or morph
+event output set on the parent container.&nbsp;</li>
+<li>Use the dropdown to link the named output to a float or
+text track in the animation.&nbsp;</li>
+<li><a name="Animation_Events"></a>Set the event track to the entry marked &lt;Anim.
+events&gt; to make an animation event get generated when the
+animation starts
+and when it loops.&nbsp;</li>
+</ul>
+</ul>
+<li><span style="font-weight: bold;"><a name="Parameters_Node"></a>Parameters</span><span style="font-weight: bold;"> Node</span><br>
+Numerical inputs from the game to the
+state machine<span style="font-weight: bold;"></span></li>
+  <ul>
+<li><span style="font-weight: bold;"><span style="font-style: italic;">Add Parameter</span>:</span> Add a parameter to the node.</li>
+    <li><span style="font-style: italic; font-weight: bold;">Integers Only</span>: restricts this parameter to an integer. <br>
+    </li>
+    <li><span style="font-style: italic; font-weight: bold;">Max Speed</span>: prevents the parameter from changing faster than this many units per seconds. <br>
+    </li>
+    <li><span style="font-weight: bold; font-style: italic;">Acceleration</span>: caps the acceleration of the parameter.&nbsp;</li>
+    <li><span style="font-style: italic; font-weight: bold;">Cyclic</span>:
+if true, the parameter wraps around. For a timer, that will make the
+timer run over and over again. For accelerating parameters, it will
+properly handle wrapping the accelerated parameter around to the
+beginning. <br>
+    </li>
+<li>The dropdown lets you select what kind of parameter it is:</li><ul><li>Random: A new random number is returned every time it is sampled.</li><li>Timer: A timer that counts down from the max time to zero.</li><ul><li>The timer can also take a range to randomly pick a max time from.</li>
+        <li>The timer starts when its parent container is activated.</li>
+</ul><li>Value: A parameter driven by slider or by code.</li><ul><li>Drag the slider to set the value.</li></ul></ul>
+    <ul>
+      <ul>
+        <li>Code can drive the parameter node by finding it then setting
+the value:<br>
+&nbsp;&nbsp;parameters* Params =
+GSTATE_DYNCAST(CharacterInstance-&gt;GetStateMachine-&gt;FindChildRecursively("Path|To|Params"),
+parameters);<br>
+&nbsp;&nbsp;if( Params )<br>
+&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp; for (int Idx = 0; Idx
+&lt;&nbsp;Params-&gt;GetNumOutputs(); ++Idx)<br>
+&nbsp;&nbsp;&nbsp; {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+if (strcmp(Node-&gt;GetOutputName(Idx), "MyParam") == 0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+Params-&gt;SetParameter(Idx,Value);<br>
+&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;}<br>
+<br>
+        </li>
+      </ul>
+    </ul>
+
+  </ul>
+
+<li style="font-weight: bold;"><a name="Event_Source_Node"></a>Event Source<span style="font-weight: bold;"> Node</span><br>
+<span style="font-weight: normal;">Input for edge
+events triggered from the game.</span></li>
+<ul>
+<li><span style="font-weight: bold; font-style: italic;">Add Event</span>: Click Add Event to create a new event. <br>
+</li>
+    <li>Code drives the event node by finding it and setting the
+event:<br>
+<br>
+&nbsp;&nbsp;event_source* EventSource =
+GSTATE_DYNCAST(CharacterInstance-&gt;GetStateMachine-&gt;FindChildRecursively("Path|To|Events"),event_source);<br>
+&nbsp;&nbsp;if( EventSource )<br>
+&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;
+EventSource-&gt;PokeEvent("MyEvent");<br>
+&nbsp;&nbsp;}<br>
+<br>
+    </li>
+
+</ul>
+<li><span style="font-weight: bold;">Comment</span><span style="font-weight: bold;"></span><br>
+Drag a comment box around
+nodes to describe them.&nbsp;</li>
+<li><span style="font-weight: bold;">Blend</span><span style="font-weight: bold;"> Node</span><br>
+Blend or select
+between&nbsp;animations.&nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Parameter</span>:
+The value used to decide what inputs to sample. This can be 0-1 or some
+other range (maybe 0-5 if there were 5 inputs to map to
+integers). The blend node will split up the values evenly. Use <a href="#Linear_Equation_Node">linear equation</a>, <a href="#Linear_Remap_Node">linear remap</a> and <a href="#Custom_Remap_Node">custom remap</a> nodes to
+get more
+detailed control of the input.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">PoseIn</span>:
+Input pose.</li>
+<li><span style="font-style: italic; font-weight: bold;">PoseOut</span>:
+Output pose.</li>
+<li><span style="font-style: italic; font-weight: bold;">Phase
+locked when possible</span>: Scale the speed of
+the
+animations that are being blended together so that their phases match.
+This assumes once cycle per loop of each animation.&nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Use
+neighborhooded blend</span>: Turn off the rest-pose quaternion
+blend
+heuristic.&nbsp; Normally when two local poses are combined, the
+quaternions are brought into<br>
+the same hemisphere as the rest pose. This&nbsp;decides what is
+supposed to happen when you have&nbsp;rotations that are closer to each
+other than they are to the rest pose. Use neighborhooded blend makes
+the blend&nbsp;always take the short way around. The first rotation
+sets the hemisphere for the quaternion blends, and then every rotation
+after that is brought into the same hemisphere as the current rotation.<br>
+</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Choose on
+activation</span>: Only sample the parameter when this
+node is activated, rather than sampling it continuously.</li>
+    <li><span style="font-style: italic;"><span style="font-weight: bold;">Circular blend</span></span>:
+Parameters map the inputs circularly, so that a parameter value close
+to 1 (but less than one) will blend between the nth input and the first
+input. This is useful for blending for 2D movement, for example. <br>
+    </li>
+
+</ul>
+<li><span style="font-weight: bold;">Additive Blend</span><span style="font-weight: bold;"> Node</span><br>
+Additive
+blend nodes add an animation to a base animation, with an optional mask
+layer. See the Additive Blending discussion in granny2.chm in the
+Advanced Animation section&nbsp;for an in-depth discussion of
+Granny's
+additive animation approach.&nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Amount</span>: How much of the additive animation to contribute.
+0 is no contribution, 1 is full contribution.</li>
+<li><span style="font-style: italic; font-weight: bold;">Into</span>:
+The animation we will add onto.</li>
+<li><span style="font-style: italic; font-weight: bold;">Base</span>:
+The animation that the delta (additive) animation is relative to. This
+is often the rest pose, but could also be an animated input.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Delta</span>:
+The animation to add.</li>
+<li><span style="font-style: italic; font-weight: bold;">Mask</span>:
+A mask input for applying the additive
+animation to just part of the character.&nbsp;</li>
+</ul>
+<li><span style="font-weight: bold;">Masked Combine</span><span style="font-weight: bold;"> Node</span><br>
+Combine
+two incoming animations.</li><ul><li><span style="font-style: italic; font-weight: bold;">From
+Pose</span><span style="font-style: italic;"></span>: This affects
+bones that are not specified in the bone mask</li><li><span style="font-style: italic; font-weight: bold;">To Pose</span>:<span style="font-weight: bold;"><span style="font-weight: bold;"> </span></span>This affects bones that are specified in the mask.&nbsp;</li></ul>
+<li><span style="font-weight: bold;">Mask Source</span><span style="font-weight: bold;"> Node</span><br>
+Node for selecting a subset of the bones in a skeleton.&nbsp;</li>
+<ul>
+<li>While selected, the triangles of the character in the preview
+window that are affected by the mask are drawn lighter, and the
+triangles that are not affected by the mask are drawn darker.</li>
+    <li>Shift-click the "+" sign next to a bone name to expand all the child bones under that bone.&nbsp;&nbsp;</li>
+    <li>Note: If you select a bone without its children being expanded, all of its children are selected to be part of the mask. <br>
+    </li>
+
+</ul>
+<li><span style="font-weight: bold;">Mask Invert</span><span style="font-weight: bold;"> Node</span><br>
+Invert a mask source.</li>
+<ul>
+<li>Bones that don't occur in the mask source will
+contribute to the output.</li>
+</ul>
+<li style="font-weight: bold;">Mask Union<span style="font-weight: bold;"> Node</span><br>
+<span style="font-weight: normal;">Perform a union
+operation on two mask sources.</span></li>
+<ul>
+<li style="font-weight: bold;"><span style="font-weight: normal;">Bones that occur in either mask
+source
+will contribute to the output.&nbsp;</span></li>
+</ul>
+<li><span style="font-weight: bold;">Constant
+Velocity</span><span style="font-weight: bold;"> Node</span><br>
+Output a constant root motion velocity.<br>
+</li>
+<li><span style="font-weight: bold;">Mirror</span><span style="font-weight: bold;"> Node</span><br>
+Mirror selected joints of the input pose across a given axis.</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Axis To
+Mirror</span>: Axis to mirror across. For a character this is typically the left/right axis (not the facing axis or up axis)</li>
+<li><span style="font-style: italic; font-weight: bold;">Name Swap
+Pairs</span>:
+Joints to mirror (left_hand and right_hand
+for example). These can be prefix strings as well, so if you create a swap
+pair with "left" and "right", it will swap any joint that starts with
+"left" and "right" in the name if the rest of the name matches, so it
+will catch left/right_hand, left/right_shoulder, etc.&nbsp;</li>
+</ul>
+<li><span style="font-weight: bold;">Time Shift</span><span style="font-weight: bold;"> Node</span><br>
+Scale and offset&nbsp;the sample time for an animation. The equation is
+NewTime = Time * Scale + Offset.&nbsp;</li>
+<ul>
+<li><span style="font-style: italic;"><span style="font-weight: bold;">TimeScale</span>:</span>
+Amount to scale the sample time by.</li>
+<li><span style="font-style: italic; font-weight: bold;">TimeOffset</span>:
+Amount to offset the sample time by.</li>
+<li><span style="font-style: italic; font-weight: bold;">Offset Is
+Relative</span>: If true, the offset is scaled by the
+duration of the input: NewTime = Time * Scale + Offset * Duration.</li>
+<li>The time shift node can time shift scalar, event and
+morph edges.</li>
+</ul>
+<li><span style="font-weight: bold;">Time Select</span><span style="font-weight: bold;"> Node</span><br>
+Set one specific time to sample an animation at.&nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Time is relative</span>: If true, time is scaled by the duration
+of the input.&nbsp;</li>
+<li>The time select node can select time for scalar, event
+and morph edges.</li>
+</ul>
+<li><span style="font-weight: bold;">Time Clamp</span><span style="font-weight: bold;"> Node</span><br>
+Clamp the time that an animation is sampled by to a specific
+range.&nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">MinTime</span>:
+Minimum time to allow.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">MaxTime</span>:
+Maximum time to allow. </li>
+</ul>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Range is
+relative</span>: If true, the range values
+are&nbsp;scaled by the duration of the input.&nbsp;</li>
+</ul>
+<ul>
+<li>The time clamp node can clamp scalar, event and morph
+edges.</li>
+</ul>
+<li><span style="font-weight: bold;">LOD Protect</span><span style="font-weight: bold;"> Node</span><br>
+Turns off LOD for the input to this node.</li>
+<li><span style="font-weight: bold;"><a name="Linear_Equation_Node"></a>Linear
+Equation</span><span style="font-weight: bold;"> Node</span><br>
+Modify parameter according to a linear equation: Output = A * Input + B.</li>
+<li><span style="font-weight: bold;"><a name="Linear_Remap_Node"></a>Linear Remap</span><span style="font-weight: bold;"> Node</span><br>
+Modify parameter according to a piecewise linear, continuous curve.</li>
+<li style="font-weight: bold;"><a name="Custom_Remap_Node"></a>Custom Remap<span style="font-weight: bold;"> Node</span><br>
+<span style="font-weight: normal;">Modify parameter
+using custom ranges.</span></li>
+<ul>
+<li>Modes:&nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Direct</span>:
+Input -&gt; Output, values in between
+adjacent inputs output the value associated with the smaller input.</li>
+<li><span style="font-style: italic; font-weight: bold;">Direct
+Strict</span>: Input -&gt; Output, but will trigger
+a GStateWarning if the inputs don't match exactly.</li>
+<li><span style="font-style: italic; font-weight: bold;">Integer
+Interpolated</span>: Input -&gt; integers in
+between outputs.</li>
+<li><span style="font-style: italic; font-weight: bold;">Float
+Interpolated</span>: Input -&gt; continuous floats
+between outputs.</li><li><span style="font-style: italic; font-weight: bold;">Direct
+With Fallback</span>: Input -&gt; Output, but will use the&nbsp;<span style="font-style: italic; font-weight: bold;">Fallback</span> value if the inputs don't match exactly.&nbsp;</li>
+</ul>
+</ul>
+<ul>
+<li>Add as many ranges as needed to control the
+inputs.&nbsp;</li>
+
+</ul>
+<li><span style="font-weight: bold;">Clamp Value</span><span style="font-weight: bold;"> Node</span><br>
+Clamp a parameter to a range.</li>
+<li><span style="font-weight: bold;">Event Mixer</span><span style="font-weight: bold;"> Node</span><br>
+Combine two or more event outputs to a single edge. If either event
+triggers, the output event will trigger.&nbsp;</li>
+<li><span style="font-weight: bold;">Event Renamer</span><span style="font-weight: bold;"> Node</span><br>
+Rename events to keep them distinct.&nbsp;</li>
+<ul>
+<li>The dropdown list shows any events that are valid in this
+container.</li>
+<li>Select an event and type in a new name next to it rename
+it for its outputs.</li>
+</ul>
+<li><span style="font-weight: bold;">2-Bone IK</span><span style="font-weight: bold;"> Node</span><br>
+Hip/Knee/Angle IK system for foot placement.</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Foot
+Effector</span>: The foot joint that the IK will try to move into place.</li>
+<li><span style="font-style: italic; font-weight: bold;">Knee Joint</span>:
+The joint, connected to the foot effector, to bend.</li>
+<li><span style="font-style: italic; font-weight: bold;">Hip Joint</span>:
+The joint, connected to the knee joint, to rotate.</li>
+<li><span style="font-style: italic; font-weight: bold;">Knee
+Plane</span>: A normal perpendicular to the plane within which the
+knee should rotate
+(in a human knee this would come out the left or right side of the
+knee).</li>
+</ul>
+<ul>
+<li>Code keeps the desired foot position up to date by
+finding the node and setting the position:<br>
+<br>
+&nbsp; twobone_ik* ik =
+GSTATE_DYNCAST(CharacterInstance-&gt;GetStateMachine-&gt;FindChildRecursively("Path|To|IKNode"),
+twobone_ik);<br>
+&nbsp;&nbsp;if( ik )<br>
+&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;
+&nbsp;ik-&gt;SetFootPosition(pos); //pos is a float* pointing
+to an array with 3 float elements. <br>
+&nbsp;&nbsp;}</li></ul><li><span style="font-weight: bold;">Position IK</span><span style="font-weight: bold;"> Node</span><br>
+IK system to move the end effector of a joint to a position in space.</li><ul><li><span style="font-style: italic; font-weight: bold;">Target: <br>
+</span></li>
+    <ul>
+      <li><span style="font-style: italic; font-weight: bold;">Note</span>:
+The target is a character-relative Mat4x4, not a world-space Mat4x4.
+GState uses a full Mat4x4 because it is possible to offset the end
+effector using target's frame of reference using the <a href="#FromTargetOffsetType">From Target</a> Offset Type. If you're not using the offset, you only have to set the position row of the Mat4x4. <br>
+      </li>
+    </ul>
+    <ul>
+      <li><span style="font-style: italic; font-weight: bold;">Bone Name</span>:
+Target specified using the name of a bone in the current skeleton. Your
+runtime must cache a transform with this name per frame using
+GStateCacheMat4x4.&nbsp;</li>
+      <li><span style="font-style: italic; font-weight: bold;">Custom Name</span>:
+Target specified using a user-supplied name. Your runtime must cache a
+transform with this name per frame using GStateCacheMat4x4.&nbsp;</li>
+      <li><span style="font-style: italic; font-weight: bold;">User Specified</span>:
+Target position can be set with sliders on the node in the tool, or
+with SetDefaultTargetMat4x4() from your runtime. Note
+SetDefaultTargetMat4x4 assumes a character-relative transform, not a
+world transform. <br>
+      </li>
+    </ul>
+    <ul>
+      <ul>
+<li><span style="font-style: italic; font-weight: bold;">X, Y, Z</span>:
+The position to move the end effector to.</li>
+      </ul>
+      <ul>
+<li><span style="font-style: italic; font-weight: bold;">Range</span>: Sets the range of values for the position sliders on this node.&nbsp;</li>
+      </ul>
+    </ul>
+<li><span style="font-style: italic; font-weight: bold;">Offset:&nbsp;</span></li><ul><li><span style="font-style: italic; font-weight: bold;">X, Y, Z</span>:
+The offset position. Exactly what type of offset depends on the Offset Type (see below)</li></ul><ul><li><span style="font-style: italic; font-weight: bold;">Range</span>:&nbsp;Sets the range of values for the offset sliders on this node.</li><li><span style="font-weight: bold; font-style: italic;">Offset Type</span>:&nbsp;</li><ul><li><span style="font-weight: bold; font-style: italic;"><a name="FromTargetOffsetType"></a></span>From
+Target: offsets the position the is from the target position or target
+joint (depending which is active). The offset is in the space of the
+target joint (or the position and orientation set on the node if the
+joint name is not active).&nbsp;</li><ul><li>Note: If you are combining
+a Position IK node with a later Orient Match node on the same chain,
+you should use a From Target offset, so that the Orient Match does not
+move the target off the object Position IK is trying to hit.&nbsp;</li></ul><li>From End Effector: offsets the end effector position by this much (in the space of the end effector joint).&nbsp;</li></ul></ul><li><span style="font-style: italic; font-weight: bold;">CCD Iterations</span>:
+How many iterations of the Cyclic Coordinate Descent solver to run while solving.
+More iterations will be more accurate, but take more CPU time.&nbsp; </li><li><span style="font-style: italic; font-weight: bold;"></span><span style="font-style: italic; font-weight: bold;">Add Joint</span>: Add a joint to the joint chain</li>
+    <li><span style="font-style: italic; font-weight: bold;">End Effector</span>: The end joint in the chain that will be moved to the target position (or moved as close as possible if it cannot fully reach)</li>
+<li><span style="font-style: italic; font-weight: bold;"></span><span style="font-style: italic; font-weight: bold;">Chain Joint N</span>: The N'th joint away from the end effector in the chain. These do not have to be contiguous in the skeleton. <br>
+</li></ul>
+<li><span style="font-weight: bold;">AimAt IK</span><span style="font-weight: bold;"> Node</span><br>
+IK system to point an axis of a bone at a position in space, moving an
+IK chain from the root to the end effector to do so.&nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">X, Y, Z</span>:
+The position to aim at.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Aim Axis</span>:
+The local axis the character faces (forward
+vector)</li>
+<li><span style="font-style: italic; font-weight: bold;">Ear Axis</span>:
+The local axis of the character's 'ear'
+(side&nbsp; vector)</li>
+<li><span style="font-style: italic; font-weight: bold;">Ground
+Normal</span>: The local up axis (up vector)</li>
+<li><span style="font-style: italic; font-weight: bold;">End
+Effector</span>: The bone&nbsp;to point at the position. </li>
+<li>Code keeps the target position for this node to
+aim at up to date by finding the node and setting the position:<br>
+<br>
+&nbsp; aimat_ik* ik =
+GSTATE_DYNCAST(CharacterInstance-&gt;GetStateMachine-&gt;FindChildRecursively("Path|To|IKNode"),
+aimat_ik);<br>
+&nbsp;&nbsp;if( ik )<br>
+&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;
+&nbsp;ik-&gt;SetAimPosition(pos); //pos is a float* pointing to
+an array with 3 float elements. <br>
+&nbsp;&nbsp;}<br>
+</li>
+</ul>
+<li><span style="font-weight: bold;">Orient Towards</span><span style="font-weight: bold;"> Node</span><br>
+Orient one or more bones toward a target. There is no IK here,
+this is just rotating a single bone. This rotation
+uses the shortest quaternion path, so it won't necessarily be axially
+aligned.&nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">X, Y, Z</span>:
+The default position to orient towards.</li>
+</ul>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Aim Axis</span>:
+The local axis the character faces (forward
+vector).</li>
+</ul>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Bone</span>:
+The bone to rotate toward the target.</li>
+    <li>Code keeps the target position for this node to
+aim at up to date by finding the node and setting the position:<br>
+<br>
+&nbsp; orient_towards* orient =
+GSTATE_DYNCAST(CharacterInstance-&gt;GetStateMachine-&gt;FindChildRecursively("Path|To|IKNode"),
+orient_towards);<br>
+&nbsp;&nbsp;if( orient )<br>
+&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;
+&nbsp;orient-&gt;SetAimPosition(pos); //pos is a float*
+pointing to
+an array with 3 float elements. <br>
+&nbsp;&nbsp;}</li>
+
+</ul>
+  <li><span style="font-weight: bold;">Orient Match</span><span style="font-weight: bold;"> Node</span><br>Sets
+the orientation of a bone to match that of the given target. There is
+no IK here,
+this is just rotating a single bone. This is useful for running
+directly after position IK to match the orientation of the end effector
+to a contacted surface or object. For this to work well, the Orient
+Match Bone should be the same joint as the End Effector in the upstream
+Position IK, and you should not use the End Effector Offset type on the
+position IK (though Target Offset is ok) otherwise, the Orient Match
+will move the end effector away from its target. <br>
+  </li>
+  <ul>
+<li><span style="font-style: italic; font-weight: bold;">Target:</span></li>
+    <ul>
+      <li><span style="font-style: italic; font-weight: bold;">Bone Name</span>:
+Target specified using the name of a bone in the current skeleton. Your
+runtime must cache a transform with this name per frame using
+GStateCacheMat4x4.&nbsp;</li>
+      <li><span style="font-style: italic; font-weight: bold;">Custom Name</span>:
+Target specified using a user-supplied name. Your runtime must cache a
+transform with this name per frame using GStateCacheMat4x4.&nbsp;</li>
+      <li><span style="font-style: italic; font-weight: bold;">User Specified</span>: Target orientation set at runtime with SetTargetOrientation() (or you can use Offset X, Y, Z below)<br>
+<span style="font-style: italic; font-weight: bold;"></span></li>
+    </ul>
+    <li><span style="font-style: italic; font-weight: bold;">Offset X, Y, Z</span>:
+rotation offset about the X, Y and Z axes for fine-tuning the
+orientation match. If no target bone is specified, you can specify a
+node-driven orientation for a joint by setting these. <br>
+    </li>
+  </ul>
+  <ul>
+<li><span style="font-style: italic; font-weight: bold;">Bone</span>:
+The bone to rotate toward the target.</li>
+  </ul>
+<li><span style="font-weight: bold;">Selection Node</span><br>
+Select from among a list of input nodes based on the given
+parameter.&nbsp;</li><ul><li><span style="font-style: italic; font-weight: bold;">Choose on
+activation</span>: Only sample the parameter when this
+node is activated, rather than sampling it continuously.</li></ul>
+<li><span style="font-weight: bold;">Pose Storage
+Node<br>
+</span>Capture a single pose, and give it back upon request.</li>
+<ul>
+<li>Connect an animation to the PoseCapture input to start
+using the Pose Storage Node.</li>
+</ul>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Rest Pose</span>:
+Click to reset the pose storage node to the
+rest pose.</li>
+<li><span style="font-style: italic; font-weight: bold;">Capture
+time</span>: Drag the slider to select a pose from the
+input and release to hold that pose. <br>
+</li>
+    <li><span style="font-weight: bold;"><span style="font-style: italic;">Sample once per frame</span></span>:<span style="font-weight: bold;"> </span>Instead of storing a specific captured pose, this will sample the input
+pose, but only once per frame. If the node has multiple outputs, this
+can be a large performance win. <br>
+    </li>
+
+</ul>
+<li><span style="font-weight: bold;">Rest Pose Node<br>
+</span>Generate the rest pose of the character.<span style="font-weight: bold;"></span><br>
+</li>
+</ul>
+
+<h2 id="intro"><a name="Transitions"></a>Transitions</h2>
+<ul>
+<li><strong style="font-weight: normal;"></strong>For
+an animation state request to succeed, either that state must be marked
+as AnyTrans, or it must have a transition to it from the current
+state.&nbsp;</li>
+<li>See the <a href="#Node_And_Blend_Graph_Editing">Node
+and Blend Graph Editing</a> section for details on creating
+transitions. </li>
+<li>Transition Properties:</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">TransExit</span>:
+Allow the transition to be interrupted if the target state's exit
+conditions are met.</li>
+<li><span style="font-style: italic; font-weight: bold;">Type</span>:
+The type of transition. Not all transitions are defined and visible for all start
+nodes. Each type below lists the start nodes it is defined for. &nbsp;</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">On
+Request</span>: Triggered if the code requests its end node&nbsp;via
+RequestChangeToState().</li>
+<ul>
+<li>This transition is defined for all start node types.</li>
+</ul>
+<ul>
+<li>Note that the OnRequest will fail if conditionals are
+added to it and those are not met.&nbsp;</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">On Loop</span>:
+Triggered if the start node loops.</li>
+<ul>
+<li>This transition is defined for animation and blend graph start nodes. </li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">On
+Subloop</span>: Triggered if a sub-node of the start
+node loops.&nbsp;</li>
+<ul>
+<li>This transition is defined for blend graph and state machine nodes.</li>
+</ul>
+<ul>
+<li>Subnode: The child node of the node of the start node
+to watch for looping.</li>
+<li>Output: The output channel of the sub-node to
+watch.&nbsp;</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Last
+Resort (On loop)</span>: Triggered if the start node or sub-node
+loops and all other transitions out of the start node fail.&nbsp;</li>
+
+<ul>
+<li>This transition is defined for animation and blend graph start nodes.</li><li>This
+is useful when setting up a bunch of random transitions out of a node,
+and making one transition be the fallback&nbsp;if all the others
+fail.</li>
+</ul>
+<li><a name="On_Conditional"></a><span style="font-style: italic; font-weight: bold;">On Conditional</span>: Triggered if its conditionals are met.</li>
+<ul>
+<li>Defined for all start nodes.</li>
+</ul>
+</ul><li><span style="font-weight: bold;"><span style="font-style: italic;">Blend Type</span></span>:&nbsp;</li><ul><li><span style="font-style: italic; font-weight: bold;">Linear</span>: Blend value advances linearly.</li><li><span style="font-weight: bold;"><span style="font-style: italic;">Smooth</span></span>: Blend value follows an s-curve so the blend appears smoother.</li></ul>
+<li><span style="font-style: italic; font-weight: bold;">Duration</span>:
+How long the transition will take to complete.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Probability</span>:
+Probability that the transition will happen when a loop occurs.</li>
+<ul>
+<li>This option is only available for On Loop and On Subloop
+transitions.</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Look Ahead</span>:
+Start the transition before the loop by this much.&nbsp;</li>
+<ul>
+<li>This option is only&nbsp;available for On Loop and On Subloop and
+Last Resort (On loop) transitions.</li>
+<li>Use
+this so that the start animation doesn't hit the end and freeze (if the
+start animation is set to One Shot), or loop around, during the
+transition.</li>
+<li>Set 0.0 and Set [Duration] set the look ahead value to
+predefined values.&nbsp;</li>
+<li>If
+the start animation is set as one shot, it is usually best to have the
+lookahead&nbsp;set to the duration of the transition.&nbsp;</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Subnode</span>:
+Which sub-node to node to watch for looping.</li>
+<ul>
+<li>This option is only available for On Subloop transitions.</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Output</span>:
+Which output channel of the sub-node to watch.</li>
+<ul>
+<li>This option is only available for On Subloop transitions.</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;"></span><br>
+</li><li><span style="font-style: italic; font-weight: bold;"></span>:</li>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Switch
+at Midpoint</span>: Process events from the start node until the
+midpoint of
+the transition is reached, then process events from the end
+node.&nbsp;</li>
+</ul>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Sample
+Both</span>: Process events from both the start and end nodes
+during the transition.</li>
+</ul>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Start
+Only</span>: Process events only from the start node.&nbsp;</li>
+</ul>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">End Only</span>:
+Process events only from the end node.&nbsp;</li>
+</ul>
+<ul>
+<li><span style="font-style: italic; font-weight: bold;">Neither</span>:
+Don't process&nbsp;events from either the start or end nodes during
+the transition.</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Preferred exit</span>: Set the preferred transition out of the end node,
+for use when transitioning out of the end node later.</li>
+<ul>
+<li>Preferred transition gets checked for success before
+the other transitions out of the end node.</li>
+<li>This is for tiebreaking transitions out of a node.</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;"><a name="End_Start_State"></a>End start state</span>: Override the start state in the end node.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Conditionals</span>:
+Set conditionals for this transition.&nbsp;</li>
+<ul>
+<li>The On Conditional transition type triggers as soon as its
+conditionals are met.</li>
+<li>Other transition types will proceed if their
+conditionals are true along with their other requirements (looped,
+requested, etc).</li>
+</ul>
+<li><span style="font-style: italic; font-weight: bold;">Synced
+Nodes</span>: Syncs a transition with the underlying
+animation's cycles or with&nbsp;an event.&nbsp;</li>
+<ul>
+<li>The most common use for this is syncing a transition
+between states with locomotion animations on a footstep event.&nbsp;</li><li><span style="font-style: italic; font-weight: bold;">Reference</span>:
+The node to watch for sync information.</li>
+<li><span style="font-style: italic; font-weight: bold;">Synced</span>:
+The node that will be synced. The end state of the transition will be
+started so that the events are in sync.</li>
+<li><span style="font-style: italic; font-weight: bold;">Ref. Edge</span>:
+The event output edge corresponding to the reference
+animation.&nbsp;</li>
+<li><span style="font-style: italic; font-weight: bold;">Sync Edge</span>:
+The event output corresponding to the synced animation. </li>
+<li>Use of Events and Edges is optional. If they are
+not set, the animations will sync on phase.&nbsp;</li>
+</ul>
+</ul>
+</ul><br>
+</body></html>
