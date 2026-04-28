@@ -22,7 +22,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 - **GR2 to SMD** (Only Windows) - Export Granny2 Models to Valve SMD with  Animations, Bone and Texture [Watch Video](https://youtu.be/I2yra8eqjds?t=200)
   - Tested with Only Metin2 assets 
   - More games coming soon
-- **Auto-Rig System** - Intelligent bone assignment using CS 1.6 skeleton reference [Watch Video](https://www.youtube.com/watch?v=dmAm790ER0c)
+- **Auto-Rig** - A bone assignment system [Watch Video](https://www.youtube.com/watch?v=dmAm790ER0c)
 
 ### Textures
 - **DTX Viewer & Extract** (Only Windows) - View and Extract LithTech Engine textures
