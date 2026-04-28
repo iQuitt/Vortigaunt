@@ -177,7 +177,7 @@ void Discord_Integration::UpdatePresence()
     activity.SetType(discordpp::ActivityTypes::Playing);
     activity.SetName("Vortigaunt");
     char buffer[128];
-    snprintf(buffer, sizeof(buffer), "Version %s.beta", VORTIGAUNT_VERSION_STRING);
+    snprintf(buffer, sizeof(buffer), "Version %s beta", VORTIGAUNT_VERSION_STRING);
     activity.SetState(std::string(buffer));
     activity.SetDetails(std::string("A Porting tool For Goldsrc Engine"));
 
