@@ -1,5 +1,5 @@
 
-# Vortigaunt <img align="right" width="128" height="128" src="https://i.ibb.co/ps8QRRs/yeerrrr.png" alt="VortigauntTool icon" />
+# Vortigaunt
 
 [![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/iQuitt/Vortigaunt?style=social)](https://github.com/iQuitt/Vortigaunt)
@@ -20,7 +20,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 ### Model Exports
 - **LTB to SMD** (Only Windows) - Export LithTech Models to Valve SMD with Animations and Bone [Watch Video](https://youtu.be/I2yra8eqjds?t=18)
 - **GR2 to SMD** (Only Windows) - Export Granny2 Models to Valve SMD with  Animations, Bone and Texture [Watch Video](https://youtu.be/I2yra8eqjds?t=200)
-  - Tested with Metin2 assets
+  - Tested with Only Metin2 assets 
   - More games coming soon
 - **Auto-Rig System** - Intelligent bone assignment using CS 1.6 skeleton reference [Watch Video](https://www.youtube.com/watch?v=dmAm790ER0c)
 
@@ -31,7 +31,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 ### Game Archive Files
 - **REZ File** - Extract and browse LithTech REZ archives (Tested only Crossfire)
 - **PAK File** - Extract and browse PAK files from Counter Strike Online
-- **XFS File** - Extract and browse XFS files from Wolfteam (it May work other Softynx games etc: Rakion) [Watch Video](https://youtu.be/lNnPhTMf2fs)
+- **XFS File** - Extract and browse XFS files from Wolfteam (it May work other Softynx games etc: Rakion)
 
 ### Sprite Management
 - **Sprite Viewer** - View, edit, and create GoldSrc sprites [Watch Video](https://youtu.be/q3DvdgdLPls)
@@ -106,8 +106,12 @@ cmake --build . -j$(nproc)
 - [ ] FBX to SMD
 - [ ] CODM Asset Support
 ---
-**The Source Code Will be Released As soon As Possible**
 
+Special Thanks to 
+-	Luís Leite for Counter Strike Online PAK (https://git.sr.ht/~leite/cso-pak)
+-	Kungfulon for Crossfire REZ  (https://gist.github.com/kungfulon/dfa49323eb7a55db964f10174e57c19f)
+-	Luigi Auriemma for XFS logic (https://aluigi.altervista.org/bms/xenesis.bms)
+-	YoungFine0825 for LTB2FBX (https://github.com/YoungFine0825/LTB2FBX)
 
 
 
