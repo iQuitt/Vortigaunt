@@ -22,7 +22,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 - **GR2 to SMD** (Only Windows) - Export Granny2 Models to Valve SMD with  Animations, Bone and Texture [Watch Video](https://youtu.be/I2yra8eqjds?t=200)
   - Tested with Metin2 assets
   - More games coming soon
-- **Auto-Rig System** - Intelligent bone assignment using CS 1.6 skeleton reference [Watch Video](https://www.youtube.com/watch?v=dmAm790ER0c)
+- **Auto-Rig** - A Bone Assingment System [Watch Video](https://www.youtube.com/watch?v=dmAm790ER0c)
 
 ### Textures
 - **DTX Viewer & Extract** (Only Windows) - View and Extract LithTech Engine textures
@@ -106,7 +106,13 @@ cmake --build . -j$(nproc)
 - [ ] FBX to SMD
 - [ ] CODM Asset Support
 ---
-**The Source Code Will be Released As soon As Possible**
+
+Special Thanks To:
+	Luís Leite for Counter Strike Online PAK (https://git.sr.ht/~leite/cso-pak)
+	Kungfulon for Crossfire REZ  (https://gist.github.com/kungfulon/dfa49323eb7a55db964f10174e57c19f)
+	Luigi Auriemma for XFS logic (https://aluigi.altervista.org/bms/xenesis.bms)
+	YoungFine0825 for LTB2FBX and DTX to TGA (https://github.com/YoungFine0825/LTB2FBX)
+	
 
 
 
