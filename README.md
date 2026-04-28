@@ -108,10 +108,10 @@ cmake --build . -j$(nproc)
 ---
 
 Special Thanks To:
-	Luís Leite for Counter Strike Online PAK (https://git.sr.ht/~leite/cso-pak)
-	Kungfulon for Crossfire REZ  (https://gist.github.com/kungfulon/dfa49323eb7a55db964f10174e57c19f)
-	Luigi Auriemma for XFS logic (https://aluigi.altervista.org/bms/xenesis.bms)
-	YoungFine0825 for LTB2FBX and DTX to TGA (https://github.com/YoungFine0825/LTB2FBX)
+- Luís Leite for Counter Strike Online PAK (https://git.sr.ht/~leite/cso-pak)
+- Kungfulon for Crossfire REZ  (https://gist.github.com/kungfulon/dfa49323eb7a55db964f10174e57c19f)
+- Luigi Auriemma for XFS logic (https://aluigi.altervista.org/bms/xenesis.bms)
+- YoungFine0825 for LTB2FBX and DTX to TGA (https://github.com/YoungFine0825/LTB2FBX)
 	
 
 
