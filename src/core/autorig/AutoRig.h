@@ -25,16 +25,18 @@ public:
     // assigns bone indices to each vertex
     // Returns vector of bone indices, one per vertex
     // vertexPositions: flat array of vertex positions (x,y,z for each vertex)
+    // vertexNormals: flat array of vertex normals (nx,ny,nz for each vertex) - optional, pass empty to disable normal filtering
     // useDepthPenalty: If true, uses hierarchy depth to prevent helper bones from stealing parent areas (good for players, bad for hands)
-    std::vector<int> RigVertices(const std::vector<float>& vertexPositions, bool useDepthPenalty = true);
+    std::vector<int> RigVertices(const std::vector<float>& vertexPositions, const std::vector<float>& vertexNormals, bool useDepthPenalty = true);
     
 
     // Rig vertices with triangle topology smoothing (recommended for SMD)
     // Uses mesh adjacency to smooth bone assignments at joint boundaries
     // vertexPositions: flat array (x,y,z per vertex), vertices are in triangle order (every 3 = 1 triangle)
+    // vertexNormals: flat array of vertex normals (nx,ny,nz per vertex) - optional, pass empty to disable
     // smoothingPasses: number of mesh-topology smoothing iterations (default 3)
     // useDepthPenalty: see RigVertices
-    std::vector<int> RigTriangles(const std::vector<float>& vertexPositions, int smoothingPasses = 3, bool useDepthPenalty = true);
+    std::vector<int> RigTriangles(const std::vector<float>& vertexPositions, const std::vector<float>& vertexNormals, int smoothingPasses = 3, bool useDepthPenalty = true);
     
     // Rig an Assimp mesh
     std::vector<int> RigMesh(const aiMesh* mesh);
@@ -73,7 +75,8 @@ private:
     aiMatrix4x4 CreateRotationMatrix(float rx, float ry, float rz) const;
     
     // Find the nearest bone for a given vertex position
-    int FindNearestBone(float x, float y, float z, bool useDepthPenalty = true) const;
+    // nx,ny,nz: vertex normal direction for directional filtering (set to 0,0,0 to disable)
+    int FindNearestBone(float x, float y, float z, float nx, float ny, float nz, bool useDepthPenalty = true) const;
     
     // Rotate a point around a pivot
     aiVector3D RotateAroundPivot(const aiVector3D& point, const aiVector3D& pivot, 

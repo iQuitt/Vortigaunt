@@ -8,12 +8,11 @@
 #define VORTIGAUNT_VERSION_STRING "1.0.0"
 
 // Build info (populated by CMake at configure time)
-#define VORTIGAUNT_GIT_COMMIT "4d56e74"
+#define VORTIGAUNT_GIT_COMMIT "4d36c82"
 #define VORTIGAUNT_GIT_BRANCH "master"
 #define VORTIGAUNT_BUILD_TYPE "Release"
 #define VORTIGAUNT_OS "Windows"
-#define VORTIGAUNT_SOURCE_DIR "C:/Users/Onur/source/repos/Vortigaunt/src"
-#define VORTIGAUNT_LINES_OF_CODE 33132
+#define VORTIGAUNT_LINES_OF_CODE 33131
 
 // GitHub repository for update checks
 #define VORTIGAUNT_GITHUB_OWNER "iQuitt"

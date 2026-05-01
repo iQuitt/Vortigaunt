@@ -4,6 +4,8 @@
 #include <cmath>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
+#include <queue>
 
 
 bool AutoRig::LoadSkeleton(const std::string& smdPath) {
@@ -174,7 +176,7 @@ static float PointToSegmentDistSq(const aiVector3D& point, const aiVector3D& seg
     return diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
 }
 
-int AutoRig::FindNearestBone(float x, float y, float z, bool useDepthPenalty) const {
+int AutoRig::FindNearestBone(float x, float y, float z, float nx, float ny, float nz, bool useDepthPenalty) const {
     if (m_boneWorldPositions.empty()) {
         return 0;
     }
@@ -184,10 +186,21 @@ int AutoRig::FindNearestBone(float x, float y, float z, bool useDepthPenalty) co
     
     aiVector3D vertex(x, y, z);
     constexpr float DEPTH_PENALTY = 0.03f;
+    
+    // Normal filtering
+    bool hasNormal = (nx * nx + ny * ny + nz * nz) > 0.001f;
 
     for (size_t p = 0; p < m_boneWorldPositions.size(); p++) {
         const aiVector3D& parentPos = m_boneWorldPositions[p];
         const std::vector<int>& children = m_boneChildren[p];
+        
+
+        if (m_bones[p].parentIndex < 0 && !children.empty()) {
+            float rootDistSq = parentPos.x * parentPos.x + parentPos.y * parentPos.y + parentPos.z * parentPos.z;
+            if (rootDistSq < 1.0f) {
+                continue; // skip origin-root bones
+            }
+        }
         
         if (children.empty()) {
             // Leaf or lone bone: evaluate point distance directly
@@ -201,11 +214,23 @@ int AutoRig::FindNearestBone(float x, float y, float z, bool useDepthPenalty) co
                 score *= (1.0f + m_boneDepths[p] * DEPTH_PENALTY);
             }
             
+            // Normal direction penalty
+            if (hasNormal && distSq > 0.0001f) {
+                float invDist = 1.0f / std::sqrt(distSq);
+                float dirX = -dx * invDist;
+                float dirY = -dy * invDist;
+                float dirZ = -dz * invDist;
+                float dot = dirX * nx + dirY * ny + dirZ * nz;
+                if (dot < -0.3f) {
+                    float t = (-dot - 0.3f) / 0.7f;
+                    score *= (1.0f + t * t * 1.5f);
+                }
+            }
+            
             if (score < minScore - 0.00001f) {
                 minScore = score;
                 bestBone = static_cast<int>(p);
             } else if (std::abs(score - minScore) <= 0.00001f) {
-                // Tie-breaker for overlapping bones
                 if (!useDepthPenalty && m_boneDepths[p] > m_boneDepths[bestBone]) {
                     bestBone = static_cast<int>(p);
                 } else if (useDepthPenalty && m_boneDepths[p] < m_boneDepths[bestBone]) {
@@ -219,9 +244,6 @@ int AutoRig::FindNearestBone(float x, float y, float z, bool useDepthPenalty) co
                 float t = 0.0f;
                 float distSq = PointToSegmentDistSq(vertex, parentPos, childPos, t);
                 
-                // Which joint on the segment is the vertex closer to?
-                // Split the segment at 50% to give half the volume to the child.
-                // This perfectly handles inverted hierarchies (like FPS hands where Elbow -> Shoulder).
                 int candidateBone = (t < 0.5f) ? static_cast<int>(p) : c;
                 
                 float score = distSq;
@@ -229,16 +251,47 @@ int AutoRig::FindNearestBone(float x, float y, float z, bool useDepthPenalty) co
                     score *= (1.0f + m_boneDepths[candidateBone] * DEPTH_PENALTY);
                 }
                 
+
+                
+                float segDx = childPos.x - parentPos.x;
+                float segDy = childPos.y - parentPos.y;
+                float segDz = childPos.z - parentPos.z;
+                float segLenSq = segDx * segDx + segDy * segDy + segDz * segDz;
+                if (segLenSq > 0.0001f) {
+                    float unclampedT = ((x - parentPos.x) * segDx + (y - parentPos.y) * segDy + (z - parentPos.z) * segDz) / segLenSq;
+                    if (unclampedT < 0.0f || unclampedT > 1.0f) {
+                        float overshoot = (unclampedT < 0.0f) ? -unclampedT : (unclampedT - 1.0f);
+                        score *= (1.0f + overshoot * overshoot * 2.0f);
+                    }
+                }
+                
+                
+                if (hasNormal && distSq > 0.0001f) {
+                    aiVector3D closestPt;
+                    closestPt.x = parentPos.x + t * (childPos.x - parentPos.x);
+                    closestPt.y = parentPos.y + t * (childPos.y - parentPos.y);
+                    closestPt.z = parentPos.z + t * (childPos.z - parentPos.z);
+                    float cdx = closestPt.x - x;
+                    float cdy = closestPt.y - y;
+                    float cdz = closestPt.z - z;
+                    float cDistSq = cdx * cdx + cdy * cdy + cdz * cdz;
+                    if (cDistSq > 0.0001f) {
+                        float invDist = 1.0f / std::sqrt(cDistSq);
+                        float dot = (cdx * invDist) * nx + (cdy * invDist) * ny + (cdz * invDist) * nz;
+                        if (dot < -0.3f) {
+                            float tt = (-dot - 0.3f) / 0.7f;
+                            score *= (1.0f + tt * tt * 1.5f);
+                        }
+                    }
+                }
+                
                 if (score < minScore - 0.00001f) {
                     minScore = score;
                     bestBone = candidateBone;
                 } else if (std::abs(score - minScore) <= 0.00001f) {
-                    // Tie-breaker for overlapping bones
                     if (!useDepthPenalty && m_boneDepths[candidateBone] > m_boneDepths[bestBone]) {
-                        // For weapons: deeper child wins ties (e.g. v_weapon.knife wins over v_weapon)
                         bestBone = candidateBone;
                     } else if (useDepthPenalty && m_boneDepths[candidateBone] < m_boneDepths[bestBone]) {
-                        // For players: shallower parent wins ties
                         bestBone = candidateBone;
                     }
                 }
@@ -249,10 +302,11 @@ int AutoRig::FindNearestBone(float x, float y, float z, bool useDepthPenalty) co
     return bestBone;
 }
 
-std::vector<int> AutoRig::RigVertices(const std::vector<float>& vertexPositions, bool useDepthPenalty) {
+std::vector<int> AutoRig::RigVertices(const std::vector<float>& vertexPositions, const std::vector<float>& vertexNormals, bool useDepthPenalty) {
     std::vector<int> boneIndices;
     
     size_t vertexCount = vertexPositions.size() / 3;
+    bool hasNormals = (vertexNormals.size() == vertexPositions.size());
     boneIndices.reserve(vertexCount);
 
     for (size_t i = 0; i < vertexCount; i++) {
@@ -260,14 +314,21 @@ std::vector<int> AutoRig::RigVertices(const std::vector<float>& vertexPositions,
         float y = vertexPositions[i * 3 + 1];
         float z = vertexPositions[i * 3 + 2];
         
-        boneIndices.push_back(FindNearestBone(x, y, z, useDepthPenalty));
+        float nx = 0.0f, ny = 0.0f, nz = 0.0f;
+        if (hasNormals) {
+            nx = vertexNormals[i * 3 + 0];
+            ny = vertexNormals[i * 3 + 1];
+            nz = vertexNormals[i * 3 + 2];
+        }
+        
+        boneIndices.push_back(FindNearestBone(x, y, z, nx, ny, nz, useDepthPenalty));
     }
 
     return boneIndices;
 }
 
-std::vector<int> AutoRig::RigTriangles(const std::vector<float>& vertexPositions, int smoothingPasses, bool useDepthPenalty) {
-    std::vector<int> boneIndices = RigVertices(vertexPositions, useDepthPenalty);
+std::vector<int> AutoRig::RigTriangles(const std::vector<float>& vertexPositions, const std::vector<float>& vertexNormals, int smoothingPasses, bool useDepthPenalty) {
+    std::vector<int> boneIndices = RigVertices(vertexPositions, vertexNormals, useDepthPenalty);
     
     size_t vertexCount = boneIndices.size();
     if (vertexCount < 3 || smoothingPasses <= 0) {
@@ -327,10 +388,100 @@ std::vector<int> AutoRig::RigTriangles(const std::vector<float>& vertexPositions
     
 
 
+    {
+        std::vector<int> regionId(vertexCount, -1);
+        std::vector<int> regionBone;
+        std::vector<int> regionSize;
+        // Store centroid per region
+        std::vector<float> regionCentroidX, regionCentroidY, regionCentroidZ;
+        int numRegions = 0;
+        
+        for (size_t i = 0; i < vertexCount; i++) {
+            if (regionId[i] >= 0) continue;
+            int bone = boneIndices[i];
+            std::queue<int> q;
+            q.push(static_cast<int>(i));
+            regionId[i] = numRegions;
+            int sz = 0;
+            float cx = 0, cy = 0, cz = 0;
+            while (!q.empty()) {
+                int v = q.front(); q.pop();
+                sz++;
+                cx += vertexPositions[v * 3 + 0];
+                cy += vertexPositions[v * 3 + 1];
+                cz += vertexPositions[v * 3 + 2];
+                for (int n : neighbors[v]) {
+                    if (regionId[n] < 0 && boneIndices[n] == bone) {
+                        regionId[n] = numRegions;
+                        q.push(n);
+                    }
+                }
+            }
+            regionBone.push_back(bone);
+            regionSize.push_back(sz);
+            regionCentroidX.push_back(cx / sz);
+            regionCentroidY.push_back(cy / sz);
+            regionCentroidZ.push_back(cz / sz);
+            numRegions++;
+        }
+        
+        // For each bone, find its largest region
+        std::unordered_map<int, int> largestRegionForBone;
+        std::unordered_map<int, int> largestSizeForBone;
+        for (int r = 0; r < numRegions; r++) {
+            int bone = regionBone[r];
+            if (regionSize[r] > largestSizeForBone[bone]) {
+                largestSizeForBone[bone] = regionSize[r];
+                largestRegionForBone[bone] = r;
+            }
+        }
+        
+        for (int r = 0; r < numRegions; r++) {
+            int bone = regionBone[r];
+            if (r == largestRegionForBone[bone]) continue;
+            if (regionSize[r] >= largestSizeForBone[bone]) continue;
+            
+            int mainRegion = largestRegionForBone[bone];
+            
+            float dx = regionCentroidX[r] - regionCentroidX[mainRegion];
+            float dy = regionCentroidY[r] - regionCentroidY[mainRegion];
+            float dz = regionCentroidZ[r] - regionCentroidZ[mainRegion];
+            float interIslandDist = std::sqrt(dx * dx + dy * dy + dz * dz);
+            
+            float boneLen = (bone < static_cast<int>(m_boneLengths.size())) ? m_boneLengths[bone] : 5.0f;
+            float threshold = std::max(10.0f, boneLen * 2.0f);
+            
+            if (interIslandDist < threshold) continue; // too close
+            
+            std::unordered_map<int, int> neighborBoneCounts;
+            for (size_t i = 0; i < vertexCount; i++) {
+                if (regionId[i] != r) continue;
+                for (int n : neighbors[i]) {
+                    if (regionId[n] != r) {
+                        neighborBoneCounts[boneIndices[n]]++;
+                    }
+                }
+            }
+            
+            if (neighborBoneCounts.empty()) continue;
+            
+            int bestBone = bone;
+            int bestCount = 0;
+            for (auto& [b, c] : neighborBoneCounts) {
+                if (c > bestCount) {
+                    bestCount = c;
+                    bestBone = b;
+                }
+            }
+            
+            for (size_t i = 0; i < vertexCount; i++) {
+                if (regionId[i] == r) {
+                    boneIndices[i] = bestBone;
+                }
+            }
+        }
+    }
 
-    // Each pass: if a vertex's bone assignment is the minority among its neighbors,
-    // switch it to the majority bone. This propagates correct assignments across
-    // joint boundaries, similar to heat diffusion on the mesh surface.
     std::vector<int> newIndices(vertexCount);
     
     for (int pass = 0; pass < smoothingPasses; pass++) {
@@ -342,9 +493,8 @@ std::vector<int> AutoRig::RigTriangles(const std::vector<float>& vertexPositions
                 continue;
             }
             
-            // Count bone votes from neighbors (include self)
             std::unordered_map<int, int> votes;
-            votes[boneIndices[i]] = 2;  // Self gets 2 votes (weighted anchor)
+            votes[boneIndices[i]] = 2;
             
             for (int neighborIdx : neighbors[i]) {
                 votes[boneIndices[neighborIdx]]++;
@@ -367,8 +517,6 @@ std::vector<int> AutoRig::RigTriangles(const std::vector<float>& vertexPositions
         }
         
         boneIndices = newIndices;
-        
-        // Early exit if nothing changed
         if (!changed) break;
     }
     
@@ -386,7 +534,13 @@ std::vector<int> AutoRig::RigMesh(const aiMesh* mesh) {
 
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         const aiVector3D& pos = mesh->mVertices[i];
-        boneIndices.push_back(FindNearestBone(pos.x, pos.y, pos.z));
+        float nx = 0.0f, ny = 0.0f, nz = 0.0f;
+        if (mesh->mNormals) {
+            nx = mesh->mNormals[i].x;
+            ny = mesh->mNormals[i].y;
+            nz = mesh->mNormals[i].z;
+        }
+        boneIndices.push_back(FindNearestBone(pos.x, pos.y, pos.z, nx, ny, nz));
     }
 
     return boneIndices;

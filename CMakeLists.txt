@@ -60,8 +60,6 @@ else()
     set(VORTIGAUNT_OS "Linux")
 endif()
 
-# Source directory path (for runtime line counting in About dialog)
-set(VORTIGAUNT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 # Count lines of code at configure time
 file(GLOB_RECURSE ALL_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp")

@@ -271,26 +271,38 @@ void AutoRigDialog::onRig() {
     QApplication::processEvents();
     
     std::vector<float> vertexPositions;
+    std::vector<float> vertexNormals;
     for (const auto& tri : triangles) {
         for (int v = 0; v < 3; v++) {
             float x = tri.vertices[v].x * scale;
             float y = tri.vertices[v].y * scale;
             float z = tri.vertices[v].z * scale;
+            float nx = tri.vertices[v].nx;
+            float ny = tri.vertices[v].ny;
+            float nz = tri.vertices[v].nz;
             
             if (flipYZ) {
                 float temp = y;
                 y = z;
                 z = -temp;
+                
+                float tempN = ny;
+                ny = nz;
+                nz = -tempN;
             }
             
             vertexPositions.push_back(x);
             vertexPositions.push_back(y);
             vertexPositions.push_back(z);
+            
+            vertexNormals.push_back(nx);
+            vertexNormals.push_back(ny);
+            vertexNormals.push_back(nz);
         }
     }
     
     // Use topology smoothing (RigTriangles) with 10 passes to fix joint boundaries
-    std::vector<int> boneIndices = gsrcAutorig.RigTriangles(vertexPositions, 10, useDepthPenalty);
+    std::vector<int> boneIndices = gsrcAutorig.RigTriangles(vertexPositions, vertexNormals, 10, useDepthPenalty);
     VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2Rigged ^5%1 ^2vertices with topology smoothing.").arg(boneIndices.size()));
     setProgress(80);
     
