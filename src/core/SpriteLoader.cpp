@@ -431,9 +431,13 @@ bool SpriteLoader::createSpriteV2(const std::string& outputPath,const std::vecto
     // Create composite image for palette generation
     QImage compositeImage = buildCompositeImage(frameImages);
     
-    // Create palette (255 colors + 1 transparency) using libimagequant
+    // Create palette (254 colors) using libimagequant
     QVector<QRgb> colorTable = buildPaletteWithLiq(
-        compositeImage.convertToFormat(QImage::Format_RGBA8888), 255);
+        compositeImage.convertToFormat(QImage::Format_RGBA8888), 254);
+    
+    // Force exact background color into the palette to prevent Additive sprite background artifacts
+    colorTable.prepend(qRgb(bgR, bgG, bgB));
+
     while (colorTable.size() < 255)
         colorTable.append(qRgb(0, 0, 0));
     
@@ -591,9 +595,13 @@ bool SpriteLoader::convertV3ToV2(const std::string& inputPath, const std::string
     // Create composite image for palette generation
     QImage compositeImage = buildCompositeImage(rgbFrames);
     
-    // Create palette (255 colors + 1 transparency) using libimagequant
+    // Create palette (254 colors + 1 bg color + 1 transparency) using libimagequant
     QVector<QRgb> colorTable = buildPaletteWithLiq(
-        compositeImage.convertToFormat(QImage::Format_RGBA8888), 255);
+        compositeImage.convertToFormat(QImage::Format_RGBA8888), 254);
+    
+    // Force exact background color into the palette to prevent Additive sprite background artifacts
+    colorTable.prepend(qRgb(bgR, bgG, bgB));
+
     while (colorTable.size() < 255)
         colorTable.append(qRgb(0, 0, 0));
     // Add transparency color at index 255 (always blue = sprite transparency key)
