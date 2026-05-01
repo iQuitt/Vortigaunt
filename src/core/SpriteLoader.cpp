@@ -420,6 +420,19 @@ bool SpriteLoader::createSpriteV2(const std::string& outputPath,const std::vecto
         
         QImage rgbImg = alphaCompositeOnto(img.convertToFormat(QImage::Format_ARGB32), bgR, bgG, bgB);
         
+        for (int y = 0; y < rgbImg.height(); y++) {
+            QRgb* scanLine = reinterpret_cast<QRgb*>(rgbImg.scanLine(y));
+            for (int x = 0; x < rgbImg.width(); x++) {
+                int r = qRed(scanLine[x]);
+                int g = qGreen(scanLine[x]);
+                int b = qBlue(scanLine[x]);
+                
+                if (std::abs(r - bgR) < 15 && std::abs(g - bgG) < 15 && std::abs(b - bgB) < 15) {
+                    scanLine[x] = qRgb(bgR, bgG, bgB);
+                }
+            }
+        }
+        
         maxWidth = std::max(maxWidth, static_cast<int32_t>(rgbImg.width()));
         maxHeight = std::max(maxHeight, static_cast<int32_t>(rgbImg.height()));
         frameImages.push_back(rgbImg);
@@ -584,6 +597,19 @@ bool SpriteLoader::convertV3ToV2(const std::string& inputPath, const std::string
         
         QImage rgbImg = alphaCompositeOnto(
             frame.image.convertToFormat(QImage::Format_ARGB32), bgR, bgG, bgB);
+
+        for (int y = 0; y < rgbImg.height(); y++) {
+            QRgb* scanLine = reinterpret_cast<QRgb*>(rgbImg.scanLine(y));
+            for (int x = 0; x < rgbImg.width(); x++) {
+                int r = qRed(scanLine[x]);
+                int g = qGreen(scanLine[x]);
+                int b = qBlue(scanLine[x]);
+                
+                if (std::abs(r - bgR) < 15 && std::abs(g - bgG) < 15 && std::abs(b - bgB) < 15) {
+                    scanLine[x] = qRgb(bgR, bgG, bgB);
+                }
+            }
+        }
         
         rgbFrames.push_back(rgbImg);
         frameOrigins.push_back({frame.origin_x, frame.origin_y});
