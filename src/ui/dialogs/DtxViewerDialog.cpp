@@ -179,8 +179,24 @@ void DtxViewerDialog::onSaveBmp()
     if (outPath.isEmpty())
         return;
 
-    // Use octree quantisation (same as CLI) for best quality
+
+
     QImage argb = m_currentImage.convertToFormat(QImage::Format_ARGB32);
+
+    if (m_currentImage.hasAlphaChannel()) {
+        for (int y = 0; y < argb.height(); ++y) {
+            QRgb* scanLine = reinterpret_cast<QRgb*>(argb.scanLine(y));
+            for (int x = 0; x < argb.width(); ++x) {
+                if (qAlpha(scanLine[x]) < 5) {// TODO: I need take a look this value or go another way, because some of textures we got still green background. not at all but some pixels are green in some textures.
+                    scanLine[x] = qRgb(0, 0, 0);
+                }
+                else {
+                    scanLine[x] = qRgb(qRed(scanLine[x]), qGreen(scanLine[x]), qBlue(scanLine[x]));
+                }
+            }
+        }
+    }
+
     if (!BMP::saveAsIndexed8(outPath.toStdString().c_str(),
                                   argb.width(), argb.height(),
                                   reinterpret_cast<const uint32_t*>(argb.constBits())))
