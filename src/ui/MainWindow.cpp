@@ -151,6 +151,8 @@ MainWindow::MainWindow(QWidget* parent)
 
 	setWindowState(Qt::WindowMaximized);
     setAcceptDrops(true);
+    setMinimumWidth(800);
+    setMinimumHeight(600);
 
     // Menu bar with Tools entries
     m_toolsMenu = menuBar()->addMenu(tr("Tools"));
@@ -180,7 +182,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_spriteViewAction = goldSrcMenu->addAction(tr("Sprite Viewer..."));
     connect(m_spriteViewAction, &QAction::triggered, this, &MainWindow::onOpenSpriteViewer);
 
-    m_wadMakerAction = goldSrcMenu->addAction(tr("Wad Editor..."));
+    m_wadMakerAction = goldSrcMenu->addAction(tr("WAD Editor..."));
     connect(m_wadMakerAction, &QAction::triggered, this, &MainWindow::onOpenWadMaker);
     
     m_pakViewAction = goldSrcMenu->addAction(tr("PAK Viewer (CSO)..."));
@@ -337,8 +339,8 @@ MainWindow::MainWindow(QWidget* parent)
     auto* opLayout = new QHBoxLayout();
     opLayout->addWidget(new QLabel(tr("Mode:")));
     m_operationCombo = new QComboBox();
-    m_operationCombo->addItem(tr("Convert LTB "));
-    m_operationCombo->addItem(tr("Convert GR2 "));
+    m_operationCombo->addItem(tr("Convert LTB"));
+    m_operationCombo->addItem(tr("Convert GR2"));
     m_operationCombo->addItem(tr("Convert MSE Effect (Metin2 Effect Script)"));
     m_operationCombo->addItem(tr("Extract REZ file"));
     //m_operationCombo->addItem(tr("Multi-REZ extract (folder with  REZ)"));
