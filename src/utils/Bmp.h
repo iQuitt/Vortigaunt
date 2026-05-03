@@ -15,13 +15,14 @@
 #endif
 
 #include "libimagequant.h" // optimize the palette using 
+#include "FileIO.h"
 
 namespace BMP
 {
 
 inline bool writeIndexed8(const char* filename, int width, int height,  const uint8_t* paletteData, const uint8_t* pixelData)
 {
-    FILE* f = fopen(filename, "wb");
+    FILE* f = FileIO::openFile(std::string(filename), "wb");
     if (!f) return false;
 
     uint32_t offBits  = 14 + 40 + 1024;

@@ -2,6 +2,7 @@
 #include "core/VortigauntLog.h"
 
 #include <fstream>
+#include "utils/FileIO.h"
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
@@ -281,7 +282,7 @@ bool RezExtractor::Load(const std::string& rezFilePath)
     m_entries.clear();
     m_rezFilePath = rezFilePath;
 
-    std::ifstream in(rezFilePath, std::ios::binary);
+    std::ifstream in(FileIO::toPath(rezFilePath), std::ios::binary);
     if (!in)
     {
         VortigauntLog::LogF("Error: cannot open REZ file: ^4%s^7\n", rezFilePath.c_str());
@@ -307,14 +308,14 @@ bool RezExtractor::ExtractAll(const std::string& outputDir) const
     }
 
     std::error_code ec;
-    std::filesystem::create_directories(outputDir, ec);
+    std::filesystem::create_directories(FileIO::toPath(outputDir), ec);
     if (ec)
     {
         VortigauntLog::LogF("^1Error:^7 failed to create output directory: ^4%s^7 (%s)\n", outputDir.c_str(), ec.message().c_str());
         return false;
     }
 
-    std::ifstream in(m_rezFilePath, std::ios::binary);
+    std::ifstream in(FileIO::toPath(m_rezFilePath), std::ios::binary);
     if (!in)
     {
         VortigauntLog::LogF("^1Error:^7 cannot reopen REZ file for extraction: ^4%s^7\n", m_rezFilePath.c_str());
@@ -361,7 +362,7 @@ bool RezExtractor::ExtractAll(const std::string& outputDir) const
             continue;
 
         // Build sanitized path
-        std::filesystem::path relPath(e.filename);
+        std::filesystem::path relPath = FileIO::toPath(e.filename);
         std::filesystem::path safeRelPath;
         for (const auto& part : relPath)
         {
@@ -375,7 +376,7 @@ bool RezExtractor::ExtractAll(const std::string& outputDir) const
             safeRelPath = SanitizePathComponent(e.filename);
         }
 
-        std::filesystem::path outPath = std::filesystem::path(outputDir) / safeRelPath;
+        std::filesystem::path outPath = FileIO::toPath(outputDir) / safeRelPath;
         std::filesystem::path parentDir = outPath.parent_path();
         
         // Track directories to create
@@ -488,14 +489,14 @@ bool RezExtractor::ExtractSelectedEntries(const std::vector<size_t>& indices, co
     }
 
     std::error_code ec;
-    std::filesystem::create_directories(outputDir, ec);
+    std::filesystem::create_directories(FileIO::toPath(outputDir), ec);
     if (ec)
     {
         VortigauntLog::LogF("ERROR:^7 failed to create output directory: ^4%s^7 (%s)\n", outputDir.c_str(), ec.message().c_str());
         return false;
     }
 
-    std::ifstream in(m_rezFilePath, std::ios::binary);
+    std::ifstream in(FileIO::toPath(m_rezFilePath), std::ios::binary);
     if (!in)
     {
         VortigauntLog::LogF("ERROR:^7 cannot reopen REZ file for extraction: ^4%s^7\n", m_rezFilePath.c_str());
@@ -535,7 +536,7 @@ bool RezExtractor::ExtractSelectedEntries(const std::vector<size_t>& indices, co
         if (e.size > MAX_ENTRY_SIZE)
             continue;
 
-        std::filesystem::path relPath(e.filename);
+        std::filesystem::path relPath = FileIO::toPath(e.filename);
         std::filesystem::path safeRelPath;
         for (const auto& part : relPath)
         {
@@ -549,7 +550,7 @@ bool RezExtractor::ExtractSelectedEntries(const std::vector<size_t>& indices, co
             safeRelPath = SanitizePathComponent(e.filename);
         }
 
-        std::filesystem::path outPath = std::filesystem::path(outputDir) / safeRelPath;
+        std::filesystem::path outPath = FileIO::toPath(outputDir) / safeRelPath;
         std::filesystem::path parentDir = outPath.parent_path();
         
         if (!parentDir.empty() && createdDirs.find(parentDir) == createdDirs.end())
@@ -650,7 +651,7 @@ bool RezExtractor::ExtractEntryToMemory(const RezEntry& entry, std::vector<char>
     if (m_rezFilePath.empty() || entry.size == 0)
         return false;
 
-    std::ifstream in(m_rezFilePath, std::ios::binary);
+    std::ifstream in(FileIO::toPath(m_rezFilePath), std::ios::binary);
     if (!in)
         return false;
 
@@ -689,7 +690,7 @@ bool RezExtractor::ExtractEntry(const RezEntry& entry, const std::string& output
     if (!ExtractEntryToMemory(entry, data))
         return false;
 
-    std::filesystem::path outPath(outputPath);
+    std::filesystem::path outPath = FileIO::toPath(outputPath);
     
     std::error_code ec;
     std::filesystem::create_directories(outPath.parent_path(), ec);

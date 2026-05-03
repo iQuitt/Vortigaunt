@@ -19,6 +19,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include "utils/FileIO.h"
 
 #include "util.hpp"
 #include "LanguageManager.h"
@@ -153,8 +154,7 @@ void PakViewerWindow::onOpenPak()
 bool PakViewerWindow::loadPak(const QString& filePath)
 {
     // Read file
-    std::filesystem::path fsPath = filePath.toStdString();
-
+    std::filesystem::path fsPath = filePath.toStdWString();
     std::ifstream is(fsPath, std::ios::binary | std::ios::ate);
     if (!is)
     {
@@ -350,8 +350,8 @@ void PakViewerWindow::openEntryInViewer(size_t index)
 
         QString fileName = QFileInfo(qPath).fileName();
         QString tempFilePath = tempDir + "/" + fileName;
-
-        std::ofstream os(tempFilePath.toStdString(), std::ios::binary);
+        std::filesystem::path tempPath = tempFilePath.toStdWString();
+        std::ofstream os(tempPath, std::ios::binary);
         if (!os)
         {
             QApplication::restoreOverrideCursor();

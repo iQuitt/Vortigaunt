@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cctype>
+#include "utils/FileIO.h"
 
 // Trim whitespace
 std::string SmdParser::Trim(const std::string& str) {
@@ -17,7 +18,7 @@ bool SmdParser::Parse(const std::string& filePath) {
     m_valid = false;
     m_error.clear();
 
-    std::ifstream file(filePath);
+    std::ifstream file(FileIO::toPath(filePath));
     if (!file.is_open()) {
         m_error = "Failed to open file: " + filePath;
         return false;

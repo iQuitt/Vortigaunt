@@ -1,4 +1,11 @@
 #include "de_file.h"
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+#include <string>
 
 BaseFileStream::BaseFileStream()
 {
@@ -38,7 +45,26 @@ void DosFileStream::Release()
 
 LTRESULT DosFileStream::Open(const char *pName)
 {
-	FILE *fp = fopen(pName, "rb");
+	FILE *fp = nullptr;
+
+#ifdef _WIN32
+	if (pName && pName[0] != '\0')
+	{
+		int wlen = MultiByteToWideChar(CP_UTF8, 0, pName, -1, nullptr, 0);
+		if (wlen > 0)
+		{
+			std::wstring wstr(wlen, L'\0');
+			MultiByteToWideChar(CP_UTF8, 0, pName, -1, &wstr[0], wlen);
+			fp = _wfopen(wstr.c_str(), L"rb");
+		}
+	}
+	if (!fp)
+	{
+		fp = fopen(pName, "rb"); 
+	}
+#else
+	fp = fopen(pName, "rb");
+#endif
 
 	if (!fp)
 	{

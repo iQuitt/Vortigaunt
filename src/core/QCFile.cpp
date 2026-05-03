@@ -1,6 +1,7 @@
 #include "QCFile.h"
 #include <filesystem>
 #include "VortigauntVersion.h"
+#include "utils/FileIO.h"
 
 void QCFile::AddSequence(const std::string& name, const std::string& smdPath, int fps)
 {
@@ -13,7 +14,7 @@ void QCFile::AddSequence(const std::string& name, const std::string& smdPath, in
 
 bool QCFile::Write(const std::string& outputPath)
 {
-    std::ofstream file(outputPath);
+    std::ofstream file(FileIO::toPath(outputPath));
     if (!file.is_open())
     {
         m_error = "Failed to create QC file: " + outputPath;

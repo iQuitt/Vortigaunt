@@ -1,17 +1,18 @@
 #include "fsutils.hpp"
 
 #include <fstream>
+#include "utils/FileIO.h"
 // this isnt mine code i took from this project https://git.sr.ht/~leite/cso-pak
 
 std::pair<bool, std::vector<uint8_t>> ReadFileToBuffer(
     std::string_view filename, uint64_t readLength /*= 0*/)
 {
-    if (fs::is_regular_file(filename.data()) == false)
+    if (FileIO::isRegularFile(std::string(filename)) == false)
     {
         return { false, {} };
     }
 
-    std::ifstream is(filename.data(), std::ios::binary | std::ios::ate);
+    std::ifstream is(FileIO::toPath(std::string(filename)), std::ios::binary | std::ios::ate);
 
     if (is.is_open() == false)
     {
@@ -34,7 +35,7 @@ std::pair<bool, std::vector<uint8_t>> ReadFileToBuffer(
 
 bool WriteBufferToFile(std::span<uint8_t> buff, std::string_view filename)
 {
-    std::ofstream os(filename.data(), std::ios::binary);
+    std::ofstream os(FileIO::toPath(std::string(filename)), std::ios::binary);
 
     if (os.is_open() == false)
     {

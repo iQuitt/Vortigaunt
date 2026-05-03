@@ -52,17 +52,15 @@ public:
     void AddHiddenMeshIndex(unsigned int index) { m_hiddenMeshIndices.insert(index); }
     void ClearHiddenMeshIndices() { m_hiddenMeshIndices.clear(); }
 
-    // Manual skeleton support (for AutoRig)
+    // for AutoRig
     void SetSkeleton(const std::vector<SmdBone>& bones) { m_manualBones = bones; }
     void SetMaterialName(const std::string& name) { m_materialName = name; }
     const std::string& GetError() const { return m_error; }
 
-    // Export from Assimp scene (implemented in SmdWriter.cpp)
     bool ExportMeshSMD(const aiScene* scene, const std::string& outputPath);
     bool ExportAnimationSMD(const aiScene* scene, int animIndex, const std::string& outputPath);
     bool ExportAllAnimationsSMD(const aiScene* scene, const std::string& baseOutputPath);
 
-    // Export with manual skeleton (for AutoRig - replaces GoldSrcSmdWriter)
     bool ExportSmdTriangles(const std::string& outputPath,
         const std::vector<SmdTriangle>& triangles,
         const std::vector<int>& boneIndices);
@@ -73,12 +71,10 @@ public:
         const aiScene* scene,
         const std::vector<std::vector<int>>& boneIndicesPerMesh);
 
-    // Animation interpolation (implemented in SmdWriter.cpp)
     aiVector3D InterpolatePosition(aiNodeAnim* nodeAnim, double time);
     aiQuaternion InterpolateRotation(aiNodeAnim* nodeAnim, double time);
     aiMatrix4x4 GetGlobalTransform(aiNode* node);
 
-    // SMD writing helpers (implemented in SmdWriter.cpp)
     void WriteHeader(std::ofstream& file);
     std::string SanitizeNodeName(const std::string& name);
     void WriteNodes(std::ofstream& file, const aiScene* scene);
@@ -86,7 +82,6 @@ public:
     void WriteSkeletonAnimation(std::ofstream& file, const aiScene* scene, int animIndex);
     void WriteTriangles(std::ofstream& file, const aiScene* scene);
 
-    // Manual skeleton helpers (implemented in SmdWriter.cpp)
     void WriteManualNodes(std::ofstream& file);
     void WriteManualSkeleton(std::ofstream& file);
     void WriteManualTriangles(std::ofstream& file, const std::vector<SmdTriangle>& triangles, const std::vector<int>& boneIndices);
@@ -94,7 +89,6 @@ public:
     void WriteManualTrianglesScene(std::ofstream& file, const aiScene* scene, const std::vector<std::vector<int>>& boneIndicesPerMesh);
     std::string GetMaterialNameFromMesh(const aiScene* scene, const aiMesh* mesh) const;
 
-    // Helper functions (implemented in SmdWriter.cpp)
     void BuildNodeList(aiNode* node);
     int GetNodeIndex(aiNode* node);
     aiNode* FindNodeByName(aiNode* node, const std::string& name);

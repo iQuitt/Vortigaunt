@@ -11,6 +11,7 @@
 #include <cstring> 
 #include <cstdint> 
 #include <cmath>   
+#include "utils/util.hpp"
 
 #include "granny.h"
 
@@ -58,13 +59,13 @@ void Gr2Converter::SetConverterSettings(const Gr2ConverterSettings& settings)
 int Gr2Converter::ConvertSingleGr2File(const std::string& inputFilePath, const std::string& outputFilePath)
 {
     // Store the GR2 file directory for texture search
-    s_currentGr2FileDir = std::filesystem::path(inputFilePath).parent_path().string();
+    s_currentGr2FileDir = String_UTF16toUTF8(FileIO::toPath(inputFilePath).parent_path().generic_u16string());
     if (!s_currentGr2FileDir.empty() && s_currentGr2FileDir.back() != '/' && s_currentGr2FileDir.back() != '\\')
     {
         s_currentGr2FileDir += std::filesystem::path::preferred_separator;
     }
     
-    if (!std::filesystem::exists(inputFilePath))
+    if (!std::filesystem::exists(FileIO::toPath(inputFilePath)))
     {
         Vortigaunt_Printf("ERROR: GR2 file does not exist: " + inputFilePath);
         return GR2_CONVERT_RET_INVALID_INPUT_FILE;
@@ -109,9 +110,9 @@ int Gr2Converter::ConvertSingleGr2File(const std::string& inputFilePath, const s
     // Export textures if materials are enabled
     if (m_settings.ExportMaterials && m_grannyFileInfo && m_grannyFileInfo->TextureCount > 0)
     {
-        std::filesystem::path outputDir = std::filesystem::path(outputFilePath).parent_path();
+        std::filesystem::path outputDir = FileIO::toPath(outputFilePath).parent_path();
         std::string smdFilePath = outputFilePath;
-        exportTextures(outputDir.string(), smdFilePath);
+        exportTextures(String_UTF16toUTF8(outputDir.generic_u16string()), smdFilePath);
     }
 
     clearData();
@@ -119,11 +120,37 @@ int Gr2Converter::ConvertSingleGr2File(const std::string& inputFilePath, const s
     return GR2_CONVERT_RET_OK;
 }
 
+static bool ReadFileToBuffer(const std::string& inputFilePath, std::vector<char>& buffer)
+{
+    std::ifstream file(FileIO::toPath(inputFilePath), std::ios::binary | std::ios::ate);
+    if (!file)
+        return false;
+        
+    std::streamsize size = file.tellg();
+    if (size <= 0)
+        return false;
+        
+    file.seekg(0, std::ios::beg);
+    buffer.resize(static_cast<size_t>(size));
+    
+    if (!file.read(buffer.data(), size))
+    {
+        buffer.clear();
+        return false;
+    }
+        
+    return true;
+}
+
 std::vector<std::string> Gr2Converter::GetAnimationNames(const std::string& inputFilePath)
 {
     std::vector<std::string> names;
     
-    granny_file* file = GrannyReadEntireFile(inputFilePath.c_str());
+    std::vector<char> buffer;
+    if (!ReadFileToBuffer(inputFilePath, buffer))
+        return names;
+        
+    granny_file* file = GrannyReadEntireFileFromMemory(static_cast<granny_int32x>(buffer.size()), buffer.data());
     if (!file)
         return names;
     
@@ -150,7 +177,11 @@ std::vector<std::string> Gr2Converter::GetAnimationNames(const std::string& inpu
 
 int Gr2Converter::GetPolygonCount(const std::string& inputFilePath)
 {
-    granny_file* file = GrannyReadEntireFile(inputFilePath.c_str());
+    std::vector<char> buffer;
+    if (!ReadFileToBuffer(inputFilePath, buffer))
+        return 0;
+
+    granny_file* file = GrannyReadEntireFileFromMemory(static_cast<granny_int32x>(buffer.size()), buffer.data());
     if (!file)
         return 0;
     
@@ -185,13 +216,13 @@ int Gr2Converter::GetPolygonCount(const std::string& inputFilePath)
 aiScene* Gr2Converter::LoadAndGetScene(const std::string& inputFilePath, const std::string& textureOutputDir)
 {
     // Store the GR2 file directory for texture search
-    s_currentGr2FileDir = std::filesystem::path(inputFilePath).parent_path().string();
+    s_currentGr2FileDir = String_UTF16toUTF8(FileIO::toPath(inputFilePath).parent_path().generic_u16string());
     if (!s_currentGr2FileDir.empty() && s_currentGr2FileDir.back() != '/' && s_currentGr2FileDir.back() != '\\')
     {
         s_currentGr2FileDir += std::filesystem::path::preferred_separator;
     }
     
-    if (!std::filesystem::exists(inputFilePath))
+    if (!std::filesystem::exists(FileIO::toPath(inputFilePath)))
     {
         Vortigaunt_Printf("ERROR: GR2 file does not exist: " + inputFilePath);
         return nullptr;
@@ -234,7 +265,7 @@ aiScene* Gr2Converter::LoadAndGetScene(const std::string& inputFilePath, const s
 int Gr2Converter::ConvertGr2Animation(const std::string& inputFilePath, const std::string& outputFilePath, int animationIndex, const std::string& skeletonSourceFile)
 {
     
-    if (!std::filesystem::exists(inputFilePath))
+    if (!std::filesystem::exists(FileIO::toPath(inputFilePath)))
     {
         Vortigaunt_Printf("ERROR: GR2 file does not exist: " + inputFilePath);
         return GR2_CONVERT_RET_INVALID_INPUT_FILE;
@@ -243,17 +274,22 @@ int Gr2Converter::ConvertGr2Animation(const std::string& inputFilePath, const st
     // Load skeleton from main model file if provided
     granny_file* skeletonFile = nullptr;
     granny_file_info* skeletonFileInfo = nullptr;
-    if (!skeletonSourceFile.empty() && std::filesystem::exists(skeletonSourceFile))
+    std::vector<char> skeletonBuffer;
+    
+    if (!skeletonSourceFile.empty() && std::filesystem::exists(FileIO::toPath(skeletonSourceFile)))
     {
-        skeletonFile = GrannyReadEntireFile(skeletonSourceFile.c_str());
-        if (skeletonFile)
+        if (ReadFileToBuffer(skeletonSourceFile, skeletonBuffer))
         {
-            skeletonFileInfo = GrannyGetFileInfo(skeletonFile);
-            if (!skeletonFileInfo || skeletonFileInfo->ModelCount == 0)
+            skeletonFile = GrannyReadEntireFileFromMemory(static_cast<granny_int32x>(skeletonBuffer.size()), skeletonBuffer.data());
+            if (skeletonFile)
             {
-                GrannyFreeFile(skeletonFile);
-                skeletonFile = nullptr;
-                skeletonFileInfo = nullptr;
+                skeletonFileInfo = GrannyGetFileInfo(skeletonFile);
+                if (!skeletonFileInfo || skeletonFileInfo->ModelCount == 0)
+                {
+                    GrannyFreeFile(skeletonFile);
+                    skeletonFile = nullptr;
+                    skeletonFileInfo = nullptr;
+                }
             }
         }
     }
@@ -360,8 +396,10 @@ int Gr2Converter::ConvertGr2Animation(const std::string& inputFilePath, const st
         if (m_assimpScene && m_assimpScene->mNumAnimations > animationIndex)
         {
             aiAnimation* selectedAnim = m_assimpScene->mAnimations[animationIndex];
+            aiAnimation** newAnims = new aiAnimation*[1];
+            newAnims[0] = selectedAnim;
+            m_assimpScene->mAnimations = newAnims;
             m_assimpScene->mNumAnimations = 1;
-            m_assimpScene->mAnimations = &selectedAnim;
         }
     }
     
@@ -385,10 +423,17 @@ bool Gr2Converter::loadGr2File(const std::string& inputFilePath)
 {
     clearData();
 
-    m_grannyFile = GrannyReadEntireFile(inputFilePath.c_str());
+    if (!ReadFileToBuffer(inputFilePath, m_grannyBuffer))
+    {
+        Vortigaunt_Printf("ERROR: Failed to read GR2 file to buffer");
+        return false;
+    }
+
+    m_grannyFile = GrannyReadEntireFileFromMemory(static_cast<granny_int32x>(m_grannyBuffer.size()), m_grannyBuffer.data());
     if (!m_grannyFile)
     {
-        Vortigaunt_Printf("ERROR: Failed to read GR2 file");
+        Vortigaunt_Printf("ERROR: Failed to parse GR2 file");
+        m_grannyBuffer.clear();
         return false;
     }
 
@@ -1522,7 +1567,7 @@ bool Gr2Converter::exportTextures(const std::string& outputDir, const std::strin
         return true; // No textures is OK
     }
 
-    std::filesystem::path outputPath(outputDir);
+    std::filesystem::path outputPath = FileIO::toPath(outputDir);
     
     std::vector<std::string> exportedTexturePaths;
     int exportedCount = 0;
@@ -1535,7 +1580,7 @@ bool Gr2Converter::exportTextures(const std::string& outputDir, const std::strin
         }
 
         std::string sourceTexPath = grannyTex->FromFileName;
-        std::filesystem::path sourcePath(sourceTexPath);
+        std::filesystem::path sourcePath = FileIO::toPath(sourceTexPath);
         
         // Try to find the texture file
         std::filesystem::path actualSourcePath;
@@ -1550,7 +1595,7 @@ bool Gr2Converter::exportTextures(const std::string& outputDir, const std::strin
             // Try just the filename in the GR2 file's directory
             if (!s_currentGr2FileDir.empty())
             {
-                std::filesystem::path tryPath = std::filesystem::path(s_currentGr2FileDir) / sourcePath.filename();
+                std::filesystem::path tryPath = FileIO::toPath(s_currentGr2FileDir) / sourcePath.filename();
                 if (std::filesystem::exists(tryPath))
                 {
                     actualSourcePath = tryPath;
@@ -1567,7 +1612,7 @@ bool Gr2Converter::exportTextures(const std::string& outputDir, const std::strin
         if (!actualSourcePath.empty() && std::filesystem::exists(actualSourcePath))
         {
             // Determine output texture filename
-            std::string texName = sourcePath.stem().string();
+            std::string texName = String_UTF16toUTF8(sourcePath.stem().generic_u16string());
             // Sanitize filename (remove invalid characters)
             for (char& c : texName)
             {
@@ -1577,24 +1622,24 @@ bool Gr2Converter::exportTextures(const std::string& outputDir, const std::strin
                 }
             }
             
-            std::filesystem::path targetPath = outputPath / (texName + ".bmp");
+            std::filesystem::path targetPath = outputPath / FileIO::toPath(texName + ".bmp");
             
             try
             {
                 // Convert texture to 8-bit indexed color BMP
-                if (!convertTextureto8IndexedBMP(actualSourcePath.string(), targetPath.string()))
+                if (!convertTextureto8IndexedBMP(String_UTF16toUTF8(actualSourcePath.generic_u16string()), String_UTF16toUTF8(targetPath.generic_u16string())))
                 {
-                    Vortigaunt_Printf("WARNING: Failed to convert texture " + sourcePath.filename().string() + " to 8-bit BMP");
+                    Vortigaunt_Printf("WARNING: Failed to convert texture " + String_UTF16toUTF8(sourcePath.filename().generic_u16string()) + " to 8-bit BMP");
                 }
                 else
                 {
-                    exportedTexturePaths.push_back(targetPath.string());
+                    exportedTexturePaths.push_back(String_UTF16toUTF8(targetPath.generic_u16string()));
                     exportedCount++;
                 }
             }
             catch (const std::exception& e)
             {
-                Vortigaunt_Printf("WARNING: Failed to export texture " + sourcePath.filename().string() + " : " + e.what());
+                Vortigaunt_Printf("WARNING: Failed to export texture " + String_UTF16toUTF8(sourcePath.filename().generic_u16string()) + " : " + e.what());
             }
         }
         else
@@ -1606,7 +1651,7 @@ bool Gr2Converter::exportTextures(const std::string& outputDir, const std::strin
     if (exportedCount > 0)
     {
         // If SMD file exists, rename textures to match SMD texture names
-        if (!smdFilePath.empty() && std::filesystem::exists(smdFilePath))
+        if (!smdFilePath.empty() && std::filesystem::exists(FileIO::toPath(smdFilePath)))
         {
             std::vector<std::string> smdTextureNames = parseSmdTextureNames(smdFilePath);
             if (!smdTextureNames.empty())
@@ -1623,13 +1668,13 @@ std::vector<std::string> Gr2Converter::parseSmdTextureNames(const std::string& s
 {
     std::vector<std::string> textureNames;
     
-    if (!std::filesystem::exists(smdFilePath))
+    if (!std::filesystem::exists(FileIO::toPath(smdFilePath)))
     {
         Vortigaunt_Printf("WARNING: SMD file not found : " + smdFilePath);
         return textureNames;
     }
     
-    std::ifstream file(smdFilePath);
+    std::ifstream file(FileIO::toPath(smdFilePath));
     if (!file.is_open())
     {
         Vortigaunt_Printf("WARNING: Failed to open SMD file: " + smdFilePath);
@@ -1711,7 +1756,7 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
     Vortigaunt_Printf("DEBUG: renameTexturesToMatchSmd: SMD texture names count: " + std::to_string(smdTextureNames.size()));
     Vortigaunt_Printf("DEBUG: renameTexturesToMatchSmd: Exported texture paths count: " + std::to_string(exportedTexturePaths.size()));
     
-    std::filesystem::path outputPath(outputDir);
+    std::filesystem::path outputPath = FileIO::toPath(outputDir);
     int renamedCount = 0;
     
     // Create a map of exported texture paths by their base name (without extension)
@@ -1720,14 +1765,14 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
     std::map<std::string, std::filesystem::path> exportedTextureMap;
     for (const auto& exportedPath : exportedTexturePaths)
     {
-        std::filesystem::path path(exportedPath);
+        std::filesystem::path path = FileIO::toPath(exportedPath);
         if (std::filesystem::exists(path))
         {
-            std::string baseName = path.stem().string();
+            std::string baseName = String_UTF16toUTF8(path.stem().generic_u16string());
             // Convert to lowercase for case-insensitive matching
-            std::transform(baseName.begin(), baseName.end(), baseName.begin(), ::tolower);
+            std::transform(baseName.begin(), baseName.end(), baseName.begin(), [](unsigned char c){ return std::tolower(c); });
             exportedTextureMap[baseName] = path;
-            Vortigaunt_Printf("DEBUG:   Exported texture: '" + baseName + "' -> " + path.string());
+            Vortigaunt_Printf("DEBUG:   Exported texture: '" + baseName + "' -> " + String_UTF16toUTF8(path.generic_u16string()));
         }
     }
     
@@ -1742,7 +1787,7 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
             if (mesh)
             {
                 std::string meshName = mesh->mName.C_Str();
-                std::transform(meshName.begin(), meshName.end(), meshName.begin(), ::tolower);
+                std::transform(meshName.begin(), meshName.end(), meshName.begin(), [](unsigned char c){ return std::tolower(c); });
                 meshNameToMaterialIndex[meshName] = mesh->mMaterialIndex;
                 Vortigaunt_Printf("DEBUG:     Mesh '" + std::string(mesh->mName.C_Str()) + "' -> material index " + std::to_string(mesh->mMaterialIndex));
             }
@@ -1765,7 +1810,7 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
             if (mesh)
             {
                 std::string meshName = mesh->mName.C_Str();
-                std::transform(meshName.begin(), meshName.end(), meshName.begin(), ::tolower);
+                std::transform(meshName.begin(), meshName.end(), meshName.begin(), [](unsigned char c){ return std::tolower(c); });
                 meshNameToOrder[meshName] = meshOrder++;
             }
         }
@@ -1780,7 +1825,7 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
         {
             smdBaseName = smdBaseName.substr(0, dotPos);
         }
-        std::transform(smdBaseName.begin(), smdBaseName.end(), smdBaseName.begin(), ::tolower);
+        std::transform(smdBaseName.begin(), smdBaseName.end(), smdBaseName.begin(), [](unsigned char c){ return std::tolower(c); });
         
         Vortigaunt_Printf("DEBUG:   Processing SMD texture name: '" + smdTexName + "' (base: '" + smdBaseName + "')");
         
@@ -1796,11 +1841,11 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
             // Material index should correspond to texture index in GR2
             if (materialIndex >= 0 && materialIndex < static_cast<int>(exportedTexturePaths.size()))
             {
-                std::filesystem::path candidatePath(exportedTexturePaths[materialIndex]);
+                std::filesystem::path candidatePath = FileIO::toPath(exportedTexturePaths[materialIndex]);
                 if (std::filesystem::exists(candidatePath) && usedTextures.find(candidatePath) == usedTextures.end())
                 {
                     matchingTexturePath = candidatePath;
-                    Vortigaunt_Printf("DEBUG: Matched via material index: " + candidatePath.string());
+                    Vortigaunt_Printf("DEBUG: Matched via material index: " + String_UTF16toUTF8(candidatePath.generic_u16string()));
                 }
             }
             else
@@ -1816,7 +1861,7 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
             if (it != exportedTextureMap.end() && usedTextures.find(it->second) == usedTextures.end())
             {
                 matchingTexturePath = it->second;
-                Vortigaunt_Printf("DEBUG: Matched via direct name: " + matchingTexturePath.string());
+                Vortigaunt_Printf("DEBUG: Matched via direct name: " + String_UTF16toUTF8(matchingTexturePath.generic_u16string()));
             }
             else
             {
@@ -1836,11 +1881,11 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
                 // Try to match by order: first mesh -> first texture, etc.
                 if (meshOrder >= 0 && meshOrder < static_cast<int>(exportedTexturePaths.size()))
                 {
-                    std::filesystem::path candidatePath(exportedTexturePaths[meshOrder]);
+                    std::filesystem::path candidatePath = FileIO::toPath(exportedTexturePaths[meshOrder]);
                     if (std::filesystem::exists(candidatePath) && usedTextures.find(candidatePath) == usedTextures.end())
                     {
                         matchingTexturePath = candidatePath;
-                        Vortigaunt_Printf("DEBUG:  Matched via mesh order: " + matchingTexturePath.string());
+                        Vortigaunt_Printf("DEBUG:  Matched via mesh order: " + String_UTF16toUTF8(matchingTexturePath.generic_u16string()));
                     }
                 }
             }
@@ -1856,7 +1901,7 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
                 finalSmdName += ".bmp";
             }
             
-            std::filesystem::path newPath = outputPath / finalSmdName;
+            std::filesystem::path newPath = outputPath / FileIO::toPath(finalSmdName);
             
             // If the new name is different from the old name, rename it
             if (matchingTexturePath.filename() != newPath.filename())
@@ -1875,7 +1920,7 @@ void Gr2Converter::renameTexturesToMatchSmd(const std::string& outputDir, const 
                 }
                 catch (const std::exception& e)
                 {
-                    Vortigaunt_Printf("WARNING: Failed to rename texture " + matchingTexturePath.filename().string() + " to " + finalSmdName + ": " + e.what());
+                    Vortigaunt_Printf("WARNING: Failed to rename texture " + String_UTF16toUTF8(matchingTexturePath.filename().generic_u16string()) + " to " + finalSmdName + ": " + e.what());
                 }
             }
         }
@@ -1900,7 +1945,7 @@ bool Gr2Converter::convertTextureto8IndexedBMP(const std::string& inputPath, con
             
         if (sourceImage.isNull())
         {
-            Vortigaunt_Printf("ERROR: Failed to decode DDS file: " + std::filesystem::path(inputPath).filename().string());
+            Vortigaunt_Printf("ERROR: Failed to decode DDS file: " + String_UTF16toUTF8(FileIO::toPath(inputPath).filename().generic_u16string()));
             return false;
         }
     }
@@ -1953,7 +1998,7 @@ bool Gr2Converter::convertTextureto8IndexedBMP(const std::string& inputPath, con
     Vortigaunt_Printf("WARNING: Qt not available in CLI build, texture conversion to 8-bit BMP not supported");
     try
     {
-        std::filesystem::copy_file(inputPath, outputPath, std::filesystem::copy_options::overwrite_existing);
+        std::filesystem::copy_file(FileIO::toPath(inputPath), FileIO::toPath(outputPath), std::filesystem::copy_options::overwrite_existing);
         return true;
     }
     catch (const std::exception& e)
@@ -1995,8 +2040,8 @@ std::string Gr2Converter::getTextureBaseName(granny_texture* texture)
     if (!texture || !texture->FromFileName)
         return "unnamed";
     
-    std::filesystem::path texPath(texture->FromFileName);
-    return texPath.stem().string();
+    std::filesystem::path texPath = FileIO::toPath(std::string(texture->FromFileName));
+    return texPath.stem().generic_string();
 }
 
 // Find texture index in file info
@@ -2020,6 +2065,7 @@ void Gr2Converter::clearData()
         GrannyFreeFile(m_grannyFile);
         m_grannyFile = nullptr;
         m_grannyFileInfo = nullptr;
+        m_grannyBuffer.clear();
     }
 
     m_meshes.clear();

@@ -7,6 +7,8 @@
 
 #include <filesystem>
 #include <vector>
+#include "utils/FileIO.h"
+#include "utils/util.hpp"
 
 // from https://github.com/YoungFine0825/LTB2FBX/blob/main/Source/Converter.cpp
 // Use system temp directory to avoid permission issues in Program Files
@@ -128,9 +130,9 @@ bool ltbConverter::doConvertLTB(LTBModelPtr ltbModel, std::string outFilePath)
 	//
 
 	// Export as SMD format
-	std::filesystem::path outPath(outFilePath);
-	std::string parentDir = outPath.parent_path().string();
-	std::string baseName = outPath.stem().string();
+	std::filesystem::path outPath = FileIO::toPath(outFilePath);
+	std::string parentDir = String_UTF16toUTF8(outPath.parent_path().generic_u16string());
+	std::string baseName = String_UTF16toUTF8(outPath.stem().generic_u16string());
 
 	// Create base path properly
 	std::string basePath;
@@ -679,7 +681,7 @@ bool ltbConverter::readLTBHeader(LTB_Header* head, DosFileStream* stream)
 
 bool ltbConverter::decodingLTBFile(const std::string& ltbFilePath, DosFileStream* fileStream)
 {
-	FILE* f = fopen(DECODING_TEMP_FILE_PATH, "w");
+	FILE* f = FileIO::openFile(DECODING_TEMP_FILE_PATH, "w");
 	if (f)
 	{
 		fclose(f);

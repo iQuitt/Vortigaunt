@@ -6,6 +6,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include "utils/FileIO.h"
 #include <cstdarg>
 #include <cstdio>
 #include <algorithm>
@@ -57,7 +58,7 @@ bool PakExtractor::ExtractSingle(const std::string& pakPath, const std::string& 
 {
     namespace fs = std::filesystem;
 
-    fs::path pakFsPath = fs::path(pakPath);
+    fs::path pakFsPath = FileIO::toPath(pakPath);
     if (!fs::exists(pakFsPath))
     {
         VortigauntLog::LogF("Error: Input path does not exist: %s", pakPath.c_str());
@@ -78,7 +79,7 @@ bool PakExtractor::ExtractSingle(const std::string& pakPath, const std::string& 
         baseOut = "VortigauntOutput";
     }
     std::error_code ec;
-    fs::create_directories(baseOut, ec);
+    fs::create_directories(FileIO::toPath(baseOut), ec);
     if (ec)
     {
         VortigauntLog::LogF("^2Error:^7 failed to create output directory: %s", ec.message().c_str());
@@ -133,7 +134,7 @@ bool PakExtractor::ExtractSingle(const std::string& pakPath, const std::string& 
         return true;  // Not an error, just empty
     }
 
-    fs::path baseOutPath = fs::path(baseOut);
+    fs::path baseOutPath = FileIO::toPath(baseOut);
     size_t okCount = 0;
     size_t totalEntries = entries.size();
 
@@ -206,7 +207,7 @@ size_t PakExtractor::ExtractMultiple(const std::vector<std::string>& pakPaths, c
 
         ReportFileProgress(i + 1, totalFiles);
 
-        fs::path pakFsPath(pakPath);
+        fs::path pakFsPath = FileIO::toPath(pakPath);
         VortigauntLog::LogF("--- Extracting: %s ---", pakFsPath.filename().string().c_str());
 
         auto ext = pakFsPath.extension().string();
@@ -227,7 +228,7 @@ size_t PakExtractor::ExtractMultiple(const std::vector<std::string>& pakPaths, c
         std::string targetDir;
         if (separateFolders)
         {
-            targetDir = (fs::path(outputDir) / pakFsPath.stem()).string();
+            targetDir = (FileIO::toPath(outputDir) / pakFsPath.stem()).string();
         }
         else
         {

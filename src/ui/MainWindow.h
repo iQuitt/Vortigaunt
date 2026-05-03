@@ -155,7 +155,7 @@ private:
     
     // Log filtering
     QComboBox*     m_logFilterCombo;
-    QPushButton*   m_exportLogButton;
+    QPushButton*   m_saveLogButton;
     QPushButton*   m_clearLogButton;
     VortigauntLog::LogLevel m_currentLogFilter;
     

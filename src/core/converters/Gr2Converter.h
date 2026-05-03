@@ -92,6 +92,7 @@ private:
     // Granny2 SDK data
     granny_file* m_grannyFile;
     granny_file_info* m_grannyFileInfo;
+    std::vector<char> m_grannyBuffer;
     
     // Assimp scene for export
     struct aiScene* m_assimpScene;

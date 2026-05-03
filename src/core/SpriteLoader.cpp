@@ -3,6 +3,7 @@
 #endif
 #include "SpriteLoader.h"
 #include "core/VortigauntLog.h"
+#include "utils/FileIO.h"
 
 #include <fstream>
 #include <algorithm>
@@ -91,7 +92,7 @@ void SpriteLoader::rebuildFramesFromPalette()
 
 bool SpriteLoader::loadFile(const std::string& filePath, bool transparent)
 {
-    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+    std::ifstream file(FileIO::toPath(filePath), std::ios::binary | std::ios::ate);
     if (!file)
         return false;
     
@@ -355,7 +356,7 @@ bool SpriteLoader::saveFile(const std::string& outputPath)
         return false;
     }
     
-    std::ofstream outFile(outputPath, std::ios::binary);
+    std::ofstream outFile(FileIO::toPath(outputPath), std::ios::binary);
     if (!outFile.is_open())
         return false;
     
@@ -457,7 +458,7 @@ bool SpriteLoader::createSpriteV2(const std::string& outputPath,const std::vecto
 	colorTable.append(qRgb(0, 0, 255));// blue is transparency key
     
     // Write sprite file
-    std::ofstream outFile(outputPath, std::ios::binary);
+    std::ofstream outFile(FileIO::toPath(outputPath), std::ios::binary);
     if (!outFile)
         return false;
     
@@ -634,7 +635,7 @@ bool SpriteLoader::convertV3ToV2(const std::string& inputPath, const std::string
     colorTable.append(qRgb(0, 0, 255));
     
     // Write V2 sprite file
-    std::ofstream outFile(outputPath, std::ios::binary);
+    std::ofstream outFile(FileIO::toPath(outputPath), std::ios::binary);
     if (!outFile)
         return false;
     

@@ -1,6 +1,7 @@
 #include "core/VortigauntLog.h"
 #include "VortigauntVersion.h"
 #include "utils/Platform.h"
+#include "utils/FileIO.h"
 #include <iostream>
 #include <fstream>
 #include <mutex>
@@ -59,7 +60,7 @@ namespace VortigauntLog
             }
         }
 
-        std::ofstream file(g_logFilePath, std::ios::app);
+        std::ofstream file(FileIO::toPath(g_logFilePath), std::ios::app);
         if (file.is_open()) {
             file << getTimeStamp() << rawMsg << std::endl;
         }
@@ -234,7 +235,7 @@ namespace VortigauntLog
         g_logFilePath = logFileName;
         
         // Clear log file on start
-        std::ofstream file(g_logFilePath, std::ios::trunc);
+        std::ofstream file(FileIO::toPath(g_logFilePath), std::ios::trunc);
         if (file.is_open()) {
             file << "================================================================================" << std::endl;
             file << "VortigauntTool v" << VORTIGAUNT_VERSION_STRING

@@ -4,6 +4,7 @@
 #include "utils/Bmp.h"
 #include <string>
 #include <fstream>
+#include "utils/FileIO.h"
 #include <filesystem>
 
 
@@ -29,7 +30,7 @@ DtxConverter::~DtxConverter()
 
 int DtxConverter::ConvertSingleDTXFile(const std::string& format, const std::string& inputFilePath, const std::string& outFilePath)
 {
-	FILE* f = fopen(DECODING_TEMP_FILE_PATH, "w");
+	FILE* f = FileIO::openFile(DECODING_TEMP_FILE_PATH, "w");
 	if (f)
 	{
 		fclose(f);
@@ -66,7 +67,7 @@ int DtxConverter::ConvertSingleDTXFile(const std::string& format, const std::str
 bool DtxConverter::DecodeDTXToRGBA(const std::string& inputFilePath, std::vector<unsigned int>& outPixels, int& width, int& height)
 {
     // Handle optional LZMA compression
-    FILE* f = fopen(DECODING_TEMP_FILE_PATH, "w");
+    FILE* f = FileIO::openFile(DECODING_TEMP_FILE_PATH, "w");
     if (f)
     {
         fclose(f);

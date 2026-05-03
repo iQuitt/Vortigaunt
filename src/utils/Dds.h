@@ -382,7 +382,7 @@ inline QImage loadDdsFromMemory(const std::vector<uint8_t>& ddsData)
  */
 inline QImage loadDdsToQImage(const QString& filePath)
 {
-    std::ifstream file(filePath.toStdString(), std::ios::binary);
+    std::ifstream file(std::filesystem::path(filePath.toStdWString()), std::ios::binary);
     if (!file)
         return QImage();
     

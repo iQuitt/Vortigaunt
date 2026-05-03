@@ -1,6 +1,7 @@
 #include "WadMaker.h"
 #include "core/VortigauntLog.h"
 #include "utils/Bmp.h"
+#include "utils/FileIO.h"
 #include "libimagequant.h"
 
 
@@ -262,7 +263,7 @@ bool WadArchive::resizeAndValidate(WadTexture& texture)
 
 bool WadArchive::loadBmp(const std::string& path, WadTexture& texture)
 {
-    std::ifstream file(path, std::ios::binary);
+    std::ifstream file(FileIO::toPath(path), std::ios::binary);
     if (!file)
     {
         Vortigaunt_Printf("ERROR: Cannot open BMP file: " + path);
@@ -598,7 +599,7 @@ bool WadArchive::save(const std::string& outputPath)
     Vortigaunt_Printf("Saving WAD file: " + outputPath);
     Vortigaunt_Printf("  Textures: " + std::to_string(m_textures.size()));
     
-    std::ofstream file(outputPath, std::ios::binary);
+    std::ofstream file(FileIO::toPath(outputPath), std::ios::binary);
     if (!file)
     {
         Vortigaunt_Printf("ERROR: Cannot create WAD file: " + outputPath);
@@ -695,7 +696,7 @@ bool WadArchive::save(const std::string& outputPath)
 
 bool WadArchive::load(const std::string& path)
 {
-    std::ifstream file(path, std::ios::binary);
+    std::ifstream file(FileIO::toPath(path), std::ios::binary);
     if (!file)
     {
         Vortigaunt_Printf("ERROR: Cannot open WAD file: " + path);

@@ -1,12 +1,14 @@
 #include "SmdWriter.h"
 #include "core/VortigauntLog.h"
+#include "utils/FileIO.h"
+#include "utils/util.hpp"
 
 // ExportMeshSMD - Export mesh as reference SMD (contains geometry and skeleton)
 bool SmdWriter::ExportMeshSMD(const aiScene* scene, const std::string& outputPath)
 {
     if (!scene) return false;
 
-    std::ofstream file(outputPath);
+    std::ofstream file(FileIO::toPath(outputPath));
     if (!file.is_open()) {
         std::cerr << "Failed to create SMD file: " << outputPath << std::endl;
         return false;
@@ -38,7 +40,7 @@ bool SmdWriter::ExportAnimationSMD(const aiScene* scene, int animIndex, const st
         m_progressCallback();
     }
 
-    std::ofstream file(outputPath);
+    std::ofstream file(FileIO::toPath(outputPath));
     if (!file.is_open()) {
         std::cerr << "Failed to create animation SMD file: " << outputPath << std::endl;
         return false;
@@ -69,9 +71,9 @@ bool SmdWriter::ExportAllAnimationsSMD(const aiScene* scene, const std::string& 
 {
     if (!scene || scene->mNumAnimations == 0) return false;
 
-    std::filesystem::path basePath(baseOutputPath);
-    std::string baseDir = basePath.parent_path().string();
-    std::string baseName = basePath.stem().string();
+    std::filesystem::path basePath = FileIO::toPath(baseOutputPath);
+    std::string baseDir = String_UTF16toUTF8(basePath.parent_path().generic_u16string());
+    std::string baseName = String_UTF16toUTF8(basePath.stem().generic_u16string());
 
     for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
         std::string animName = scene->mAnimations[i]->mName.C_Str();
@@ -656,17 +658,13 @@ std::string SmdWriter::GetTextureName(const aiScene* scene, unsigned int materia
     aiString texturePath;
 
     if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS) {
-        std::filesystem::path path(texturePath.C_Str());
-        return path.stem().string();
+        std::filesystem::path path = FileIO::toPath(std::string(texturePath.C_Str()));
+        return path.stem().generic_string();
     }
 
     return "default";
 }
 
-// ============================================================================
-// Manual Skeleton Support (replaces GoldSrcSmdWriter)
-// Used by AutoRig for exporting meshes with custom bone assignments
-// ============================================================================
 
 // WriteManualNodes - Write nodes section from manual skeleton
 void SmdWriter::WriteManualNodes(std::ofstream& file)
@@ -882,7 +880,7 @@ bool SmdWriter::ExportSmdTriangles(const std::string& outputPath,
         return false;
     }
     
-    std::ofstream file(outputPath);
+    std::ofstream file(FileIO::toPath(outputPath));
     if (!file.is_open()) {
         m_error = "Failed to open output file: " + outputPath;
         return false;
@@ -912,7 +910,7 @@ bool SmdWriter::ExportMeshWithManualSkeleton(const std::string& outputPath,
         return false;
     }
     
-    std::ofstream file(outputPath);
+    std::ofstream file(FileIO::toPath(outputPath));
     if (!file.is_open()) {
         m_error = "Failed to open output file: " + outputPath;
         return false;
@@ -947,7 +945,7 @@ bool SmdWriter::ExportSceneWithManualSkeleton(const std::string& outputPath,
         return false;
     }
     
-    std::ofstream file(outputPath);
+    std::ofstream file(FileIO::toPath(outputPath));
     if (!file.is_open()) {
         m_error = "Failed to open output file: " + outputPath;
         return false;

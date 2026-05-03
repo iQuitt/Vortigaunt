@@ -2,6 +2,7 @@
 #include "core/VortigauntLog.h"
 
 #include <fstream>
+#include "utils/FileIO.h"
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
@@ -11,6 +12,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include "utils/fsutils.hpp"
+#include "utils/util.hpp"
 
 #include "zlib.h"
 
@@ -228,7 +230,7 @@ bool XfsExtractor::Load(const std::string& xfsFilePath)
     m_entries.clear();
     m_xfsFilePath = xfsFilePath;
 
-    std::ifstream in(xfsFilePath, std::ios::binary | std::ios::ate);
+    std::ifstream in(FileIO::toPath(xfsFilePath), std::ios::binary | std::ios::ate);
     if (!in)
     {
         VortigauntLog::LogF("^1[XFS] Error:^7 cannot open file: ^4%s^7\n", xfsFilePath.c_str());
@@ -557,7 +559,7 @@ bool XfsExtractor::ExtractEntry(const XfsEntry& entry, const std::string& output
         return false;
 
     // Create parent directory
-    std::filesystem::path outPath(outputPath);
+    std::filesystem::path outPath = FileIO::toPath(outputPath);
     std::error_code ec;
     std::filesystem::create_directories(outPath.parent_path(), ec);
     if (ec)
@@ -566,7 +568,7 @@ bool XfsExtractor::ExtractEntry(const XfsEntry& entry, const std::string& output
         return false;
     }
 
-    std::ifstream in(m_xfsFilePath, std::ios::binary);
+    std::ifstream in(FileIO::toPath(m_xfsFilePath), std::ios::binary);
     if (!in)
     {
         VortigauntLog::LogF("^1[XFS]^7 Failed to open archive for extraction\n");
@@ -672,7 +674,7 @@ bool XfsExtractor::ExtractEntry(const XfsEntry& entry, const std::string& output
     }
 
     // Write output file
-    std::ofstream out(outputPath, std::ios::binary);
+    std::ofstream out(FileIO::toPath(outputPath), std::ios::binary);
     if (!out)
     {
         VortigauntLog::LogF("^1[XFS]^7 Failed to create output file: ^4%s^7\n", outputPath.c_str());
@@ -690,7 +692,7 @@ bool XfsExtractor::ExtractEntryToMemory(const XfsEntry& entry, std::vector<uint8
     if (m_xfsFilePath.empty())
         return false;
 
-    std::ifstream in(m_xfsFilePath, std::ios::binary);
+    std::ifstream in(FileIO::toPath(m_xfsFilePath), std::ios::binary);
     if (!in)
         return false;
 
@@ -745,7 +747,7 @@ bool XfsExtractor::ExtractAll(const std::string& outputDir) const
     }
 
     std::error_code ec;
-    std::filesystem::create_directories(outputDir, ec);
+    std::filesystem::create_directories(FileIO::toPath(outputDir), ec);
     if (ec)
     {
          VortigauntLog::LogF("^1[XFS]^7 Failed to create output directory: %s\n", ec.message().c_str());
@@ -771,7 +773,7 @@ bool XfsExtractor::ExtractAll(const std::string& outputDir) const
     for (size_t idx : indices)
     {
         const XfsEntry& e = m_entries[idx];
-        std::filesystem::path outPath = std::filesystem::path(outputDir) / e.filename;
+        std::filesystem::path outPath = FileIO::toPath(outputDir) / FileIO::toPath(e.filename);
         if (outPath.has_parent_path())
         {
             dirs.insert(outPath.parent_path());
@@ -784,7 +786,7 @@ bool XfsExtractor::ExtractAll(const std::string& outputDir) const
     }
 
     // Open single file handle with large buffer for all extractions
-    std::ifstream in(m_xfsFilePath, std::ios::binary);
+    std::ifstream in(FileIO::toPath(m_xfsFilePath), std::ios::binary);
     if (!in)
     {
     VortigauntLog::LogF("^1[XFS]^7 Failed to open archive\n");
@@ -810,7 +812,7 @@ bool XfsExtractor::ExtractAll(const std::string& outputDir) const
     {
         const XfsEntry& e = m_entries[indices[i]];
         
-        std::filesystem::path outPath = std::filesystem::path(outputDir) / e.filename;
+        std::filesystem::path outPath = FileIO::toPath(outputDir) / FileIO::toPath(e.filename);
         
         // Inline extraction for speed (avoid function call overhead)
         bool success = false;
@@ -907,7 +909,7 @@ bool XfsExtractor::ExtractSelectedEntries(const std::vector<size_t>& indices, co
         return false;
     }
 
-    std::filesystem::create_directories(outputDir);
+    std::filesystem::create_directories(FileIO::toPath(outputDir));
 
     // Sort by offset
     std::vector<size_t> sortedIndices = indices;
@@ -923,7 +925,7 @@ bool XfsExtractor::ExtractSelectedEntries(const std::vector<size_t>& indices, co
     {
         if (idx >= m_entries.size()) continue;
         const XfsEntry& e = m_entries[idx];
-        std::filesystem::path outPath = std::filesystem::path(outputDir) / e.filename;
+        std::filesystem::path outPath = FileIO::toPath(outputDir) / FileIO::toPath(e.filename);
         if (!outPath.parent_path().empty())
         {
             dirs.insert(outPath.parent_path());
@@ -943,9 +945,9 @@ bool XfsExtractor::ExtractSelectedEntries(const std::vector<size_t>& indices, co
         if (idx >= m_entries.size()) continue;
 
         const XfsEntry& e = m_entries[idx];
-        std::filesystem::path outPath = std::filesystem::path(outputDir) / e.filename;
+        std::filesystem::path outPath = FileIO::toPath(outputDir) / FileIO::toPath(e.filename);
 
-        if (ExtractEntry(e, outPath.string()))
+        if (ExtractEntry(e, String_UTF16toUTF8(outPath.generic_u16string())))
         {
             ++successCount;
         }
