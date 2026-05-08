@@ -1154,7 +1154,13 @@ void MainWindow::convertLtb(const QString& inputPath, const QString& outputDir, 
             if (!outputDir.isEmpty())
             {
                 QFileInfo fi(inFile);
-                outFile = QDir(outputDir).filePath(fi.completeBaseName() + ".smd");
+                QString baseName = fi.completeBaseName();
+                QString targetFolder = QDir(outputDir).filePath(baseName);
+                
+                std::error_code ec;
+                std::filesystem::create_directories(targetFolder.toStdWString(), ec);
+                
+                outFile = QDir(targetFolder).filePath(baseName + ".smd");
             }
 
             VortigauntLog::Vortigaunt_Printf(QStringLiteral("Converting LTB..."));
