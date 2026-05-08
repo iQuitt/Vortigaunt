@@ -130,7 +130,6 @@ private:
     QMatrix4x4 interpolateTranslation(const aiVectorKey* keys, unsigned int numKeys, float time);
     QMatrix4x4 interpolateRotation(const aiQuatKey* keys, unsigned int numKeys, float time);
     QMatrix4x4 interpolateScaling(const aiVectorKey* keys, unsigned int numKeys, float time);
-    void drawFPS();
     
     QOpenGLShaderProgram* m_shaderProgram;
     std::vector<std::unique_ptr<MeshData>> m_meshes;
@@ -185,12 +184,6 @@ private:
     
     std::function<void(const QString&)> m_logCallback;
     bool m_glInitialized;
-    
-    // FPS tracking
-    QElapsedTimer m_fpsTimer;
-    int m_frameCount;
-    float m_currentFPS;
-    qint64 m_lastFpsUpdate;
     
     // Animation timing
     QElapsedTimer m_animationElapsedTimer;

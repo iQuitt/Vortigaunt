@@ -68,13 +68,9 @@ GLBViewer::GLBViewer(QWidget* parent)
     , m_scene(nullptr)
     , m_importerHolder(nullptr)
     , m_glInitialized(false)
-    , m_frameCount(0)
-    , m_currentFPS(0.0f)
-    , m_lastFpsUpdate(0)
     , m_lastAnimationTime(-1.0f)
 {
     setMinimumSize(400, 400);
-    m_fpsTimer.start();
     
     // Initialize network manager
     m_networkManager = new QNetworkAccessManager(this);
@@ -358,39 +354,6 @@ void GLBViewer::paintGL()
         }
     }
 
-    // FPS calculation - update every frame for smoother display
-    m_frameCount++;
-    qint64 currentTime = m_fpsTimer.elapsed();
-    
-    // FPS calculation - FIXED: Calculate every frame
-    static qint64 lastFrameTime = 0;
-    if (lastFrameTime == 0) {
-        lastFrameTime = currentTime;
-        m_currentFPS = 0.0f;
-    } else {
-        qint64 frameElapsed = currentTime - lastFrameTime;
-        if (frameElapsed > 0) {
-            float frameFPS = 1000.0f / frameElapsed;
-            if (m_currentFPS == 0.0f) {
-                m_currentFPS = frameFPS;
-            } else {
-                m_currentFPS = m_currentFPS * 0.9f + frameFPS * 0.1f;
-            }
-        }
-        lastFrameTime = currentTime;
-    }
-    
-    // Also update frame count for periodic logging
-    if (m_lastFpsUpdate == 0) {
-        m_lastFpsUpdate = currentTime;
-    } else {
-        qint64 elapsed = currentTime - m_lastFpsUpdate;
-        if (elapsed >= 1000) {
-            m_frameCount = 0;
-            m_lastFpsUpdate = currentTime;
-        }
-    }
-    
     // Clear with depth buffer to fix transparency issues
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
@@ -436,9 +399,6 @@ void GLBViewer::paintGL()
     // Update animation transforms - only when animation time changes (performance optimization)
     if (m_currentAnimationIndex >= 0 && m_currentAnimationIndex < (int)m_animations.size() && m_scene) {
         if (m_animationPlaying) {
-            // Only update if animation time changed significantly (cache check for performance)
-            // Use epsilon comparison to avoid floating point precision issues
-            // This prevents recalculating 1837+ bone transforms every frame
             float timeDelta = qAbs(m_animationTime - m_lastAnimationTime);
             if (timeDelta > 0.001f || m_lastAnimationTime < 0.0f) {
                 updateAnimationTransforms(m_animationTime);
@@ -547,35 +507,8 @@ void GLBViewer::paintEvent(QPaintEvent* event)
     // Call base class to do OpenGL rendering
     QOpenGLWidget::paintEvent(event);
     
-    // Draw FPS overlay on top (always show)
-    drawFPS();
 }
 
-void GLBViewer::drawFPS()
-{
-    // Use QPainter to draw text over OpenGL content
-    // FONT FIX: Save and restore state to prevent affecting other widgets
-    QPainter painter(this);
-    painter.save();  // Save current state
-    
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setRenderHint(QPainter::TextAntialiasing);
-    
-    // Set green color for FPS text
-    painter.setPen(QColor(0, 255, 0));
-    QFont font("Arial", 14, QFont::Bold);
-    painter.setFont(font);
-    
-    // Draw FPS in top-right corner (always show, even if 0)
-    QString fpsText = QString("FPS: %1").arg((int)m_currentFPS);
-    QRect textRect = painter.fontMetrics().boundingRect(fpsText);
-    int x = width() - textRect.width() - 10;
-    int y = textRect.height() + 10;
-    painter.drawText(x, y, fpsText);
-    
-    painter.restore();  // Restore state
-    painter.end();
-}
 
 void GLBViewer::showEvent(QShowEvent* event)
 {
@@ -605,8 +538,7 @@ void GLBViewer::mouseMoveEvent(QMouseEvent* event)
         m_cameraRotationX = qBound(-89.0f, m_cameraRotationX - delta.y() * 0.5f, 89.0f);
         m_lastMousePos = event->pos();
         m_cameraChanged = true;
-        // Timer will handle update() - no need to call it here
-        // This reduces redundant repaints during mouse drag
+
     }
 }
 
