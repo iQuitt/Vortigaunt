@@ -10,9 +10,11 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <functional>
 
 #include <QListWidget>
 #include <QPushButton>
+#include <QCheckBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QProgressBar>
@@ -130,6 +132,14 @@ void SkinCardWidget::mousePressEvent(QMouseEvent* event)
         emit clicked();
     }
     QWidget::mousePressEvent(event);
+}
+
+void SkinCardWidget::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton) {
+        emit doubleClicked();
+    }
+    QWidget::mouseDoubleClickEvent(event);
 }
 
 void SkinCardWidget::enterEvent(QEnterEvent* event)
@@ -497,6 +507,10 @@ void LoLModelDownloadDialog::setupUI()
     m_viewCharacterButton->setEnabled(false);
     buttonLayout->addWidget(m_viewCharacterButton);
     
+    m_singleSmdCheckbox = new QCheckBox(tr("Make Seperate SMDs as Single SMD"));
+    m_singleSmdCheckbox->setChecked(false);
+    buttonLayout->addWidget(m_singleSmdCheckbox);
+    
     m_downloadButton = new QPushButton(tr("Export SMD"));
     m_downloadButton->setStyleSheet("QPushButton { padding: 10px 20px; font-weight: bold; background-color: #4CAF50; color: white; } QPushButton:hover { background-color: #45a049; } QPushButton:disabled { background-color: #666; }");
     m_downloadButton->setEnabled(false);
@@ -513,9 +527,7 @@ void LoLModelDownloadDialog::setupUI()
     m_logEdit->setFont(QFont("Consolas", 9));
     m_logEdit->setStyleSheet("QTextEdit { background-color: #1a1a1a; color: #ffffff; }");
     m_logEdit->setMinimumHeight(100);
-    // Log widget is now swapped in the constructor, after setupUI() completes.
-    // This prevents log corruption if setupUI() crashes (e.g., GLBViewer fails).
-    
+
     
     logLayout->addWidget(m_logEdit);
 
@@ -840,6 +852,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
         // Create skin card widget
         SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
         connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
+        connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
         m_skinCards[modelId] = card;
         
         // Add to grid (4 columns)
@@ -886,6 +899,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
                 
                 SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
                 connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
+                connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
                 m_skinCards[modelId] = card;
                 
                 int row = m_skinModels.size() - 1;
@@ -925,6 +939,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
                 // Create skin card widget
                 SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
                 connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
+                connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
                 m_skinCards[modelId] = card;
                 
                 // Add to grid (4 columns)
@@ -964,6 +979,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
                     // Create skin card widget
                     SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
                     connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
+                    connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
                     m_skinCards[modelId] = card;
                     
                     // Add to grid (4 columns)
@@ -1011,6 +1027,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
                     // Create skin card widget
                     SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
                     connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
+                    connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
                     m_skinCards[modelId] = card;
                     
                     // Add to grid. 4 columns
@@ -1110,6 +1127,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
                 // Create skin card widget
                 SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
                 connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
+                connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
                 m_skinCards[modelId] = card;
                 
                 // Add to grid (4 columns)
@@ -1332,40 +1350,31 @@ void LoLModelDownloadDialog::onSkinCardClicked()
     
     QString skinId = card->skinId();
     
-    // Double click to open viewer, single click to select
-    static QPoint lastClickPos;
-    static qint64 lastClickTime = 0;
-    static QString lastClickedSkinId;
-    
-    QPoint currentPos = QCursor::pos();
-    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-    
-    bool isDoubleClick = (skinId == lastClickedSkinId && 
-                         (currentTime - lastClickTime) < 300 && 
-                         (currentPos - lastClickPos).manhattanLength() < 10);
-    
-    if (isDoubleClick) {
-        // Double click - open GLB viewer
-        this->openGLBViewer(skinId);
-        lastClickTime = 0; // Reset to prevent triple click
-    } else {
-        // Single click - toggle selection
-        bool wasSelected = m_selectedSkinIds.contains(skinId);
-        
-        if (wasSelected) {
-            m_selectedSkinIds.remove(skinId);
-            card->setSelected(false);
-        } else {
-            m_selectedSkinIds.insert(skinId);
-            card->setSelected(true);
+
+    for (auto it = m_skinCards.begin(); it != m_skinCards.end(); ++it) {
+        if (it.key() != skinId) {
+            it.value()->setSelected(false);
         }
-        
-        updateDownloadButton();
+    }
+    m_selectedSkinIds.clear();
+    
+    // Select this card
+    m_selectedSkinIds.insert(skinId);
+    card->setSelected(true);
+    updateDownloadButton();
+}
+
+void LoLModelDownloadDialog::onSkinCardDoubleClicked()
+{
+    SkinCardWidget* card = qobject_cast<SkinCardWidget*>(sender());
+    if (!card) {
+        return;
     }
     
-    lastClickPos = currentPos;
-    lastClickTime = currentTime;
-    lastClickedSkinId = skinId;
+    QString skinId = card->skinId();
+    
+    // Open GLB viewer for this skin
+    this->openGLBViewer(skinId);
 }
 
 void LoLModelDownloadDialog::onSkinSelected()
@@ -1513,7 +1522,7 @@ void LoLModelDownloadDialog::onDownloadClicked()
             tempDir,
             true,   // autoFix
             true,   // splitPrimitives
-            false   // downloadChromas - not needed for SMD export
+            true    // downloadChromas
         );
         
         if (!downloadSuccess) {
@@ -1605,8 +1614,9 @@ void LoLModelDownloadDialog::onDownloadClicked()
         
         // Get hidden mesh indices from viewer if available
         // This allows users to hide meshes in the 3D viewer and exclude them from SMD export
-        if (m_viewerWidget && m_viewerWidget->getMeshCount() > 0) {
-            std::set<unsigned int> hiddenMeshes = m_viewerWidget->getHiddenMeshIndices();
+        std::set<unsigned int> hiddenMeshes;
+        if (m_viewedSkinId == skin.id && m_viewerWidget && m_viewerWidget->getMeshCount() > 0) {
+            hiddenMeshes = m_viewerWidget->getHiddenMeshIndices();
             if (!hiddenMeshes.empty()) {
                 smdWriter.SetHiddenMeshIndices(hiddenMeshes);
                 logToDialog(tr("DEBUG:   Excluding %1 hidden mesh(es) from export").arg(hiddenMeshes.size()));
@@ -1614,16 +1624,79 @@ void LoLModelDownloadDialog::onDownloadClicked()
             }
         }
         
-        // Export reference SMD (mesh + skeleton)
-        QString refPath = QDir(modelDir).filePath("reference.smd");
-        
-        if (!smdWriter.ExportMeshSMD(scene, refPath.toStdString())) {
-            logToDialog(tr("  Failed to export reference mesh."));
-            QApplication::processEvents();
-            continue;
+        if (m_singleSmdCheckbox->isChecked()) {
+            QString refPath = QDir(modelDir).filePath("reference.smd");
+            
+            if (!smdWriter.ExportMeshSMD(scene, refPath.toStdString())) {
+                logToDialog(tr("  Failed to export reference mesh."));
+                QApplication::processEvents();
+                continue;
+            }
+            
+            logToDialog(tr("DEBUG:   Reference mesh exported: reference.smd"));
+        } else {
+            // Export separate SMDs per mesh
+            for (unsigned int meshIdx = 0; meshIdx < scene->mNumMeshes; meshIdx++) {
+                if (hiddenMeshes.find(meshIdx) != hiddenMeshes.end()) {
+                    continue; // Skip hidden meshes
+                }
+                
+                std::set<unsigned int> hideForThisExport;
+                for (unsigned int j = 0; j < scene->mNumMeshes; j++) {
+                    if (j != meshIdx) {
+                        hideForThisExport.insert(j);
+                    }
+                }
+                smdWriter.SetHiddenMeshIndices(hideForThisExport);
+                
+                aiMesh* mesh = scene->mMeshes[meshIdx];
+                QString meshNameStr;
+                
+                if (mesh->mMaterialIndex < scene->mNumMaterials) {
+                    aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+                    aiString materialName;
+                    if (material->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS) {
+                        QString matName = QString::fromUtf8(materialName.C_Str());
+                        if (!matName.isEmpty() && matName != "DefaultMaterial" && !matName.startsWith("Material", Qt::CaseInsensitive)) {
+                            meshNameStr = matName;
+                        }
+                    }
+                }
+                if (meshNameStr.isEmpty()) meshNameStr = QString::fromStdString(mesh->mName.C_Str());
+                
+                if (meshNameStr.isEmpty() || meshNameStr.startsWith("Mesh", Qt::CaseInsensitive) || meshNameStr.startsWith("meshes", Qt::CaseInsensitive)) {
+                    std::function<const aiNode*(const aiNode*, unsigned int)> findNode = [&](const aiNode* node, unsigned int idx) -> const aiNode* {
+                        for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
+                            if (node->mMeshes[i] == idx) return node;
+                        }
+                        for (unsigned int i = 0; i < node->mNumChildren; ++i) {
+                            const aiNode* found = findNode(node->mChildren[i], idx);
+                            if (found) return found;
+                        }
+                        return nullptr;
+                    };
+                    const aiNode* node = findNode(scene->mRootNode, meshIdx);
+                    if (node) {
+                        QString nodeName = QString::fromStdString(node->mName.C_Str());
+                        if (!nodeName.isEmpty()) meshNameStr = nodeName;
+                    }
+                }
+                if (meshNameStr.isEmpty()) meshNameStr = "default";
+                
+                std::string baseName = meshNameStr.toStdString();
+                std::replace(baseName.begin(), baseName.end(), ' ', '_');
+                std::replace(baseName.begin(), baseName.end(), '/', '_');
+                std::replace(baseName.begin(), baseName.end(), '\\', '_');
+                
+                QString refPath = QDir(modelDir).filePath(QString::fromStdString(baseName) + ".smd");
+                if (smdWriter.ExportMeshSMD(scene, refPath.toStdString())) {
+                    logToDialog(tr("DEBUG:   Mesh exported: %1.smd").arg(QString::fromStdString(baseName)));
+                }
+            }
+            
+            // Restore hidden meshes before animation export
+            smdWriter.SetHiddenMeshIndices(hiddenMeshes);
         }
-        
-        logToDialog(tr("DEBUG:   Reference mesh exported: reference.smd"));
         QApplication::processEvents();
         
         // Export animations using optimized function (builds node list ONCE)
@@ -1715,7 +1788,7 @@ void LoLModelDownloadDialog::onDownloadClicked()
         
         for (unsigned int meshIdx = 0; meshIdx < scene->mNumMeshes; meshIdx++) {
             // Skip hidden meshes
-            if (m_viewerWidget && !m_viewerWidget->isMeshVisible(meshIdx)) {
+            if (m_viewedSkinId == skin.id && m_viewerWidget && !m_viewerWidget->isMeshVisible(meshIdx)) {
                 continue;
             }
             
@@ -1723,10 +1796,52 @@ void LoLModelDownloadDialog::onDownloadClicked()
             if (!mesh) continue;
             
             // Get mesh name for texture filename
-            std::string meshName = mesh->mName.C_Str();
-            if (meshName.empty()) {
-                meshName = "default";
+            QString meshNameStr;
+            
+            if (mesh->mMaterialIndex < scene->mNumMaterials) {
+                aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+                aiString materialName;
+                if (material->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS) {
+                    QString matName = QString::fromUtf8(materialName.C_Str());
+                    if (!matName.isEmpty() && matName != "DefaultMaterial" && !matName.startsWith("Material", Qt::CaseInsensitive)) {
+                        meshNameStr = matName;
+                    }
+                }
             }
+            
+            // If no material name, try mesh name
+            if (meshNameStr.isEmpty()) {
+                meshNameStr = QString::fromStdString(mesh->mName.C_Str());
+            }
+            
+            // Try node name if failed.
+            if (meshNameStr.isEmpty() || meshNameStr.startsWith("Mesh", Qt::CaseInsensitive) || meshNameStr.startsWith("meshes", Qt::CaseInsensitive)) {
+                // Helper to find node
+                std::function<const aiNode*(const aiNode*, unsigned int)> findNode = [&](const aiNode* node, unsigned int idx) -> const aiNode* {
+                    for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
+                        if (node->mMeshes[i] == idx) return node;
+                    }
+                    for (unsigned int i = 0; i < node->mNumChildren; ++i) {
+                        const aiNode* found = findNode(node->mChildren[i], idx);
+                        if (found) return found;
+                    }
+                    return nullptr;
+                };
+                const aiNode* node = findNode(scene->mRootNode, meshIdx);
+                if (node) {
+                    QString nodeName = QString::fromStdString(node->mName.C_Str());
+                    if (!nodeName.isEmpty()) {
+                        meshNameStr = nodeName;
+                    }
+                }
+            }
+            
+            if (meshNameStr.isEmpty()) {
+                meshNameStr = "default";
+            }
+            
+            std::string meshName = meshNameStr.toStdString();
+            
             // Clean up for filesystem
             std::replace(meshName.begin(), meshName.end(), ' ', '_');
             std::replace(meshName.begin(), meshName.end(), '/', '_');
@@ -1791,6 +1906,35 @@ void LoLModelDownloadDialog::onDownloadClicked()
             logToDialog(tr("  No embedded textures found to extract"));
         }
         QApplication::processEvents();
+        
+        // Extract chroma textures if any
+        for (int offset = -30; offset <= 30; ++offset) {
+            if (offset == 0) continue;
+            QString chromaId = QString::number(skin.id.toInt() + offset);
+            QString cDirName = "chromas_" + chromaId;
+            QString srcDir = QDir(championDir).filePath(cDirName);
+            
+            if (QDir(srcDir).exists()) {
+                QString dstDir = QDir(modelDir).filePath(cDirName);
+                QDir().mkpath(dstDir);
+                
+                QDir src(srcDir);
+                QStringList files = src.entryList(QStringList() << "*.png" << "*.jpg" << "*.jpeg" << "*.webp", QDir::Files);
+                for (const QString& file : files) {
+                    QString srcFile = src.filePath(file);
+                    QImage image;
+                    if (image.load(srcFile)) {
+                        QImage scaledImage = image.scaled(512, 512, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                        QString bmpName = QFileInfo(file).completeBaseName() + ".bmp";
+                        QString dstFile = QDir(dstDir).filePath(bmpName);
+                        
+                        QImage argb = scaledImage.convertToFormat(QImage::Format_ARGB32);
+                        BMP::saveAsIndexed8(dstFile.toUtf8().constData(), argb.width(), argb.height(), reinterpret_cast<const uint32_t*>(argb.constBits()));
+                    }
+                }
+                logToDialog(tr("  Converted chroma textures for: %1").arg(cDirName));
+            }
+        }
         
         logToDialog(tr("  SMD export completed!"));
         QApplication::processEvents();
@@ -1984,9 +2128,9 @@ void LoLModelDownloadDialog::openGLBViewer(const QString& skinId)
     // Try different possible file names
     QStringList possibleFiles;
     possibleFiles << QString("%1/%2_%3.glb").arg(championDir, safeName, skinId);
-    possibleFiles << QString("%1/%2_%3_FIXED.glb").arg(championDir, safeName, skinId);
-    possibleFiles << QString("%1/%2_%3_SPLIT.glb").arg(championDir, safeName, skinId);
-    possibleFiles << QString("%1/%2_%3_FIXED_SPLIT.glb").arg(championDir, safeName, skinId);
+    //possibleFiles << QString("%1/%2_%3_FIXED.glb").arg(championDir, safeName, skinId);
+    //possibleFiles << QString("%1/%2_%3_SPLIT.glb").arg(championDir, safeName, skinId);
+    //possibleFiles << QString("%1/%2_%3_FIXED_SPLIT.glb").arg(championDir, safeName, skinId);
     
     QString glbFile;
     for (const QString& file : possibleFiles) {
@@ -1995,109 +2139,102 @@ void LoLModelDownloadDialog::openGLBViewer(const QString& skinId)
             break;
         }
     }
-    
-    if (!glbFile.isEmpty()) {
-        // File found on disk — load directly (no network needed)
-        openGLBViewerWithFile(skinId, glbFile);
-    } else {
-        // ASYNC DOWNLOAD: File not found on disk, download from CDN without blocking UI
-        logToDialog(tr("^3Model not found on disk, downloading from CDN..."));
-        m_statusLabel->setText(tr("Downloading model..."));
+
+    m_statusLabel->setText(tr("Downloading model..."));
         
-        // Create temp directory for GLB file
-        QString tempDir = QDir::tempPath() + "/VortigauntLoLViewer";
-        QDir().mkpath(tempDir);
+    // Create temp directory for GLB file
+    QString tempDir = QDir::tempPath() + "/VortigauntLoLViewer";
+    QDir().mkpath(tempDir);
         
-        // Generate unique temp file name
-        QString tempFileName = QString("model_%1_%2_%3.glb")
-                                .arg(m_currentChampion)
-                                .arg(skinId)
-                                .arg(QDateTime::currentMSecsSinceEpoch());
-        QString tempFilePath = QDir(tempDir).filePath(tempFileName);
+    // Generate unique temp file name
+    QString tempFileName = QString("model_%1_%2_%3.glb")
+                            .arg(m_currentChampion)
+                            .arg(skinId)
+                            .arg(QDateTime::currentMSecsSinceEpoch());
+    QString tempFilePath = QDir(tempDir).filePath(tempFileName);
         
-        // Build CDN URL
-        QString cdnUrl = QString("https://cdn.modelviewer.lol/lol/models/%1/%2/model.glb")
-                            .arg(m_currentChampion.toLower(), skinId);
+    // Build CDN URL
+    QString cdnUrl = QString("https://cdn.modelviewer.lol/lol/models/%1/%2/model.glb")
+                        .arg(m_currentChampion.toLower(), skinId);
         
-        // Start async download using QNetworkAccessManager (NO QEventLoop!)
-        QUrl urlObj(cdnUrl);
-        QNetworkRequest request(urlObj);
-        request.setHeader(QNetworkRequest::UserAgentHeader, 
-                         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+    // Start async download using QNetworkAccessManager (NO QEventLoop!)
+    QUrl urlObj(cdnUrl);
+    QNetworkRequest request(urlObj);
+    request.setHeader(QNetworkRequest::UserAgentHeader, 
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
         
-        m_viewerDownloadReply = m_networkManager->get(request);
+    m_viewerDownloadReply = m_networkManager->get(request);
         
-        // Show progress bar during download
-        m_progressBar->setVisible(true);
-        m_progressBar->setValue(0);
+    // Show progress bar during download
+    m_progressBar->setVisible(true);
+    m_progressBar->setValue(0);
         
-        // Track download progress
-        connect(m_viewerDownloadReply, &QNetworkReply::downloadProgress, this, 
-            [this](qint64 bytesReceived, qint64 bytesTotal) {
-                if (bytesTotal > 0) {
-                    int percent = static_cast<int>(bytesReceived * 100 / bytesTotal);
-                    m_progressBar->setValue(percent);
-                    m_statusLabel->setText(tr("Downloading model... %1%").arg(percent));
-                }
-            });
+    // Track download progress
+    connect(m_viewerDownloadReply, &QNetworkReply::downloadProgress, this, 
+        [this](qint64 bytesReceived, qint64 bytesTotal) {
+            if (bytesTotal > 0) {
+                int percent = static_cast<int>(bytesReceived * 100 / bytesTotal);
+                m_progressBar->setValue(percent);
+                m_statusLabel->setText(tr("Downloading model... %1%").arg(percent));
+            }
+        });
         
-        // Handle download completion — capture skinId and tempFilePath by value
-        connect(m_viewerDownloadReply, &QNetworkReply::finished, this,
-            [this, skinId, tempFilePath]() {
-                QNetworkReply* reply = m_viewerDownloadReply;
-                m_viewerDownloadReply = nullptr;
-                m_progressBar->setVisible(false);
+    // Handle download completion — capture skinId and tempFilePath by value
+    connect(m_viewerDownloadReply, &QNetworkReply::finished, this,
+        [this, skinId, tempFilePath]() {
+            QNetworkReply* reply = m_viewerDownloadReply;
+            m_viewerDownloadReply = nullptr;
+            m_progressBar->setVisible(false);
                 
-                if (!reply) return;
+            if (!reply) return;
                 
-                if (reply->error() != QNetworkReply::NoError) {
-                    reply->deleteLater();
-                    logToDialog(tr("^1[Viewer] Download failed: %1").arg(reply->errorString()));
-                    m_statusLabel->setText(tr("Download failed"));
-                    QMessageBox::warning(this, tr("Download Failed"), 
-                                        tr("Failed to download model from CDN. Please check your internet connection."));
-                    m_contentStack->setCurrentIndex(0); // Switch back to skin cards
-                    return;
-                }
-                
-                QByteArray data = reply->readAll();
+            if (reply->error() != QNetworkReply::NoError) {
                 reply->deleteLater();
+                logToDialog(tr("^1[Viewer] Download failed: %1").arg(reply->errorString()));
+                m_statusLabel->setText(tr("Download failed"));
+                QMessageBox::warning(this, tr("Download Failed"), 
+                                    tr("Failed to download model from CDN. Please check your internet connection."));
+                m_contentStack->setCurrentIndex(0); // Switch back to skin cards
+                return;
+            }
                 
-                // Validate GLB data
-                if (data.size() < 12 || data.left(4) != "glTF") {
-                    logToDialog(tr("^1[Viewer] Invalid GLB data received"));
-                    m_statusLabel->setText(tr("Download failed - invalid data"));
-                    QMessageBox::warning(this, tr("Download Failed"), 
-                                        tr("Downloaded data is not a valid GLB file."));
-                    m_contentStack->setCurrentIndex(0);
-                    return;
-                }
+            QByteArray data = reply->readAll();
+            reply->deleteLater();
                 
-                // Write to temp file
-                QFile file(tempFilePath);
-                if (!file.open(QIODevice::WriteOnly)) {
-                    logToDialog(tr("^1[Viewer] Cannot write temp file: %1").arg(tempFilePath));
-                    m_contentStack->setCurrentIndex(0);
-                    return;
-                }
-                file.write(data);
-                file.close();
+            // Validate GLB data
+            if (data.size() < 12 || data.left(4) != "glTF") {
+                logToDialog(tr("^1[Viewer] Invalid GLB data received"));
+                m_statusLabel->setText(tr("Download failed - invalid data"));
+                QMessageBox::warning(this, tr("Download Failed"), 
+                                    tr("Downloaded data is not a valid GLB file."));
+                m_contentStack->setCurrentIndex(0);
+                return;
+            }
                 
-                // Clean up previous temp file
-                if (!m_currentTempFile.isEmpty() && QFileInfo::exists(m_currentTempFile)) {
-                    QFile::remove(m_currentTempFile);
-                }
-                m_currentTempFile = tempFilePath;
+            // Write to temp file
+            QFile file(tempFilePath);
+            if (!file.open(QIODevice::WriteOnly)) {
+                logToDialog(tr("^1[Viewer] Cannot write temp file: %1").arg(tempFilePath));
+                m_contentStack->setCurrentIndex(0);
+                return;
+            }
+            file.write(data);
+            file.close();
                 
-                QFileInfo tempFileInfo(tempFilePath);
-                logToDialog(tr("DEBUG: ^2Model downloaded (%1 MB)")
-                    .arg(tempFileInfo.size() / 1024.0 / 1024.0, 0, 'f', 2));
-                m_statusLabel->setText(tr("Loading model..."));
+            // Clean up previous temp file
+            if (!m_currentTempFile.isEmpty() && QFileInfo::exists(m_currentTempFile)) {
+                QFile::remove(m_currentTempFile);
+            }
+            m_currentTempFile = tempFilePath;
                 
-                // Now load the model (this is CPU-bound but fast)
-                openGLBViewerWithFile(skinId, tempFilePath);
-            });
-    }
+            QFileInfo tempFileInfo(tempFilePath);
+            logToDialog(tr("DEBUG: ^2Model downloaded (%1 MB)")
+                .arg(tempFileInfo.size() / 1024.0 / 1024.0, 0, 'f', 2));
+            m_statusLabel->setText(tr("Loading model..."));
+                
+            // Now load the model (this is CPU-bound but fast)
+            openGLBViewerWithFile(skinId, tempFilePath);
+        });
 }
 
 void LoLModelDownloadDialog::openGLBViewerWithFile(const QString& skinId, const QString& filePath)
@@ -2132,8 +2269,8 @@ void LoLModelDownloadDialog::openGLBViewerWithFile(const QString& skinId, const 
             m_statusLabel->setText(tr("Ready"));
             
             // Start ASYNC chroma detection (no QEventLoop blocking!)
-            QTimer::singleShot(100, this, [this, skinId]() {
-                startAsyncChromaDetection(skinId);
+            QTimer::singleShot(100, this, [this, skinId, filePath]() {
+                startAsyncChromaDetection(skinId, filePath);
             });
         } else {
             logToDialog(tr("^1[Viewer] Failed to load GLB: %1").arg(filePath));
@@ -2156,7 +2293,7 @@ void LoLModelDownloadDialog::openGLBViewerWithFile(const QString& skinId, const 
     });
 }
 
-void LoLModelDownloadDialog::startAsyncChromaDetection(const QString& skinId)
+void LoLModelDownloadDialog::startAsyncChromaDetection(const QString& skinId, const QString& glbFilePath)
 {
     // Cancel any previous chroma detection
     for (QNetworkReply* reply : m_chromaDetectionReplies) {
@@ -2175,6 +2312,21 @@ void LoLModelDownloadDialog::startAsyncChromaDetection(const QString& skinId)
         return;
     }
     
+
+    QString probeTextureName;
+    if (!glbFilePath.isEmpty()) {
+        LoLModelDownloader tempDownloader;
+        QStringList glbTextureNames = tempDownloader.getTextureNamesFromGLB(glbFilePath);
+        if (!glbTextureNames.isEmpty()) {
+            probeTextureName = glbTextureNames.first();
+            logToDialog(tr("[Chroma] Using texture '%1' for CDN probe").arg(probeTextureName));
+        }
+    }
+    if (probeTextureName.isEmpty()) {
+        logToDialog(tr("[Chroma] No texture names found in GLB, cannot detect chromas"));
+        return;
+    }
+    
     logToDialog(tr("[Chroma] Checking for chromas (async)..."));
     
     // Send parallel HEAD requests for chroma detection (same range as before: -30 to +30)
@@ -2186,9 +2338,8 @@ void LoLModelDownloadDialog::startAsyncChromaDetection(const QString& skinId)
         int testId = baseId + offset;
         QString testIdStr = QString::number(testId);
         
-        // Check with Body.png as the test texture
-        QString testUrl = QString("https://cdn.modelviewer.lol/lol/models/%1/%2/chromas/%3/Body.png")
-                         .arg(m_currentChampion.toLower(), skinId, testIdStr);
+        QString testUrl = QString("https://cdn.modelviewer.lol/lol/models/%1/%2/chromas/%3/%4")
+                         .arg(m_currentChampion.toLower(), skinId, testIdStr, probeTextureName);
         
         QUrl urlObj(testUrl);
         QNetworkRequest request(urlObj);

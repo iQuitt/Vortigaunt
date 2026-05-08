@@ -267,7 +267,7 @@ QString SettingsDialog::getLoLOutputDir(bool isDownloadFolder)
     
     // Check if portable
     if (isAppDirTrulyWritable()) {
-        return QDir(appDir).filePath(isDownloadFolder ? "VortigauntLoLDownloads" : "VortigauntLoL");
+        return QDir(appDir).filePath("VortigauntLoL");
     }
     
     QString customPath = getDefaultExtractPath();
@@ -275,7 +275,6 @@ QString SettingsDialog::getLoLOutputDir(bool isDownloadFolder)
         return QDir(customPath).filePath("VortigauntExtracted/VortigauntLoL");
     }
     
-    // MSI installed (Program Files) - unify folders as requested
     return QDir(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).filePath("VortigauntExtracted/VortigauntLoL");
 }
 

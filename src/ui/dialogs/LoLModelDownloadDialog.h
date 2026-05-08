@@ -14,6 +14,7 @@
 
 class QListWidget;
 class QPushButton;
+class QCheckBox;
 class QLabel;
 class QLineEdit;
 class QProgressBar;
@@ -59,10 +60,12 @@ public:
 
 signals:
     void clicked();
+    void doubleClicked();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void enterEvent(QEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
 
@@ -88,6 +91,7 @@ private slots:
     void onChampionSelected();
     void onSkinSelected();
     void onSkinCardClicked();
+    void onSkinCardDoubleClicked();
     void onViewCharacterClicked();
     void onDownloadClicked();
     void onCancelClicked();
@@ -107,7 +111,7 @@ private:
     void updateDownloadButton();
     void openGLBViewer(const QString& skinId);
     void openGLBViewerWithFile(const QString& skinId, const QString& filePath);
-    void startAsyncChromaDetection(const QString& skinId);
+    void startAsyncChromaDetection(const QString& skinId, const QString& glbFilePath = QString());
     
     // UI Elements
     QComboBox*          m_championCombo;
@@ -122,6 +126,7 @@ private:
     QPushButton*        m_viewCharacterButton;  // Button to view selected character
     QPushButton*        m_downloadButton;
     QPushButton*        m_cancelButton;
+    QCheckBox*          m_singleSmdCheckbox;
     QLineEdit*          m_outputPathEdit;
     QPushButton*        m_browseOutputButton;
     QPlainTextEdit*          m_logEdit;

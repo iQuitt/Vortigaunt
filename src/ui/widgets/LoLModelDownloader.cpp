@@ -1098,8 +1098,8 @@ QStringList LoLModelDownloader::detectChromaIDs(const QString& modelId, const QS
         testTextures = textureNamesForCDN.mid(0, 3); // First 3 textures
         Vortimsg("  Checking chromas on CDN...");
     } else {
-        testTextures = QStringList() << "Body.png" << "R_Sub.png";
-        Vortimsg("  Checking chromas on CDN...");
+        Vortimsg("  [WARNING] No texture names found in GLB, cannot detect chromas");
+        return chromaIDs;
     }
     
     // CDN check - sped up with PARALLEL REQUESTS
@@ -1454,32 +1454,36 @@ QStringList LoLModelDownloader::getTextureNamesFromGLB(const QString& filepath)
         return textureNames;
     }
     
-    // Extract texture names from images
+    // Extract texture names from images — one per image, in order (index must match)
     if (gltf.contains("images") && gltf["images"].isArray()) {
         QJsonArray images = gltf["images"].toArray();
         
         for (int i = 0; i < images.size(); ++i) {
             QJsonObject image = images[i].toObject();
+            QString textureName;
             
+            // Prefer uri (external file reference)
             if (image.contains("uri")) {
                 QString uri = image["uri"].toString();
                 if (!uri.startsWith("data:")) {
-                    QString filename = QFileInfo(uri).fileName();
-                    if (!filename.isEmpty()) {
-                        textureNames.append(filename);
-                    }
+                    textureName = QFileInfo(uri).fileName();
                 }
             }
             
-            if (image.contains("name")) {
-                QString name = image["name"].toString();
-                if (!name.isEmpty()) {
-                    if (!name.endsWith(".png") && !name.endsWith(".jpg") && !name.endsWith(".jpeg")) {
-                        name += ".png";
-                    }
-                    textureNames.append(name);
+            // Fallback to name field (embedded textures)
+            if (textureName.isEmpty() && image.contains("name")) {
+                textureName = image["name"].toString();
+                if (!textureName.isEmpty() && !textureName.endsWith(".png") && !textureName.endsWith(".jpg") && !textureName.endsWith(".jpeg")) {
+                    textureName += ".png";
                 }
             }
+            
+            // Last resort — use index
+            if (textureName.isEmpty()) {
+                textureName = QString("texture_%1.png").arg(i);
+            }
+            
+            textureNames.append(textureName);
         }
     }
     

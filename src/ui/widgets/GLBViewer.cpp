@@ -1,4 +1,5 @@
 #include "GLBViewer.h"
+#include "LoLModelDownloader.h"
 #include "core/VortigauntLog.h"
 #include <QFileInfo>
 #include <QDir>
@@ -16,12 +17,6 @@
 #include <assimp/postprocess.h>
 #include <assimp/material.h>
 #include <assimp/anim.h>
-
-// Helper class to hold Assimp::Importer
-class GLBViewer::AssimpImporterHolder {
-public:
-    Assimp::Importer importer;
-};
 #include <QImage>
 #include <QOpenGLTexture>
 #include <cmath>
@@ -35,6 +30,14 @@ public:
 #include <QNetworkReply>
 #include <QEventLoop>
 #include <QUrl>
+
+
+
+
+class GLBViewer::AssimpImporterHolder {
+public:
+    Assimp::Importer importer;
+};
 
 void GLBViewer::log(const QString& message)
 {
@@ -75,16 +78,7 @@ GLBViewer::GLBViewer(QWidget* parent)
     
     // Initialize network manager
     m_networkManager = new QNetworkAccessManager(this);
-    
-    // OpenGL format is set globally in main.cpp via QSurfaceFormat::setDefaultFormat()
-    // DO NOT call setFormat() here - it would cause the parent window's native handle
-    // to be recreated, making the dialog window close and reopen when GLBViewer is created.
-    
-    // Default QOpenGLWidget update behavior is safest for cross-platform stability.
-    // Explicitly removed PartialUpdate and WA_NativeWindow as they cause compositor deadlocks on Linux Wayland/X11.
-    
-    // Create render timer for continuous updates (camera, animations, etc.)
-    // Timer must be created in constructor to ensure it exists
+
     m_animationTimer = new QTimer(this);
     m_animationTimer->setTimerType(Qt::PreciseTimer);
     m_animationTimer->setInterval(16); // ~60 FPS
@@ -171,10 +165,6 @@ void GLBViewer::initializeGL()
     m_glInitialized = true;
     log("initializeGL() completed successfully");
     
-    // FONT FIX: Release OpenGL context after initialization
-    // This prevents OpenGL from interfering with Qt's font rendering engine
-    // LINUX FIX: On Linux/X11, calling doneCurrent() here can cause the context
-    // to become permanently invalid for subsequent makeCurrent() calls.
 #ifdef Q_OS_WIN
     doneCurrent();
 #endif
@@ -361,6 +351,7 @@ void GLBViewer::paintGL()
             if (!m_animationTimer->isActive()) {
                 m_animationTimer->start();
             }
+            m_loadedGlbPath = pathToLoad; 
             emit modelLoaded(true);
         } else {
             emit modelLoaded(false);
@@ -708,6 +699,7 @@ bool GLBViewer::loadGLB(const QString& filepath)
         // Force immediate update
         update();
         // Clear deferred path to prevent paintGL from reloading
+        m_loadedGlbPath = filepath;
         m_currentModelPath.clear();
         emit modelLoaded(true);
     } else {
@@ -1191,6 +1183,12 @@ bool GLBViewer::loadModelWithAssimp(const QString& filepath)
                         meshData->diffuseTexture = textureId;
                         meshData->baseTexture = textureId;  // Save for chroma switching
                         meshData->hasTexture = true;
+                      
+                        const char* tp = texturePath.C_Str();
+                        if (tp[0] == '*') {
+                            meshData->textureImageIndex = atoi(tp + 1);
+                        }
+                        
                         log(QString("Texture loaded for mesh %1: %2").arg(i).arg(texturePath.C_Str()));
                     }
                 }
@@ -1442,23 +1440,19 @@ void GLBViewer::loadChromaTextures(const QString& championName, const QString& m
         return;
     }
     
-    // Get texture names from current meshes
     QStringList textureNames;
-    for (const auto& mesh : m_meshes) {
-        if (mesh->hasTexture) {
-            // We need to track which textures to download
-            // For now, assume "Body.png" is the main texture
-            if (!textureNames.contains("Body.png")) {
-                textureNames.append("Body.png");
-            }
-        }
+    if (!m_loadedGlbPath.isEmpty()) {
+        LoLModelDownloader tempDownloader;
+        textureNames = tempDownloader.getTextureNamesFromGLB(m_loadedGlbPath);
     }
     
     if (textureNames.isEmpty()) {
-        this->log("No textures found in model for chroma loading");
+        this->log("No texture names found in model for chroma loading");
         emit chromasLoaded(0);
         return;
     }
+    
+    this->log(QString("Found %1 texture(s) for chroma loading: %2").arg(textureNames.size()).arg(textureNames.join(", ")));
     
     // Only process chromas that are different from base model
     QStringList validChromas;
@@ -1477,83 +1471,93 @@ void GLBViewer::loadChromaTextures(const QString& championName, const QString& m
         m_networkManager = new QNetworkAccessManager(this);
     }
     
-    m_pendingChromaDownloads = validChromas.size();
-    this->log(QString("Starting async download of %1 chromas...").arg(m_pendingChromaDownloads));
+    m_pendingChromaDownloads = validChromas.size() * textureNames.size();
+    this->log(QString("Starting async download of %1 chromas (%2 textures each)...")
+        .arg(validChromas.size()).arg(textureNames.size()));
     
     for (const QString& chromaId : validChromas) {
-        // Download texture for this chroma
-        QString textureUrl = QString("https://cdn.modelviewer.lol/lol/models/%1/%2/chromas/%3/%4")
-            .arg(championName.toLower(), modelId, chromaId, textureNames.first());
+        // Pre-create ChromaData for this chroma
+        ChromaData chroma;
+        chroma.id = chromaId;
+        chroma.name = QString("Chroma %1").arg(chromaId);
+        chroma.meshTextures.resize(m_meshes.size(), 0);
+        m_chromas.push_back(chroma);
+        int chromaIndex = (int)m_chromas.size() - 1;
         
-        QUrl urlObj(textureUrl);
-        QNetworkRequest request(urlObj);
-        request.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-        
-        QNetworkReply* reply = m_networkManager->get(request);
-        
-        connect(reply, &QNetworkReply::finished, this, [this, reply, chromaId]() {
-            reply->deleteLater();
+        for (int texIdx = 0; texIdx < textureNames.size(); ++texIdx) {
+            const QString& textureName = textureNames[texIdx];
             
-            if (reply->error() == QNetworkReply::NoError) {
-                QByteArray data = reply->readAll();
-                QImage image;
-                if (image.loadFromData(data)) {
-                    image = image.convertToFormat(QImage::Format_RGBA8888);
-                    
-                    // Create texture in OpenGL thread
-                    makeCurrent();
-                    
-                    unsigned int textureId;
-                    glGenTextures(1, &textureId);
-                    glBindTexture(GL_TEXTURE_2D, textureId);
-                    
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                    
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width(), image.height(), 
-                                0, GL_RGBA, GL_UNSIGNED_BYTE, image.bits());
-                    glGenerateMipmap(GL_TEXTURE_2D);
-                    glBindTexture(GL_TEXTURE_2D, 0);
-                    
-                    doneCurrent();
-                    
-                    // Create ChromaData
-                    ChromaData chroma;
-                    chroma.id = chromaId;
-                    chroma.name = QString("Chroma %1").arg(chromaId);
-                    chroma.meshTextures.resize(m_meshes.size(), 0);
-                    
-                    // Assign to all meshes that have textures
-                    // Ideally we should match texture names, but for now we apply "Body.png" to all
-                    for (size_t i = 0; i < m_meshes.size(); ++i) {
-                        if (m_meshes[i]->hasTexture) {
-                            chroma.meshTextures[i] = textureId;
+            QString textureUrl = QString("https://cdn.modelviewer.lol/lol/models/%1/%2/chromas/%3/%4")
+                .arg(championName.toLower(), modelId, chromaId, textureName);
+            
+            QUrl urlObj(textureUrl);
+            QNetworkRequest request(urlObj);
+            request.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            
+            QNetworkReply* reply = m_networkManager->get(request);
+            
+            connect(reply, &QNetworkReply::finished, this, [this, reply, chromaId, chromaIndex, texIdx]() {
+                reply->deleteLater();
+                
+                if (reply->error() == QNetworkReply::NoError) {
+                    QByteArray data = reply->readAll();
+                    QImage image;
+                    if (image.loadFromData(data)) {
+                        image = image.convertToFormat(QImage::Format_RGBA8888);
+                        
+                        // Create OpenGL texture
+                        makeCurrent();
+                        
+                        unsigned int textureId;
+                        glGenTextures(1, &textureId);
+                        glBindTexture(GL_TEXTURE_2D, textureId);
+                        
+                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                        
+                        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width(), image.height(), 
+                                    0, GL_RGBA, GL_UNSIGNED_BYTE, image.bits());
+                        glGenerateMipmap(GL_TEXTURE_2D);
+                        glBindTexture(GL_TEXTURE_2D, 0);
+                        
+                        doneCurrent();
+                        
+                        // Assign texture to meshes that use this image index
+                        if (chromaIndex >= 0 && chromaIndex < (int)m_chromas.size()) {
+                            for (size_t i = 0; i < m_meshes.size(); ++i) {
+                                if (m_meshes[i]->hasTexture && m_meshes[i]->textureImageIndex == texIdx) {
+                                    m_chromas[chromaIndex].meshTextures[i] = textureId;
+                                }
+                            }
                         }
                     }
-                    
-                    m_chromas.push_back(chroma);
-                    this->log(QString("Loaded chroma %1").arg(chromaId));
-                } else {
-                    this->log(QString("Failed to load image for chroma %1").arg(chromaId));
                 }
-            } else {
-                this->log(QString("Network error for chroma %1: %2").arg(chromaId, reply->errorString()));
-            }
-            
-            m_pendingChromaDownloads--;
-            if (m_pendingChromaDownloads <= 0) {
-                this->log(QString("All chromas loaded. Total: %1").arg(m_chromas.size()));
                 
-                // Sort chromas by ID to keep consistent order
-                std::sort(m_chromas.begin(), m_chromas.end(), [](const ChromaData& a, const ChromaData& b) {
-                    return a.id.toInt() < b.id.toInt();
-                });
-                
-                emit chromasLoaded((int)m_chromas.size());
-            }
-        });
+                m_pendingChromaDownloads--;
+                if (m_pendingChromaDownloads <= 0) {
+                    m_chromas.erase(
+                        std::remove_if(m_chromas.begin(), m_chromas.end(), [](const ChromaData& c) {
+                            for (auto t : c.meshTextures) {
+                                if (t > 0) return false;
+                            }
+                            return true;
+                        }),
+                        m_chromas.end()
+                    );
+                    
+                    this->log(QString("All chromas loaded. Total: %1").arg(m_chromas.size()));
+                    
+                    // Sort chromas by ID to keep consistent order
+                    std::sort(m_chromas.begin(), m_chromas.end(), [](const ChromaData& a, const ChromaData& b) {
+                        return a.id.toInt() < b.id.toInt();
+                    });
+                    
+                    emit chromasLoaded((int)m_chromas.size());
+                }
+            });
+        }
     }
 }
 

@@ -38,6 +38,9 @@ public:
     // Filter and export GLB based on allowed mesh names
     bool filterAndExportGLB(const QString& inputGLB, const QString& outputGLB, const QStringList& allowedMeshNames);
 
+    // Texture utilities for chroma
+    QStringList getTextureNamesFromGLB(const QString& filepath);
+    
 private:
     // GLB parsing and writing
     QJsonObject parseGLB(const QString& filepath, QByteArray& binaryChunk);
@@ -45,13 +48,9 @@ private:
     
     // Mesh processing
     bool splitMeshPrimitives(const QString& inputGLB, const QString& outputGLB);
-
-    
-
     
     // Transform fixing
     bool fixTransforms(const QString& inputGLB, const QString& outputGLB, const QString& modelId);
-
     
     // Chroma download utilities
     bool downloadChromaTextures(const QString& championName, const QString& modelId, 
@@ -59,7 +58,6 @@ private:
     bool createChromaGLB(const QString& inputGLB, const QString& outputGLB, const QString& textureDir);
     
     // Texture utilities
-    QStringList getTextureNamesFromGLB(const QString& filepath);
     QStringList getTextureNamesFromMaterials(const QString& filepath, const QString& championName);
     
     // Helper functions

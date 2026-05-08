@@ -52,6 +52,7 @@ struct MeshData {
     QString name;  // Mesh name from GLB
     bool visible = true;  // Whether to render this mesh
     unsigned int baseTexture = 0;  // Original texture ID (for chroma switching)
+    int textureImageIndex = -1;  // GLB images[] index for chroma texture matching
 };
 
 // Chroma data structure for texture variants
@@ -200,6 +201,7 @@ private:
     QString m_currentChampionName;
     QString m_currentModelId;
     QString m_currentModelPath;
+    QString m_loadedGlbPath;  // Persisted GLB path for chroma texture name extraction
     
     QNetworkAccessManager* m_networkManager = nullptr;
     int m_pendingChromaDownloads = 0;
