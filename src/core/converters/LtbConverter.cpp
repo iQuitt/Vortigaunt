@@ -79,7 +79,8 @@ bool ltbConverter::doConvertLTB(LTBModelPtr ltbModel, std::string outFilePath)
 	grabMeshesFromLTB(ltbModel);
 	//exportScene->mFlags = AI_SCENE_FLAGS_ALLOW_SHARED;
 	exportScene->mRootNode = new Node();
-	exportScene->mRootNode->mName = ltbModel->GetFilename();
+	std::filesystem::path ltbPath = FileIO::toPath(std::string(ltbModel->GetFilename()));
+	exportScene->mRootNode->mName = String_UTF16toUTF8(ltbPath.stem().generic_u16string());
 	Node* modelRootNode = new Node();
 	modelRootNode->mName = "Root";
 	exportScene->mRootNode->addChildren(1, &modelRootNode);
@@ -92,18 +93,22 @@ bool ltbConverter::doConvertLTB(LTBModelPtr ltbModel, std::string outFilePath)
 	}
 	//
 	exportScene->mNumMeshes = numMeshes;
+
+	// NOTE: Wolfteam LTB models use a 1 unit = 1 meter scale, which is significantly smaller 
+	// than models from other games (like LoL) that use 1 unit = 1 centimeter. 
+	// Because of this small scale, default joint/bone drawing sizes in 3D editors 
+	// (like Milkshape 3D) may appear disproportionately huge relative to the model. 
+	// This is purely a visual editor issue and requires lowering the 'Joint Size' in the editor settings.
+	// in Blender there is no such thing issue. Better use blender but old habits die hard
 	if (numMeshes > 0)
 	{
 		exportScene->mMeshes = &m_meshesPtrVec[0];
-	}
-	for (size_t i = 0; i < numMeshes; ++i)
-	{
-		Node* meshSceneNode = new Node();
-		meshSceneNode->mName = m_meshesPtrVec[i]->mName;
-		meshSceneNode->mNumMeshes = 1;
-		meshSceneNode->mMeshes = new unsigned int[1];
-		meshSceneNode->mMeshes[0] = i;
-		modelRootNode->addChildren(1, &meshSceneNode);
+		modelRootNode->mNumMeshes = numMeshes;
+		modelRootNode->mMeshes = new unsigned int[numMeshes];
+		for (size_t i = 0; i < numMeshes; ++i)
+		{
+			modelRootNode->mMeshes[i] = i;
+		}
 	}
 	//
 	if (m_skeletonNodes.size() > 0)
