@@ -537,7 +537,7 @@ MainWindow::MainWindow(QWidget* parent)
         m_gr2AnimGroup->setVisible(isGr2);
         m_mirrorUVYCheck->setVisible(isGr2); // Show Mirror UV Y checkbox only for GR2
         m_invertAlphaCheck->setVisible(isGr2); // Show Invert Alpha checkbox only for GR2
-        m_writeQCCheck->setVisible(isGr2); // Show Write QC checkbox only for GR2
+        m_writeQCCheck->setVisible(isGr2 || isLtb); // Show Write QC checkbox  for GR2 & Ltb
 
 
         m_ignoreMeshesCheck->setVisible(isLtb);
@@ -580,7 +580,7 @@ MainWindow::MainWindow(QWidget* parent)
     
     m_mirrorUVYCheck->setVisible(initialGr2);
     m_invertAlphaCheck->setVisible(initialGr2);
-    m_writeQCCheck->setVisible(initialGr2);
+    m_writeQCCheck->setVisible(initialGr2 || initialLtb);
     
     if (m_outputFormatLabel) m_outputFormatLabel->setVisible(isModelOp);
     if (m_outputFormatCombo) {
@@ -1192,6 +1192,59 @@ void MainWindow::convertLtb(const QString& inputPath, const QString& outputDir, 
                 else
                 {
                     VortigauntLog::Vortigaunt_Printf(QStringLiteral("  ^3No SMD files were generated."));
+                }
+
+                // Generate QC file if checkbox is checked
+                if (m_writeQCCheck->isChecked())
+                {
+                    QCFile qcWriter;
+                    QCFileSettings qcSettings;
+
+                    qcSettings.ModelName = baseName.toStdString() + ".mdl";
+
+                    qcSettings.MeshName = (baseName + "_reference").toStdString();
+                    qcSettings.Scale = 1.0f;
+                    qcSettings.Fps = 30;
+
+                    qcWriter.SetSettings(qcSettings);
+
+                    // Add sequences 
+                    QStringList animFilters;
+                    animFilters << QStringLiteral("%1_anim_*.smd").arg(baseName);
+                    const QFileInfoList animFiles = outDir.entryInfoList(animFilters, QDir::Files, QDir::Name);
+
+                    if (!animFiles.isEmpty())
+                    {
+                        for (const QFileInfo& fi : animFiles)
+                        {
+                            QString animFileName = fi.completeBaseName();
+                            QString prefix = baseName + "_anim_";
+                            QString seqName = animFileName;
+                            if (seqName.startsWith(prefix)) {
+                                seqName = seqName.mid(prefix.length());
+                            }
+
+                            qcWriter.AddSequence(seqName.toStdString(), animFileName.toStdString(), 30);
+                        }
+                    }
+                    else
+                    {
+                        // No animations
+                        qcWriter.AddSequence("idle", qcSettings.MeshName, 30);
+                    }
+
+                    // Write QC file
+                    std::filesystem::path qcPath = outInfo.absoluteFilePath().toStdWString();
+                    qcPath.replace_extension(".qc");
+
+                    if (qcWriter.Write(String_UTF16toUTF8(qcPath.generic_u16string())))
+                    {
+                        VortigauntLog::Vortigaunt_Printf(QStringLiteral("  QC file created: %1").arg(QString::fromStdWString(qcPath.generic_wstring())));
+                    }
+                    else
+                    {
+                        VortigauntLog::Vortigaunt_Printf(QStringLiteral("  ^1Failed to create QC file:^7 %1").arg(QString::fromStdString(qcWriter.GetError())));
+                    }
                 }
             }
             else
