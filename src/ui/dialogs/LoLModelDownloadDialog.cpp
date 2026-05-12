@@ -6,6 +6,7 @@
 #include "GLBViewer.h"
 #include "utils/Bmp.h"
 #include "utils/Platform.h"
+#include "QCFile.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -502,15 +503,21 @@ void LoLModelDownloadDialog::setupUI()
     buttonLayout->addWidget(m_cancelButton);
     buttonLayout->addStretch();
     
-    m_viewCharacterButton = new QPushButton(tr("View Character"));
-    m_viewCharacterButton->setStyleSheet("QPushButton { padding: 10px 20px; font-weight: bold; background-color: #2196F3; color: white; } QPushButton:hover { background-color: #1976D2; } QPushButton:disabled { background-color: #666; }");
-    m_viewCharacterButton->setEnabled(false);
-    buttonLayout->addWidget(m_viewCharacterButton);
+
     
     m_singleSmdCheckbox = new QCheckBox(tr("Make Seperate SMDs as Single SMD"));
     m_singleSmdCheckbox->setChecked(false);
     buttonLayout->addWidget(m_singleSmdCheckbox);
     
+    m_writeQCCheckbox = new QCheckBox(tr("Write QC"));
+    m_writeQCCheckbox->setChecked(true);
+    buttonLayout->addWidget(m_writeQCCheckbox);
+    
+    m_viewCharacterButton = new QPushButton(tr("View Character"));
+    m_viewCharacterButton->setStyleSheet("QPushButton { padding: 10px 20px; font-weight: bold; background-color: #2196F3; color: white; } QPushButton:hover { background-color: #1976D2; } QPushButton:disabled { background-color: #666; }");
+    m_viewCharacterButton->setEnabled(false);
+    buttonLayout->addWidget(m_viewCharacterButton);
+
     m_downloadButton = new QPushButton(tr("Export SMD"));
     m_downloadButton->setStyleSheet("QPushButton { padding: 10px 20px; font-weight: bold; background-color: #4CAF50; color: white; } QPushButton:hover { background-color: #45a049; } QPushButton:disabled { background-color: #666; }");
     m_downloadButton->setEnabled(false);
@@ -1938,6 +1945,52 @@ void LoLModelDownloadDialog::onDownloadClicked()
         
         logToDialog(tr("  SMD export completed!"));
         QApplication::processEvents();
+        
+        // Generate QC file if checkbox is checked
+        if (m_writeQCCheckbox->isChecked()) {
+            QCFile qcWriter;
+            QCFileSettings qcSettings;
+            
+            qcSettings.ModelName = skinSafeName.toStdString() + ".mdl";
+            
+            // Determine primary mesh
+            QString meshName = "reference"; 
+            if (!m_singleSmdCheckbox->isChecked()) {
+                // For separate SMDs, find the first SMD in the model directory
+                QDir mDir(modelDir);
+                QStringList smdFiles = mDir.entryList(QStringList() << "*.smd", QDir::Files, QDir::Name);
+                if (!smdFiles.isEmpty()) {
+                    meshName = QFileInfo(smdFiles.first()).completeBaseName();
+                }
+            }
+            
+            qcSettings.MeshName = meshName.toStdString();
+            qcSettings.Scale = 1.0f;
+            qcSettings.Fps = 30;
+            
+            qcWriter.SetSettings(qcSettings);
+            
+            // Add sequences from animations folder
+            QDir aDir(animDir);
+            QStringList animFiles = aDir.entryList(QStringList() << "*.smd", QDir::Files, QDir::Name);
+            
+            if (!animFiles.isEmpty()) {
+                for (const QString& animFile : animFiles) {
+                    QString seqName = QFileInfo(animFile).completeBaseName();
+                    QString relPath = "animations/" + QFileInfo(animFile).completeBaseName();
+                    qcWriter.AddSequence(seqName.toStdString(), relPath.toStdString(), 30);
+                }
+            } else {
+                qcWriter.AddSequence("idle", qcSettings.MeshName, 30);
+            }
+            
+            QString qcPath = QDir(modelDir).filePath(skinSafeName + ".qc");
+            if (qcWriter.Write(qcPath.toStdString())) {
+                logToDialog(tr("  QC file created: %1").arg(QFileInfo(qcPath).fileName()));
+            } else {
+                logToDialog(tr("  ^1Failed to create QC file:^7 %1").arg(QString::fromStdString(qcWriter.GetError())));
+            }
+        }
         
         // Clean up temp file
         QFile::remove(glbFile);

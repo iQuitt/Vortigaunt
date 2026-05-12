@@ -127,6 +127,7 @@ private:
     QPushButton*        m_downloadButton;
     QPushButton*        m_cancelButton;
     QCheckBox*          m_singleSmdCheckbox;
+    QCheckBox*          m_writeQCCheckbox;
     QLineEdit*          m_outputPathEdit;
     QPushButton*        m_browseOutputButton;
     QPlainTextEdit*          m_logEdit;
