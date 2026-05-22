@@ -93,19 +93,7 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 
 cmake --build . -j$(nproc)
-````
-## Planned Features
 
-- [ ] GTA:SA Asset Support
-- [ ] Metin2 Script Effect 
-- [ ] Convert FBX/OBJ/GR2 to Half life .MAP format
-- [ ] Unity AnimationClip Support
-- [ ] Unity-based Games Asset Support
-- [ ] CS2 Asset Support
-- [ ] Valorant Asset Support
-- [ ] FBX to SMD
-- [ ] CODM Asset Support
----
 
 Special Thanks To:
 - Luís Leite for Counter Strike Online PAK (https://git.sr.ht/~leite/cso-pak)
