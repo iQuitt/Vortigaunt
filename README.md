@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/iQuitt/Vortigaunt?style=social)](https://github.com/iQuitt/Vortigaunt)
 [![GitHub Issues](https://img.shields.io/github/issues/iQuitt/Vortigaunt)](https://github.com/iQuitt/Vortigaunt/issues)
-[![Version](https://img.shields.io/badge/version-1.0.0b-green.svg)](https://github.com/iQuitt/Vortigaunt/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1b-green.svg)](https://github.com/iQuitt/Vortigaunt/releases)
 ![Qt Version](https://img.shields.io/badge/Qt-6.6+-41CD52?style=flat&logo=qt&logoColor=white)
 [![Discord](https://img.shields.io/discord/1463565216485867622?style=flat&logo=discord&logoColor=white&label=discord&color=5865F2)](https://discord.gg/PZ9JzgHHKa)
 
@@ -93,19 +93,7 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 
 cmake --build . -j$(nproc)
-````
-## Planned Features
 
-- [ ] GTA:SA Asset Support
-- [ ] Metin2 Script Effect 
-- [ ] Convert FBX/OBJ/GR2 to Half life .MAP format
-- [ ] Unity AnimationClip Support
-- [ ] Unity-based Games Asset Support
-- [ ] CS2 Asset Support
-- [ ] Valorant Asset Support
-- [ ] FBX to SMD
-- [ ] CODM Asset Support
----
 
 Special Thanks To:
 - Luís Leite for Counter Strike Online PAK (https://git.sr.ht/~leite/cso-pak)

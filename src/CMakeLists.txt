@@ -36,6 +36,8 @@ set(VORTIGAUNT_CORE_HEADERS
     core/extractors/unity/UnityPorter.h
     core/extractors/unity/UnityTextureDecoder.h
     core/extractors/unity/UnityAnimationExtractor.h
+    core/extractors/vpk/VpkFile.h
+    core/extractors/vpk/VpkExtractor.h
 )
 
 set(VORTIGAUNT_GUI_HEADERS
@@ -54,6 +56,7 @@ set(VORTIGAUNT_GUI_HEADERS
     ui/windows/RezViewerWindow.h
     ui/windows/SpriteViewerWindow.h
     ui/windows/XfsViewerWindow.h
+    ui/windows/VpkViewerWindow.h
 
 
     ui/widgets/LoLModelDownloader.h
@@ -83,6 +86,8 @@ set(VORTIGAUNT_CORE
     core/extractors/pak/PakFile.cpp
     core/extractors/pak/PakExtractor.cpp
     core/extractors/ExtractArchive.cpp
+    core/extractors/vpk/VpkFile.cpp
+    core/extractors/vpk/VpkExtractor.cpp
     core/VortigauntLog.cpp
     core/extractors/unity/UnityAssetParser.cpp
     core/extractors/unity/UnityDataResolver.cpp
@@ -136,6 +141,7 @@ set(VORTIGAUNT_GUI
     ui/windows/RezViewerWindow.cpp
     ui/windows/SpriteViewerWindow.cpp
     ui/windows/XfsViewerWindow.cpp
+    ui/windows/VpkViewerWindow.cpp
 
 
     ui/widgets/LoLModelDownloader.cpp
@@ -428,6 +434,12 @@ set(WIX_FILE_ASSOCIATIONS_CONTENT "<?xml version='1.0' encoding='UTF-8'?>
         <!-- PAK -->
         <ProgId Id='Vortigaunt.pak' Description='Counter Strike Online PAK Archive' Icon='VortigauntTool_gui.exe'>
           <Extension Id='pak' ContentType='application/x-pak'>
+            <Verb Id='open' Command='Open' TargetFile='VortigauntTool_gui.exe' Argument='\"%1\"'/>
+          </Extension>
+        </ProgId>
+        <!-- VPK -->
+        <ProgId Id='Vortigaunt.vpk' Description='Source Engine VPK Archive' Icon='VortigauntTool_gui.exe'>
+          <Extension Id='vpk' ContentType='application/x-vpk'>
             <Verb Id='open' Command='Open' TargetFile='VortigauntTool_gui.exe' Argument='\"%1\"'/>
           </Extension>
         </ProgId>

@@ -1,7 +1,10 @@
 #pragma once
 
 #include <QDialog>
-#include <QMessageBox>
 
-void AboutDialog(QWidget* parent = nullptr);
-
+class AboutDialog : public QDialog
+{
+    Q_OBJECT
+public:
+    explicit AboutDialog(QWidget* parent = nullptr);
+};

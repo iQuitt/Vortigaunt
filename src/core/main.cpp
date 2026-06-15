@@ -15,6 +15,8 @@
 #include "core/extractors/xfs/XfsExtractor.h"
 #include "core/extractors/pak/PakFile.h"
 #include "core/extractors/unity/UnityPorter.h"
+#include "core/extractors/vpk/VpkFile.h"
+#include "core/extractors/vpk/VpkExtractor.h"
 #include "util.hpp"
 #include "fsutils.hpp"
 
@@ -39,6 +41,7 @@ auto g_rezExtractor = std::make_unique<RezExtractor>();
 auto g_xfsExtractor = std::make_unique<XfsExtractor>();
 //XfsExtractor* g_xfsExtractor = new XfsExtractor();
 
+auto g_vpkExtractor = std::make_unique<VpkExtractor>();
 
 #ifdef ENABLE_GRANNY2
 auto g_gr2Converter = std::make_unique<Gr2Converter>();
@@ -206,7 +209,8 @@ void recurseAndCollectFilePath(std::filesystem::path start, FilePathVec* filesVe
                 ext == ".pak" || ext == ".PAK" ||
                 ext == ".unity3d" || ext == ".UNITY3D" ||
                 ext == ".bundle" || ext == ".BUNDLE" ||
-                ext == ".assets" || ext == ".ASSETS")
+                ext == ".assets" || ext == ".ASSETS" ||
+                ext == ".vpk" || ext == ".VPK")
 			{
 				filesVec->push_back(p.string());
 			}
@@ -299,6 +303,7 @@ int main(int argc,char** argv)
 		printf("    -multirezextract <folder>    Extract all .rez files recursively\n");
 		printf("    -multipakextract <folder>    Extract all .pak (CSO) files recursively\n");
 		printf("    -multixfsextract <folder>    Extract all .xfs (Xenesis) files recursively\n");
+		printf("    -multivpkextract <folder>    Extract all .vpk files recursively\n");
 		printf("\n");
 		printf(" Model Convert:\n");
 		printf("    -gr2 <input.gr2> <output.smd>    Convert GR2 to SMD\n");
@@ -474,6 +479,91 @@ int main(int argc,char** argv)
 		printf("\n======================================================\n");
 		printf("Multi-PAK extraction finished. %zu/%zu PAK files extracted to %s\n",
 			   okCount, pakOnly.size(), outDir.c_str());
+		return 0;
+	}
+
+	// Multi-VPK extract mode
+	if (argc >= 2 && std::string(argv[1]) == "-multivpkextract")
+	{
+		std::filesystem::path rootDir;
+		if (argc >= 3)
+		{
+			rootDir = std::filesystem::path(argv[2]);
+		}
+		else
+		{
+			rootDir = std::filesystem::current_path();
+		}
+
+		FilePathVec vpkFiles;
+		if (std::filesystem::is_directory(rootDir))
+		{
+			recurseAndCollectFilePath(rootDir, &vpkFiles);
+		}
+		else
+		{
+			vpkFiles.push_back(rootDir.string());
+		}
+
+		FilePathVec vpkOnly;
+		for (const auto& path : vpkFiles)
+		{
+			if (grabFileExt(path) == "vpk")
+				vpkOnly.push_back(path);
+		}
+
+		if (vpkOnly.empty())
+		{
+			printf("No .vpk files found under %s\n", rootDir.string().c_str());
+			return 0;
+		}
+
+		// Filter out _NNN.vpk chunk files (only process _dir.vpk and single VPKs)
+		FilePathVec vpkFiltered;
+		for (const auto& path : vpkOnly)
+		{
+			std::string name = std::filesystem::path(path).filename().string();
+			auto pos = name.rfind('_');
+			if (pos != std::string::npos)
+			{
+				std::string after = name.substr(pos + 1);
+				if (after.size() >= 3 && after.find('.') != std::string::npos)
+				{
+					std::string numPart = after.substr(0, after.find('.'));
+					if (numPart.find_first_not_of("0123456789") == std::string::npos)
+						continue;
+				}
+			}
+			vpkFiltered.push_back(path);
+		}
+
+		std::filesystem::path baseOut = std::filesystem::current_path() / "VortiGauntVpkExtracted";
+		std::filesystem::create_directories(baseOut);
+		std::string outDir = baseOut.string();
+
+		printf("Multi-VPK extract mode: root = %s, output = %s\n",
+			   rootDir.string().c_str(), outDir.c_str());
+		printf("Found %zu .vpk files to extract.\n\n", vpkFiltered.size());
+
+		size_t okCount = 0;
+		for (const auto& vpkPath : vpkFiltered)
+		{
+			printf("\n----------------------------------------------\n");
+			printf("Extracting VPK: %s\n", vpkPath.c_str());
+			if (g_vpkExtractor->ExtractSingle(vpkPath, outDir))
+			{
+				printf("  -> OK\n");
+				++okCount;
+			}
+			else
+			{
+				printf("  -> FAILED\n");
+			}
+		}
+
+		printf("\n======================================================\n");
+		printf("Multi-VPK extraction finished. %zu/%zu VPK files extracted to %s\n",
+			   okCount, vpkFiltered.size(), outDir.c_str());
 		return 0;
 	}
 
@@ -833,6 +923,22 @@ int main(int argc,char** argv)
             printf("Extracting Unity assets : %s --> %s\n", filesVec[i].c_str(), outDir.c_str());
             UnityPorter porter;
             porter.Process(filesVec[i], outDir);
+        }
+        else if (inFormat == "vpk")
+        {
+            std::filesystem::path baseOut = std::filesystem::current_path() / "VortigauntExtracted";
+            std::filesystem::create_directories(baseOut);
+            std::string outDir = baseOut.string();
+
+            printf("Extracting .VPK : %s --> %s\n", filesVec[i].c_str(), outDir.c_str());
+            if (g_vpkExtractor->ExtractSingle(filesVec[i], outDir))
+            {
+                printf("VPK extraction successful.\n");
+            }
+            else
+            {
+                printf("VPK extraction failed for %s\n", filesVec[i].c_str());
+            }
         }
 		else
 		{
