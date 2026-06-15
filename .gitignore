@@ -11,6 +11,8 @@
 /build
 /Test
 
+.qtcreator/
+
 # MSE (Metin2 Script Effect) not ready.
 src/core/MseLoader.h
 src/core/MseLoader.cpp

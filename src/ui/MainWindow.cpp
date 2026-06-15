@@ -53,6 +53,7 @@
 #include "core/converters/LtbConverter.h"
 #include "core/extractors/rez/RezExtractor.h"
 #include "core/extractors/xfs/XfsExtractor.h"
+#include "core/extractors/vpk/VpkExtractor.h"
 #include "core/VortigauntVersion.h"
 #include "core/extractors/pak/PakExtractor.h"
 #include "core/converters/Gr2Converter.h"
@@ -65,6 +66,7 @@
 #include "PakViewerWindow.h"
 #include "RezViewerWindow.h"
 #include "XfsViewerWindow.h"
+#include "VpkViewerWindow.h"
 #include "SpriteViewerWindow.h"
 #include "LoLModelDownloadDialog.h"
 #ifdef METIN2_SCRIPT_EFFECT
@@ -122,13 +124,14 @@ void recurseAndCollectFiles(const std::filesystem::path& start, std::vector<std:
             continue;
         const auto& p = entry.path();
         auto ext = p.extension().string();
-        if (ext == ".ltb" || ext == ".LTB" ||
-            ext == ".gr2" || ext == ".GR2" ||
-            ext == ".rez" || ext == ".REZ" ||
-            ext == ".pak" || ext == ".PAK")
-        {
-            out.push_back(p);
-        }
+    if (ext == ".ltb" || ext == ".LTB" ||
+        ext == ".gr2" || ext == ".GR2" ||
+        ext == ".rez" || ext == ".REZ" ||
+        ext == ".pak" || ext == ".PAK" ||
+        ext == ".vpk" || ext == ".VPK")
+    {
+        out.push_back(p);
+    }
     }
 }
 
@@ -138,7 +141,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_currentLogFilter(VortigauntLog::LogLevel::Info)
     , m_updateChecker(nullptr)
 {
-    setWindowTitle(tr("Vortigaunt - A Porting Tool for Goldsource Engine"));
+    setWindowTitle("Vortigaunt");
 
 #ifdef _WIN32
     setWindowIcon(QIcon(":/app2.ico"));
@@ -146,11 +149,7 @@ MainWindow::MainWindow(QWidget* parent)
     setWindowIcon(QIcon(":/app2.png")); // qt already support ico so linux can draw the ico. but somehow the execute file icon is not visible so thats why its png.
 	// windows also support png but just to be sure
 #endif
-    //resize(1280, 960); we dont need this while using Qt::WindowMaximized
-    // maybe i'll disable maximize. its depends on feedbacks
-    
-
-	setWindowState(Qt::WindowMaximized);
+    resize(minimumWidth(), minimumHeight());
     setAcceptDrops(true);
     setMinimumWidth(800);
     setMinimumHeight(600);
@@ -189,6 +188,9 @@ MainWindow::MainWindow(QWidget* parent)
     m_pakViewAction = goldSrcMenu->addAction(tr("PAK Viewer (CSO)..."));
     connect(m_pakViewAction, &QAction::triggered, this, &MainWindow::onOpenPakViewer);
 
+    m_vpkViewAction = goldSrcMenu->addAction(tr("VPK Viewer (Source)..."));
+    connect(m_vpkViewAction, &QAction::triggered, this, &MainWindow::onOpenVpkViewer);
+
     m_audioConvertAction = goldSrcMenu->addAction(tr("Convert WAV for Goldsrc..."));
     connect(m_audioConvertAction, &QAction::triggered, this, &MainWindow::onOpenAudioConverter);
 
@@ -221,7 +223,7 @@ MainWindow::MainWindow(QWidget* parent)
     QMenu* m_aboutMenu = menuBar()->addMenu(tr("About"));
 
 	m_vortiAboutAction = m_aboutMenu->addAction(tr("About Vortigaunt"));
-    connect(m_vortiAboutAction, &QAction::triggered, this, [this] { AboutDialog(this); });
+    connect(m_vortiAboutAction, &QAction::triggered, this, [this] { AboutDialog dlg(this); dlg.exec(); });
 
 	m_qtAboutAction = m_aboutMenu->addAction(tr("About Qt"));
 	connect(m_qtAboutAction, &QAction::triggered, this, &QApplication::aboutQt);
@@ -275,32 +277,42 @@ MainWindow::MainWindow(QWidget* parent)
 
     // i know most ppl tryna click this but they close the app 
     // so TODO: find a better place for this
-    QPushButton* discordBtn = new QPushButton(cornerWidget);
+    const QString menuBtnStyle = R"(
+        QPushButton {
+            border: none; padding: 4px 8px; background: transparent;
+            color: palette(windowText);
+        }
+        QPushButton:hover {
+            background: rgba(128, 128, 128, 0.15);
+        }
+        QPushButton:pressed {
+            background: rgba(128, 128, 128, 0.25);
+        }
+    )";
+
+    QPushButton* discordBtn = new QPushButton(tr("Discord"), cornerWidget);
     discordBtn->setIcon(QIcon(":/discord.png"));
-    discordBtn->setIconSize(QSize(48, 48));
+    discordBtn->setIconSize(QSize(20, 20));
     discordBtn->setToolTip(tr("Join our Discord"));
     discordBtn->setFlat(true);
     discordBtn->setCursor(Qt::PointingHandCursor);
-    discordBtn->setFixedSize(48, 48); // The reason there's unnecessary space under the menu bars is because the icons look ugly when I reduce it.
-    discordBtn->setStyleSheet("QPushButton { border: none; padding: 0px; background: transparent; }");
+    discordBtn->setStyleSheet(menuBtnStyle);
     connect(discordBtn, &QPushButton::clicked, this, []() {
         QDesktopServices::openUrl(QUrl("https://discord.gg/PZ9JzgHHKa"));
     });
-    cornerLayout->addWidget(discordBtn, 0, Qt::AlignCenter);
+    cornerLayout->addWidget(discordBtn);
 
-    QPushButton* githubBtn = new QPushButton(cornerWidget);
+    QPushButton* githubBtn = new QPushButton(tr("GitHub"), cornerWidget);
     githubBtn->setIcon(QIcon(":/github.png"));
-    githubBtn->setIconSize(QSize(48, 48));
-    githubBtn->setToolTip(tr("Github Repository of Vortigaunt"));
+    githubBtn->setIconSize(QSize(20, 20));
+    githubBtn->setToolTip(tr("GitHub Repository of Vortigaunt"));
     githubBtn->setFlat(true);
     githubBtn->setCursor(Qt::PointingHandCursor);
-    githubBtn->setFixedSize(48, 48); // The reason there's unnecessary space under the menu bars is because the icons look ugly when I reduce it.
-
-    githubBtn->setStyleSheet("QPushButton { border: none; padding: 0px; background: transparent; }");
+    githubBtn->setStyleSheet(menuBtnStyle);
     connect(githubBtn, &QPushButton::clicked, this, []() {
         QDesktopServices::openUrl(QUrl("https://github.com/iQuitt/Vortigaunt"));
     });
-    cornerLayout->addWidget(githubBtn, 0, Qt::AlignCenter);
+    cornerLayout->addWidget(githubBtn);
 
     menuBar()->setCornerWidget(cornerWidget, Qt::TopRightCorner);
 
@@ -348,6 +360,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_operationCombo->addItem(tr("Extract REZ file"));
     //m_operationCombo->addItem(tr("Multi-REZ extract (folder with  REZ)"));
     m_operationCombo->addItem(tr("PAK (Counter Strike Online)"));
+    m_operationCombo->addItem(tr("Extract VPK (Source Engine)"));
     //m_operationCombo->addItem(tr("Multi-PAK extract (folder with PAK)"));
     opLayout->addWidget(m_operationCombo, 1);
     optionsLayout->addLayout(opLayout);
@@ -529,7 +542,8 @@ MainWindow::MainWindow(QWidget* parent)
         bool isGr2 = currentText.contains("GR2", Qt::CaseInsensitive);
         bool isLtb = currentText.contains("LTB", Qt::CaseInsensitive);
         bool isArchiveFile = currentText.contains("REZ", Qt::CaseInsensitive) ||
-			currentText.contains("PAK", Qt::CaseInsensitive); 
+			currentText.contains("PAK", Qt::CaseInsensitive) ||
+			currentText.contains("VPK", Qt::CaseInsensitive);
 
         bool isArchiveOperation = isArchiveFile || currentText.contains("XFS", Qt::CaseInsensitive) || currentText.contains("Smart Batch", Qt::CaseInsensitive);
         bool showOutputFormat = isGr2 || isLtb;
@@ -799,6 +813,7 @@ void MainWindow::updateOperationComboForFile(const QString& filePath)
         m_operationCombo->addItem(tr("Extract REZ File"));
         m_operationCombo->addItem(tr("Extract PAK File (Counter Strike Online)"));
         m_operationCombo->addItem(tr("Extract XFS File (Xenesis)"));
+        m_operationCombo->addItem(tr("Extract VPK (Source Engine)"));
         
         // Restore selection if valid
         if (currentIndex >= 0 && currentIndex < m_operationCombo->count())
@@ -844,6 +859,11 @@ void MainWindow::updateOperationComboForFile(const QString& filePath)
         m_operationCombo->addItem(tr("Extract XFS "));
         m_operationCombo->setCurrentIndex(0);
     }
+    else if (ext == "vpk")
+    {
+        m_operationCombo->addItem(tr("Extract VPK (Source Engine)"));
+        m_operationCombo->setCurrentIndex(0);
+    }
     else
     {
 #ifdef ENABLE_LITHTECH
@@ -856,6 +876,7 @@ void MainWindow::updateOperationComboForFile(const QString& filePath)
         m_operationCombo->addItem(tr("Extract REZ "));
         m_operationCombo->addItem(tr("Extract PAK (Counter Strike Online)"));
         m_operationCombo->addItem(tr("Extract XFS"));
+        m_operationCombo->addItem(tr("Extract VPK (Source Engine)"));
             
         // Restore selection if valid
         if (currentIndex >= 0 && currentIndex < m_operationCombo->count())
@@ -866,7 +887,7 @@ void MainWindow::updateOperationComboForFile(const QString& filePath)
 void MainWindow::onBrowseInput()
 {
     QString current = m_inputPathEdit->text();
-    QString baseExtensions = "*.ltb *.gr2 *.rez *.pak *.mse *.xfs";
+    QString baseExtensions = "*.ltb *.gr2 *.rez *.pak *.mse *.xfs *.vpk";
     QString filterStr = tr("Supported files (%1);;All files (*.*)").arg(baseExtensions);
     
 
@@ -955,7 +976,7 @@ void MainWindow::onRun()
         // so i did this
         if (modeText.contains("Multi Process Mode", Qt::CaseInsensitive) || selectedFiles.size() > 1)
         {
-            QStringList ltbList, gr2List, rezList, pakList, xfsList;
+            QStringList ltbList, gr2List, rezList, pakList, xfsList, vpkList;
             
             for (const QString& f : selectedFiles) {
                 QString ext = QFileInfo(f).suffix().toLower();
@@ -964,6 +985,7 @@ void MainWindow::onRun()
                 else if (ext == "gr2") gr2List << f;
                 else if (ext == "ltb") ltbList << f;
                 else if (ext == "xfs") xfsList << f;
+                else if (ext == "vpk") vpkList << f;
             }
             
             if (!ltbList.isEmpty()) {
@@ -979,6 +1001,7 @@ void MainWindow::onRun()
             if (!rezList.isEmpty()) extractArchiveRez(rezList, outputDir);
             if (!pakList.isEmpty()) extractArchivePak(pakList, outputDir);
             if (!xfsList.isEmpty()) extractArchiveXfs(xfsList, outputDir);
+            if (!vpkList.isEmpty()) extractArchiveVpk(vpkList, outputDir);
         }
         else if (modeText.contains("LTB", Qt::CaseInsensitive))
         {
@@ -1000,11 +1023,16 @@ void MainWindow::onRun()
         {
             extractArchiveXfs(QStringList{inputPath}, outputDir);
         }
+        else if (modeText.contains("VPK", Qt::CaseInsensitive))
+        {
+            extractArchiveVpk(QStringList{inputPath}, outputDir);
+        }
 
         // Cleanup callbacks
         RezExtractor::SetProgressFunc(nullptr);
         PakExtractor::SetProgressFunc(nullptr);
         XfsExtractor::SetProgressFunc(nullptr);
+        VpkExtractor::SetProgressFunc(nullptr);
         
 
         QMetaObject::invokeMethod(this, [this]() {
@@ -1100,6 +1128,16 @@ void MainWindow::onOpenMseViewer()
 void MainWindow::onOpenAutoRigDialog()
 {
     AutoRigDialog* qtDialog = new AutoRigDialog(this);
+    qtDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    qtDialog->setModal(false);
+    qtDialog->show();
+    qtDialog->raise();
+    qtDialog->activateWindow();
+}
+
+void MainWindow::onOpenVpkViewer()
+{
+    VpkViewerWindow* qtDialog = new VpkViewerWindow(this);
     qtDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     qtDialog->setModal(false);
     qtDialog->show();
@@ -1532,6 +1570,66 @@ void MainWindow::extractArchiveXfs(const QStringList& paths, const QString& outp
 
     if (isBatch)
         VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2XFS extraction complete.^7 ^3%1^7 of ^3%2^7 files processed.").arg(successCount).arg(totalFiles));
+}
+
+void MainWindow::extractArchiveVpk(const QStringList& paths, const QString& outputDir)
+{
+    if (paths.isEmpty())
+    {
+        VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: No VPK files selected."));
+        return;
+    }
+
+    Platform::setHighPriority();
+
+    const int totalFiles = paths.size();
+    const bool isBatch = totalFiles > 1;
+    int successCount = 0;
+
+    VpkExtractor vpkExtractor;
+
+    VpkExtractor::SetProgressFunc([this](int percent) {
+        updateProgressSafe(percent);
+    });
+
+    for (int i = 0; i < totalFiles; ++i)
+    {
+        const QString& vpkPath = paths.at(i);
+
+        if (isBatch)
+        {
+            int filePercent = ((i + 1) * 100) / totalFiles;
+            QMetaObject::invokeMethod(this, [this, filePercent, i, totalFiles]() {
+                if (m_progressBar) {
+                    m_progressBar->setValue(filePercent);
+                    m_progressBar->setFormat(tr("VPK %1/%2: %p%").arg(i + 1).arg(totalFiles));
+                }
+            }, Qt::QueuedConnection);
+        }
+
+        // Determine output directory
+        QString targetDir;
+        if (isBatch && m_separateFoldersCheck->isChecked())
+            targetDir = QDir(outputDir).filePath(QFileInfo(vpkPath).completeBaseName());
+        else
+            targetDir = outputDir.isEmpty() ? SettingsDialog::getExtractedOutputDir() : outputDir;
+
+        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^5Extracting VPK:^7 ^4%1^7 -> ^4%2^7").arg(vpkPath, targetDir));
+
+        if (vpkExtractor.ExtractSingle(vpkPath.toStdString(), targetDir.toStdString())) {
+            ++successCount;
+        } else {
+            ExtractionError err;
+            err.filename = vpkPath;
+            err.errorMessage = tr("VPK extraction failed or was incomplete");
+            m_extractionErrors.push_back(err);
+        }
+    }
+
+    VpkExtractor::SetProgressFunc(nullptr);
+    Platform::restoreNormalPriority();
+
+    VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2VPK extraction complete.^7 ^3%1^7 of ^3%2^7 files processed.").arg(successCount).arg(totalFiles));
 }
 
 
@@ -2054,6 +2152,7 @@ void MainWindow::handleDroppedFiles(const QList<QUrl>& urls)
 void MainWindow::setupStatusBar()
 {
     m_statusLabel = new QLabel(QString("Version: %1b").arg(VORTIGAUNT_VERSION_STRING));
+    m_statusLabel->setStyleSheet("QLabel { padding: 0 6px; font-size: 11px; }");
     statusBar()->addWidget(m_statusLabel);
     
     // Progress bar
@@ -2064,9 +2163,13 @@ void MainWindow::setupStatusBar()
     m_progressBar->setTextVisible(true);
     m_progressBar->setFormat(tr("%p%"));
     m_progressBar->setMinimumWidth(200);
+    m_progressBar->setFixedHeight(16);
     statusBar()->addPermanentWidget(m_progressBar);
     
-    statusBar()->setStyleSheet("QStatusBar { border-top: 1px solid #c0c0c0; }");
+    statusBar()->setStyleSheet(
+        "QStatusBar { border: none; background: transparent; }"
+        "QStatusBar::item { border: none; }"
+    );
 }
 
 
