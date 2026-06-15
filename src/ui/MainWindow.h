@@ -67,6 +67,8 @@ private slots:
 
     void onOpenWadMaker();
 
+    void onOpenVpkViewer();
+
     void onOpenAudioConverter();
 
     void onLogFilterChanged(int index);
@@ -89,6 +91,8 @@ private:
     void extractArchivePak(const QStringList& paths, const QString& outputDir);
 
     void extractArchiveXfs(const QStringList& paths, const QString& outputDir);
+
+    void extractArchiveVpk(const QStringList& paths, const QString& outputDir);
 
     // Model/Texture Convert
     void convertLtb(const QString& inputPath, const QString& outputDir, const ltbConverterSetting& settings);
@@ -134,6 +138,7 @@ private:
     QAction*       m_pakViewAction; // Counter Strike Online PAK Archive
     QAction*       m_rezViewAction; // Lithtech Engine Archive
 	QAction*       m_xfsViewAction; // Xenesis File System Archive
+    QAction*       m_vpkViewAction; // Source Engine VPK Archive
     QAction*       m_spriteViewAction; // Goldsrc Sprite Viewer
 	QAction*       m_lithtechSpriteAction; // Lithtech Sprite Viewer
 	QAction*       m_lolModelAction; // Khada LoL Model Downloader
