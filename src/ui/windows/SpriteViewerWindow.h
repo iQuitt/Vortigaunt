@@ -105,10 +105,11 @@ protected:
     void dropEvent(QDropEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private slots:
     // File browser
-    void onFileBrowserClicked(const QModelIndex& index);
+    void onFileBrowserCurrentChanged(const QModelIndex& current, const QModelIndex& previous);
     void onFileBrowserDoubleClicked(const QModelIndex& index);
     void onNavigateBack();
     void onNavigateForward();

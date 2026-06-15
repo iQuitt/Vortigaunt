@@ -26,6 +26,7 @@
 #include <QCollator>
 #include <QSettings>
 #include <QCloseEvent>
+#include <QItemSelectionModel>
 #include "SpriteFixDialog.h"
 #include "LanguageManager.h"
 
@@ -465,7 +466,7 @@ QWidget* SpriteViewerWindow::createFileBrowserWidget()
     connect(m_forwardButton, &QPushButton::clicked, this, &SpriteViewerWindow::onNavigateForward);
     connect(m_upButton, &QPushButton::clicked, this, &SpriteViewerWindow::onNavigateUp);
     connect(m_pathEdit, &QLineEdit::returnPressed, this, &SpriteViewerWindow::onPathEditReturnPressed);
-    connect(m_fileBrowser, &QTreeView::clicked, this, &SpriteViewerWindow::onFileBrowserClicked);
+    connect(m_fileBrowser->selectionModel(), &QItemSelectionModel::currentChanged, this, &SpriteViewerWindow::onFileBrowserCurrentChanged);
     connect(m_fileBrowser, &QTreeView::activated, this, &SpriteViewerWindow::onFileBrowserDoubleClicked);
     
     return widget;
@@ -610,6 +611,7 @@ QWidget* SpriteViewerWindow::createFileTabWidget()
     m_fileFrameListWidget = new QListWidget();
     m_fileFrameListWidget->setSelectionMode(QAbstractItemView::SingleSelection);
     m_fileFrameListWidget->setMovement(QListView::Static);
+    m_fileFrameListWidget->installEventFilter(this);
     
     frameListLayout->addWidget(m_fileFrameListWidget);
     frameListGroup->setLayout(frameListLayout);
@@ -803,6 +805,7 @@ QWidget* SpriteViewerWindow::createFileTabWidget()
     navLayout->addWidget(m_prevSpriteButton);
     navLayout->addWidget(m_nextSpriteButton);
     navGroup->setLayout(navLayout);
+    navGroup->hide();
     
     bottomLayout->addWidget(animGroup);
     bottomLayout->addWidget(propsGroup);
@@ -1523,6 +1526,11 @@ void SpriteViewerWindow::onSaveAsSprite()
 
 void SpriteViewerWindow::loadSprite(const QString& filePath)
 {
+    bool signalsBlocked = false;
+    if (m_fileBrowser && m_fileBrowser->selectionModel()) {
+        signalsBlocked = m_fileBrowser->selectionModel()->blockSignals(true);
+    }
+
     m_currentSpritePath = filePath;
     m_fileSpritePathEdit->setText(filePath);
     setModified(false);
@@ -1534,6 +1542,9 @@ void SpriteViewerWindow::loadSprite(const QString& filePath)
     
     if (!m_spriteLoader.loadFile(filePath.toStdString(), true)) {
         QMessageBox::warning(this, tr("Error"), tr("Failed to load sprite file."));
+        if (m_fileBrowser && m_fileBrowser->selectionModel()) {
+            m_fileBrowser->selectionModel()->blockSignals(signalsBlocked);
+        }
         return;
     }
     
@@ -1654,6 +1665,10 @@ void SpriteViewerWindow::loadSprite(const QString& filePath)
         m_fileStopButton->setEnabled(true);
         updateFileFrameDisplay();
     }
+
+    if (m_fileBrowser && m_fileBrowser->selectionModel()) {
+        m_fileBrowser->selectionModel()->blockSignals(signalsBlocked);
+    }
 }
 
 void SpriteViewerWindow::keyPressEvent(QKeyEvent* event)
@@ -1675,7 +1690,33 @@ void SpriteViewerWindow::keyPressEvent(QKeyEvent* event)
         event->accept();
         return;
     }
+    if (event->key() == Qt::Key_Up) {
+        onPrevSprite();
+        event->accept();
+        return;
+    }
+    if (event->key() == Qt::Key_Down) {
+        onNextSprite();
+        event->accept();
+        return;
+    }
     QDialog::keyPressEvent(event);
+}
+
+bool SpriteViewerWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == m_fileFrameListWidget && event->type() == QEvent::KeyPress) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Up) {
+            onPrevSprite();
+            return true; // Filter out/consume the key event so it doesn't move list selection
+        }
+        if (keyEvent->key() == Qt::Key_Down) {
+            onNextSprite();
+            return true; // Filter out/consume the key event so it doesn't move list selection
+        }
+    }
+    return QDialog::eventFilter(watched, event);
 }
 
 void SpriteViewerWindow::setModified(bool modified)
@@ -2416,10 +2457,19 @@ void SpriteViewerWindow::onPaletteRedo()
 // File Browser Functions
 // ============================================================================
 
-void SpriteViewerWindow::onFileBrowserClicked(const QModelIndex& index)
+void SpriteViewerWindow::onFileBrowserCurrentChanged(const QModelIndex& current, const QModelIndex& previous)
 {
-    QString path = m_fileBrowserModel->filePath(index);
+    Q_UNUSED(previous);
+    if (!current.isValid())
+        return;
+    
+    QString path = m_fileBrowserModel->filePath(current);
     m_pathEdit->setText(path);
+    
+    QFileInfo fi(path);
+    if (fi.isFile() && fi.suffix().toLower() == "spr") {
+        loadSprite(path);
+    }
 }
 
 void SpriteViewerWindow::onFileBrowserDoubleClicked(const QModelIndex& index)
