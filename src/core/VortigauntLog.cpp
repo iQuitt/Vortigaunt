@@ -357,6 +357,7 @@ namespace VortigauntLog
         std::lock_guard<std::mutex> lock(g_logMutex);
 
         writeToFile(processedMsg);
+        std::cout << stripColorCodes(processedMsg) << std::flush;
 
 
 #ifdef QT_CORE_LIB

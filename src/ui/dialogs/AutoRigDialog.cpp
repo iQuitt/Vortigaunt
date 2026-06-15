@@ -21,6 +21,7 @@
 #include <QScrollArea>
 #include <limits>
 #include <algorithm>
+#include <functional>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -125,6 +126,47 @@ AutoRigDialog::AutoRigDialog(QWidget* parent) : QDialog(parent)
     // Add left side to top layout
     topLayout->addLayout(mainLayout, 1);
 
+    // Middle column: Bones exclusion tree
+    m_bonesGroupBox = new QGroupBox(tr("Bones Configuration"));
+    QVBoxLayout* bonesLayout = new QVBoxLayout(m_bonesGroupBox);
+    bonesLayout->setContentsMargins(10, 12, 10, 10);
+    bonesLayout->setSpacing(8);
+
+    // Search bar
+    m_boneSearchEdit = new QLineEdit();
+    m_boneSearchEdit->setPlaceholderText(tr("Search bone..."));
+    m_boneSearchEdit->setClearButtonEnabled(true);
+    bonesLayout->addWidget(m_boneSearchEdit);
+
+    // Tree widget
+    m_boneTreeWidget = new QTreeWidget();
+    m_boneTreeWidget->setHeaderLabel(tr("Skeleton Hierarchy"));
+    m_boneTreeWidget->setHeaderHidden(true);
+    m_boneTreeWidget->setSelectionMode(QAbstractItemView::NoSelection);
+    m_boneTreeWidget->setStyleSheet(
+        "QTreeWidget { background-color: #1a1a1a; border: 1px solid #555; border-radius: 6px; color: #ccc; padding: 4px; }"
+        "QTreeWidget::item { padding: 4px; }"
+        "QTreeWidget::item:hover { background-color: #2a2a2a; border-radius: 4px; }"
+    );
+    bonesLayout->addWidget(m_boneTreeWidget);
+
+    // Count label & controls
+    QHBoxLayout* boneCtrlLayout = new QHBoxLayout();
+    m_selectAllBonesButton = new QPushButton(tr("Select All"));
+    m_deselectAllBonesButton = new QPushButton(tr("Deselect All"));
+    m_selectAllBonesButton->setStyleSheet("font-size: 11px; padding: 4px 8px;");
+    m_deselectAllBonesButton->setStyleSheet("font-size: 11px; padding: 4px 8px;");
+    boneCtrlLayout->addWidget(m_selectAllBonesButton);
+    boneCtrlLayout->addWidget(m_deselectAllBonesButton);
+    bonesLayout->addLayout(boneCtrlLayout);
+
+    m_boneCountLabel = new QLabel(tr("No skeleton loaded"));
+    m_boneCountLabel->setStyleSheet("color: #888; font-size: 11px; font-style: italic;");
+    m_boneCountLabel->setAlignment(Qt::AlignCenter);
+    bonesLayout->addWidget(m_boneCountLabel);
+
+    topLayout->addWidget(m_bonesGroupBox, 1);
+
     // Right side: Tip image + footnote in a GroupBox
     QGroupBox* tipGroup = new QGroupBox(tr("Tip"));
     tipGroup->setFixedWidth(420);
@@ -171,6 +213,12 @@ AutoRigDialog::AutoRigDialog(QWidget* parent) : QDialog(parent)
     connect(m_browseMeshButton, &QPushButton::clicked, this, &AutoRigDialog::onBrowseMesh);
     connect(m_browseOutputButton, &QPushButton::clicked, this, &AutoRigDialog::onBrowseOutput);
     connect(m_rigButton, &QPushButton::clicked, this, &AutoRigDialog::onRig);
+    
+    connect(m_meshEdit, &QLineEdit::textChanged, this, &AutoRigDialog::onMeshPathChanged);
+    connect(m_boneSearchEdit, &QLineEdit::textChanged, this, &AutoRigDialog::onSearchBones);
+    connect(m_selectAllBonesButton, &QPushButton::clicked, this, &AutoRigDialog::onSelectAllBones);
+    connect(m_deselectAllBonesButton, &QPushButton::clicked, this, &AutoRigDialog::onDeselectAllBones);
+    connect(m_boneTreeWidget, &QTreeWidget::itemChanged, this, &AutoRigDialog::updateBoneCountLabel);
     VortigauntLog::addLogWidget(m_logEdit);
 
     VortigauntLog::Vortigaunt_Printf("^2Auto-Rig ready.");
@@ -256,8 +304,16 @@ void AutoRigDialog::onRig() {
         return;
     }
 
+    std::unordered_set<int> ignoredBones;
+    for (const auto& [boneIdx, item] : m_boneItemMap) {
+        if (item->checkState(0) == Qt::Unchecked) {
+            ignoredBones.insert(boneIdx);
+        }
+    }
+
     AutoRig gsrcAutorig;
     gsrcAutorig.SetSkeleton(inputBones);
+    gsrcAutorig.SetIgnoredBones(ignoredBones);
 
     setProgress(50);
     
@@ -391,4 +447,136 @@ bool AutoRigDialog::eventFilter(QObject* obj, QEvent* event) {
         }
     }
     return QDialog::eventFilter(obj, event);
+}
+
+void AutoRigDialog::onMeshPathChanged(const QString& path) {
+    QString trimmedPath = path.trimmed();
+    if (trimmedPath.isEmpty()) {
+        m_loadedBones.clear();
+        m_boneTreeWidget->clear();
+        m_boneItemMap.clear();
+        updateBoneCountLabel();
+        return;
+    }
+
+    SmdParser parser;
+    if (parser.Parse(trimmedPath.toStdString())) {
+        m_loadedBones = parser.GetBones();
+        populateBoneTree(m_loadedBones);
+    } else {
+        m_loadedBones.clear();
+        m_boneTreeWidget->clear();
+        m_boneItemMap.clear();
+        updateBoneCountLabel();
+    }
+}
+
+void AutoRigDialog::populateBoneTree(const std::vector<SmdBone>& bones) {
+    m_boneTreeWidget->clear();
+    m_boneItemMap.clear();
+
+    if (bones.empty()) {
+        updateBoneCountLabel();
+        return;
+    }
+
+    std::vector<int> roots;
+    std::vector<std::vector<int>> children(bones.size());
+    for (size_t i = 0; i < bones.size(); i++) {
+        int parentIdx = bones[i].parentIndex;
+        if (parentIdx < 0 || parentIdx >= static_cast<int>(bones.size()) || parentIdx == static_cast<int>(i)) {
+            roots.push_back(static_cast<int>(i));
+        } else {
+            children[parentIdx].push_back(static_cast<int>(i));
+        }
+    }
+
+    std::function<void(QTreeWidgetItem*, int)> addBoneNode = [&](QTreeWidgetItem* parentItem, int boneIdx) {
+        const auto& bone = bones[boneIdx];
+        QTreeWidgetItem* item = new QTreeWidgetItem();
+        item->setText(0, QString::fromStdString(bone.name));
+        item->setData(0, Qt::UserRole, boneIdx);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+        item->setCheckState(0, Qt::Checked);
+
+        if (parentItem) {
+            parentItem->addChild(item);
+        } else {
+            m_boneTreeWidget->addTopLevelItem(item);
+        }
+
+        m_boneItemMap[boneIdx] = item;
+
+        for (int childIdx : children[boneIdx]) {
+            addBoneNode(item, childIdx);
+        }
+    };
+
+    for (int rootIdx : roots) {
+        addBoneNode(nullptr, rootIdx);
+    }
+
+    m_boneTreeWidget->expandAll();
+    updateBoneCountLabel();
+}
+
+void AutoRigDialog::onSearchBones(const QString& text) {
+    QString query = text.trimmed();
+
+    std::function<bool(QTreeWidgetItem*)> filterItem = [&](QTreeWidgetItem* item) -> bool {
+        bool matches = item->text(0).contains(query, Qt::CaseInsensitive);
+        bool hasVisibleChild = false;
+
+        for (int i = 0; i < item->childCount(); ++i) {
+            if (filterItem(item->child(i))) {
+                hasVisibleChild = true;
+            }
+        }
+
+        bool visible = matches || hasVisibleChild || query.isEmpty();
+        item->setHidden(!visible);
+        if (visible && !query.isEmpty()) {
+            item->setExpanded(true);
+        }
+        return visible;
+    };
+
+    for (int i = 0; i < m_boneTreeWidget->topLevelItemCount(); ++i) {
+        filterItem(m_boneTreeWidget->topLevelItem(i));
+    }
+}
+
+void AutoRigDialog::onSelectAllBones() {
+    m_boneTreeWidget->blockSignals(true);
+    for (const auto& [idx, item] : m_boneItemMap) {
+        item->setCheckState(0, Qt::Checked);
+    }
+    m_boneTreeWidget->blockSignals(false);
+    updateBoneCountLabel();
+}
+
+void AutoRigDialog::onDeselectAllBones() {
+    m_boneTreeWidget->blockSignals(true);
+    for (const auto& [idx, item] : m_boneItemMap) {
+        item->setCheckState(0, Qt::Unchecked);
+    }
+    m_boneTreeWidget->blockSignals(false);
+    updateBoneCountLabel();
+}
+
+void AutoRigDialog::updateBoneCountLabel() {
+    int total = static_cast<int>(m_boneItemMap.size());
+    if (total == 0) {
+        m_boneCountLabel->setText(tr("No skeleton loaded"));
+        return;
+    }
+
+    int activeCount = 0;
+    for (const auto& [idx, item] : m_boneItemMap) {
+        if (item->checkState(0) == Qt::Checked) {
+            activeCount++;
+        }
+    }
+
+    m_boneCountLabel->setText(QString(tr("%1 / %2 bones active")).arg(activeCount).arg(total));
 }

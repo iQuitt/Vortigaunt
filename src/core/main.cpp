@@ -14,6 +14,7 @@
 
 #include "core/extractors/xfs/XfsExtractor.h"
 #include "core/extractors/pak/PakFile.h"
+#include "core/extractors/unity/UnityPorter.h"
 #include "util.hpp"
 #include "fsutils.hpp"
 
@@ -202,7 +203,10 @@ void recurseAndCollectFilePath(std::filesystem::path start, FilePathVec* filesVe
 			if (ext == ".ltb" || ext == ".LTB" ||
 				ext == ".dtx" || ext == ".DTX" ||
 				ext == ".rez" || ext == ".REZ" ||
-                ext == ".pak" || ext == ".PAK")
+                ext == ".pak" || ext == ".PAK" ||
+                ext == ".unity3d" || ext == ".UNITY3D" ||
+                ext == ".bundle" || ext == ".BUNDLE" ||
+                ext == ".assets" || ext == ".ASSETS")
 			{
 				filesVec->push_back(p.string());
 			}
@@ -306,12 +310,36 @@ int main(int argc,char** argv)
 		printf("    -wadextract <input.wad> [output_dir]    Extract WAD textures\n");
 		printf("    -wadcreate <folder> <output.wad>        Create WAD from images\n");
 		printf("\n");
+		printf(" Unity Operations:\n");
+		printf("    -unity <input_file_or_dir> [output_dir] Extract Unity meshes, textures, and animation clips\n");
+		printf("\n");
 		printf(" LTB Options:\n");
 		printf("    -ignoreMeshes       Do not export mesh data\n");
 		printf("    -ignoreAnimations   Do not export animations\n");
 		printf("\n");
-		printf(" Drag & Drop: Drag .ltb, .dtx, .rez, .pak, .xfs files or folders\n");
+		printf(" Drag & Drop: Drag .ltb, .dtx, .rez, .pak, .xfs, .unity3d, .bundle, .assets files or folders\n");
 		printf("****************************************************************\n");
+		return 0;
+	}
+
+	// Unity extraction command
+	if (argc >= 2 && std::string(argv[1]) == "-unity")
+	{
+		if (argc < 3)
+		{
+			printf("Usage: VortigauntTool -unity <input_file_or_dir> [output_dir]\n");
+			return 1;
+		}
+		std::string inputPath = argv[2];
+		std::string outDir = (argc >= 4) ? argv[3] : 
+			(std::filesystem::current_path() / "VortigauntUnityExtracted").string();
+		
+		std::filesystem::create_directories(outDir);
+		
+		printf("Processing Unity assets: %s -> %s\n", inputPath.c_str(), outDir.c_str());
+		
+		UnityPorter porter;
+		porter.Process(inputPath, outDir);
 		return 0;
 	}
 
@@ -795,6 +823,16 @@ int main(int argc,char** argv)
             {
                 printf("XFS extraction failed for %s\n", filesVec[i].c_str());
             }
+        }
+        else if (inFormat == "unity3d" || inFormat == "bundle" || inFormat == "assets")
+        {
+            std::filesystem::path baseOut = std::filesystem::current_path() / "VortigauntUnityExtracted";
+            std::filesystem::create_directories(baseOut);
+            std::string outDir = baseOut.string();
+
+            printf("Extracting Unity assets : %s --> %s\n", filesVec[i].c_str(), outDir.c_str());
+            UnityPorter porter;
+            porter.Process(filesVec[i], outDir);
         }
 		else
 		{

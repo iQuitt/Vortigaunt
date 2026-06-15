@@ -3,6 +3,11 @@
 #include <QDialog>
 #include <QString>
 #include <QPixmap>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
+#include <QGroupBox>
+#include <unordered_map>
+#include "core/smd/SmdParser.h"
 
 class QLineEdit;
 class QPushButton;
@@ -29,6 +34,10 @@ private slots:
     void onBrowseMesh();
     void onBrowseOutput();
     void onRig();
+    void onMeshPathChanged(const QString& path);
+    void onSearchBones(const QString& text);
+    void onSelectAllBones();
+    void onDeselectAllBones();
 
 private:
     // UI Elements
@@ -52,5 +61,19 @@ private:
     QLabel* m_tipImageLabel;
     QPixmap m_tipPixmap;              // Original full-size pixmap for preview
     
+    // Bones Exclusion UI
+    QGroupBox* m_bonesGroupBox;
+    QLineEdit* m_boneSearchEdit;
+    QTreeWidget* m_boneTreeWidget;
+    QPushButton* m_selectAllBonesButton;
+    QPushButton* m_deselectAllBonesButton;
+    QLabel* m_boneCountLabel;
+    
+    // Skeleton Data
+    std::vector<SmdBone> m_loadedBones;
+    std::unordered_map<int, QTreeWidgetItem*> m_boneItemMap;
+    
     void setProgress(int value);
+    void populateBoneTree(const std::vector<SmdBone>& bones);
+    void updateBoneCountLabel();
 };

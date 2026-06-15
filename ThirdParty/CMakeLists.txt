@@ -52,6 +52,16 @@ target_include_directories(discord_partner_sdk INTERFACE
 # lzma
 add_subdirectory(lzma)
 
+# lz4
+add_library(lz4 STATIC
+    lz4/lib/lz4.c
+    lz4/lib/lz4hc.c
+    lz4/lib/lz4frame.c
+    lz4/lib/xxhash.c
+)
+target_include_directories(lz4 PUBLIC lz4/lib)
+set_property(TARGET lz4 PROPERTY FOLDER "ThirdParty")
+
 # Granny2 SDK (Windows only)
 if(WIN32)
     set(GRANNY2_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/granny2sdk")
@@ -111,3 +121,12 @@ set_target_properties(libimagequant PROPERTIES
     POSITION_INDEPENDENT_CODE ON
     FOLDER "ThirdParty"
 )
+
+# ankerl::unordered_dense (via FetchContent)
+include(FetchContent)
+FetchContent_Declare(
+    unordered_dense
+    GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
+    GIT_TAG        v4.4.0
+)
+FetchContent_MakeAvailable(unordered_dense)

@@ -27,7 +27,7 @@ void AutoRig::SetSkeleton(const std::vector<SmdBone>& bones) {
     m_boneChildren.resize(m_bones.size());
     for (size_t i = 0; i < m_bones.size(); i++) {
         int parentIdx = m_bones[i].parentIndex;
-        if (parentIdx >= 0 && parentIdx < static_cast<int>(m_bones.size())) {
+        if (parentIdx >= 0 && parentIdx < static_cast<int>(m_bones.size()) && parentIdx != static_cast<int>(i)) {
             m_boneChildren[parentIdx].push_back(static_cast<int>(i));
         }
     }
@@ -39,9 +39,15 @@ void AutoRig::SetSkeleton(const std::vector<SmdBone>& bones) {
     for (size_t i = 0; i < m_bones.size(); i++) {
         int depth = 0;
         int cur = static_cast<int>(i);
-        while (m_bones[cur].parentIndex >= 0) {
+        int limit = 0;
+        while (cur >= 0 && cur < static_cast<int>(m_bones.size()) && limit < 256) {
+            int parentIdx = m_bones[cur].parentIndex;
+            if (parentIdx < 0 || parentIdx >= static_cast<int>(m_bones.size()) || parentIdx == cur) {
+                break;
+            }
             depth++;
-            cur = m_bones[cur].parentIndex;
+            cur = parentIdx;
+            limit++;
         }
         m_boneDepths[i] = depth;
     }
@@ -50,11 +56,40 @@ void AutoRig::SetSkeleton(const std::vector<SmdBone>& bones) {
     m_boneLengths.resize(m_bones.size(), 0.0f);
     for (size_t i = 0; i < m_bones.size(); i++) {
         int parentIdx = m_bones[i].parentIndex;
-        if (parentIdx >= 0 && parentIdx < static_cast<int>(m_boneWorldPositions.size())) {
+        if (parentIdx >= 0 && parentIdx < static_cast<int>(m_boneWorldPositions.size()) && parentIdx != static_cast<int>(i)) {
             aiVector3D d = m_boneWorldPositions[i] - m_boneWorldPositions[parentIdx];
             m_boneLengths[i] = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
         }
     }
+}
+
+void AutoRig::SetIgnoredBones(const std::unordered_set<int>& ignoredBones) {
+    m_ignoredBones = ignoredBones;
+}
+
+int AutoRig::ResolveNonIgnoredBone(int boneIndex) const {
+    if (m_ignoredBones.empty()) {
+        return boneIndex;
+    }
+    
+    int current = boneIndex;
+    int limit = 0;
+    while (current >= 0 && current < static_cast<int>(m_bones.size()) && limit < 256) {
+        if (m_ignoredBones.find(current) == m_ignoredBones.end()) {
+            return current;
+        }
+        current = m_bones[current].parentIndex;
+        limit++;
+    }
+    
+    // Fallback: find the first non-ignored bone
+    for (size_t i = 0; i < m_bones.size(); ++i) {
+        if (m_ignoredBones.find(static_cast<int>(i)) == m_ignoredBones.end()) {
+            return static_cast<int>(i);
+        }
+    }
+    
+    return boneIndex;
 }
 
 aiMatrix4x4 AutoRig::CreateRotationMatrix(float rx, float ry, float rz) const 
@@ -103,33 +138,36 @@ void AutoRig::CalculateBoneWorldPositions() {
 
     // Calculate world transform for each bone
     std::vector<aiMatrix4x4> worldTransforms(m_bones.size());
+    std::vector<bool> computed(m_bones.size(), false);
 
-    for (size_t i = 0; i < m_bones.size(); i++) {
-        const SmdBone& bone = m_bones[i];
+    auto resolveTransform = [&](auto& self, int idx) -> void {
+        if (computed[idx]) return;
 
-        // rotation + translation
+        const SmdBone& bone = m_bones[idx];
         aiMatrix4x4 localRotation = CreateRotationMatrix(bone.rotX, bone.rotY, bone.rotZ);
         
-        // Translation matrix, its  goes in a4,b4,c4
         aiMatrix4x4 localTranslation;
         localTranslation.a4 = bone.posX;
         localTranslation.b4 = bone.posY;
         localTranslation.c4 = bone.posZ;
         
-        // Local transform = Translation * Rotation (apply rotation first, then translation)
         aiMatrix4x4 localTransform = localTranslation * localRotation;
 
-        if (bone.parentIndex < 0) {
-            // Root bone - local transform is world transform
-            worldTransforms[i] = localTransform;
-        } else if (bone.parentIndex < static_cast<int>(i)) {
-            // Child bone - world = parent_world * local
-            worldTransforms[i] = worldTransforms[bone.parentIndex] * localTransform;
+        int parentIdx = bone.parentIndex;
+        if (parentIdx < 0 || parentIdx >= static_cast<int>(m_bones.size()) || parentIdx == idx) {
+            worldTransforms[idx] = localTransform;
         } else {
-            // Parent not processed yet (shouldn't happen with proper ordering)
-            worldTransforms[i] = localTransform;
+            self(self, parentIdx);
+            worldTransforms[idx] = worldTransforms[parentIdx] * localTransform;
         }
+        computed[idx] = true;
+    };
 
+    for (size_t i = 0; i < m_bones.size(); i++) {
+        resolveTransform(resolveTransform, static_cast<int>(i));
+    }
+
+    for (size_t i = 0; i < m_bones.size(); i++) {
         // Extract world position from transform matrix
         // aiMatrix4x4 is row-major, translation is in a4,b4,c4 (column 4)
         m_boneWorldPositions[i].x = worldTransforms[i].a4;
@@ -185,7 +223,7 @@ int AutoRig::FindNearestBone(float x, float y, float z, float nx, float ny, floa
     float minScore = std::numeric_limits<float>::max();
     
     aiVector3D vertex(x, y, z);
-    constexpr float DEPTH_PENALTY = 0.03f;
+    constexpr float DEPTH_PENALTY = 0.005f; // it was 0.03
     
     // Normal filtering
     bool hasNormal = (nx * nx + ny * ny + nz * nz) > 0.001f;
@@ -193,7 +231,6 @@ int AutoRig::FindNearestBone(float x, float y, float z, float nx, float ny, floa
     for (size_t p = 0; p < m_boneWorldPositions.size(); p++) {
         const aiVector3D& parentPos = m_boneWorldPositions[p];
         const std::vector<int>& children = m_boneChildren[p];
-        
 
         if (m_bones[p].parentIndex < 0 && !children.empty()) {
             float rootDistSq = parentPos.x * parentPos.x + parentPos.y * parentPos.y + parentPos.z * parentPos.z;
@@ -203,29 +240,30 @@ int AutoRig::FindNearestBone(float x, float y, float z, float nx, float ny, floa
         }
         
         if (children.empty()) {
-            // Leaf or lone bone: evaluate point distance directly
-            float dx = x - parentPos.x;
-            float dy = y - parentPos.y;
-            float dz = z - parentPos.z;
-            float distSq = dx * dx + dy * dy + dz * dz;
+            // Leaf bone: project virtual child segment in the direction of its parent bone
+            int parentIdx = m_bones[p].parentIndex;
+            aiVector3D dir(0, 0, 1);
+            float len = 25.0f;
+            if (parentIdx >= 0 && parentIdx < static_cast<int>(m_boneWorldPositions.size())) {
+                dir = parentPos - m_boneWorldPositions[parentIdx];
+                if (dir.SquareLength() < 0.0001f) {
+                    dir = aiVector3D(0, 0, 1);
+                } else {
+                    dir.Normalize();
+                }
+            }
+            
+            aiVector3D virtualChildPos = parentPos + dir * len;
+            float t = 0.0f;
+            float distSq = PointToSegmentDistSq(vertex, parentPos, virtualChildPos, t);
             
             float score = distSq;
             if (useDepthPenalty) {
                 score *= (1.0f + m_boneDepths[p] * DEPTH_PENALTY);
             }
             
-            // Normal direction penalty
-            if (hasNormal && distSq > 0.0001f) {
-                float invDist = 1.0f / std::sqrt(distSq);
-                float dirX = -dx * invDist;
-                float dirY = -dy * invDist;
-                float dirZ = -dz * invDist;
-                float dot = dirX * nx + dirY * ny + dirZ * nz;
-                if (dot < -0.3f) {
-                    float t = (-dot - 0.3f) / 0.7f;
-                    score *= (1.0f + t * t * 1.5f);
-                }
-            }
+            
+
             
             if (score < minScore - 0.00001f) {
                 minScore = score;
@@ -244,46 +282,16 @@ int AutoRig::FindNearestBone(float x, float y, float z, float nx, float ny, floa
                 float t = 0.0f;
                 float distSq = PointToSegmentDistSq(vertex, parentPos, childPos, t);
                 
-                int candidateBone = (t < 0.5f) ? static_cast<int>(p) : c;
+                // Map the segment p-c entirely to candidate parent bone p
+                int candidateBone = static_cast<int>(p);
                 
                 float score = distSq;
                 if (useDepthPenalty) {
                     score *= (1.0f + m_boneDepths[candidateBone] * DEPTH_PENALTY);
                 }
                 
+                
 
-                
-                float segDx = childPos.x - parentPos.x;
-                float segDy = childPos.y - parentPos.y;
-                float segDz = childPos.z - parentPos.z;
-                float segLenSq = segDx * segDx + segDy * segDy + segDz * segDz;
-                if (segLenSq > 0.0001f) {
-                    float unclampedT = ((x - parentPos.x) * segDx + (y - parentPos.y) * segDy + (z - parentPos.z) * segDz) / segLenSq;
-                    if (unclampedT < 0.0f || unclampedT > 1.0f) {
-                        float overshoot = (unclampedT < 0.0f) ? -unclampedT : (unclampedT - 1.0f);
-                        score *= (1.0f + overshoot * overshoot * 2.0f);
-                    }
-                }
-                
-                
-                if (hasNormal && distSq > 0.0001f) {
-                    aiVector3D closestPt;
-                    closestPt.x = parentPos.x + t * (childPos.x - parentPos.x);
-                    closestPt.y = parentPos.y + t * (childPos.y - parentPos.y);
-                    closestPt.z = parentPos.z + t * (childPos.z - parentPos.z);
-                    float cdx = closestPt.x - x;
-                    float cdy = closestPt.y - y;
-                    float cdz = closestPt.z - z;
-                    float cDistSq = cdx * cdx + cdy * cdy + cdz * cdz;
-                    if (cDistSq > 0.0001f) {
-                        float invDist = 1.0f / std::sqrt(cDistSq);
-                        float dot = (cdx * invDist) * nx + (cdy * invDist) * ny + (cdz * invDist) * nz;
-                        if (dot < -0.3f) {
-                            float tt = (-dot - 0.3f) / 0.7f;
-                            score *= (1.0f + tt * tt * 1.5f);
-                        }
-                    }
-                }
                 
                 if (score < minScore - 0.00001f) {
                     minScore = score;
@@ -299,7 +307,7 @@ int AutoRig::FindNearestBone(float x, float y, float z, float nx, float ny, floa
         }
     }
 
-    return bestBone;
+    return ResolveNonIgnoredBone(bestBone);
 }
 
 std::vector<int> AutoRig::RigVertices(const std::vector<float>& vertexPositions, const std::vector<float>& vertexNormals, bool useDepthPenalty) {
@@ -564,11 +572,12 @@ std::vector<std::vector<int>> AutoRig::RigScene(const aiScene* scene) {
 
 std::vector<aiMatrix4x4> AutoRig::CalculateWorldTransforms(const std::vector<SmdBone>& bones) const {
     std::vector<aiMatrix4x4> worldTransforms(bones.size());
+    std::vector<bool> computed(bones.size(), false);
     
-    for (size_t i = 0; i < bones.size(); i++) {
-        const SmdBone& bone = bones[i];
+    auto resolveTransform = [&](auto& self, int idx) -> void {
+        if (computed[idx]) return;
         
-        // Create local transform matrix
+        const SmdBone& bone = bones[idx];
         aiMatrix4x4 localRotation = CreateRotationMatrix(bone.rotX, bone.rotY, bone.rotZ);
         
         aiMatrix4x4 localTranslation;
@@ -578,13 +587,18 @@ std::vector<aiMatrix4x4> AutoRig::CalculateWorldTransforms(const std::vector<Smd
         
         aiMatrix4x4 localTransform = localTranslation * localRotation;
         
-        if (bone.parentIndex < 0) {
-            worldTransforms[i] = localTransform;
-        } else if (bone.parentIndex < static_cast<int>(i)) {
-            worldTransforms[i] = worldTransforms[bone.parentIndex] * localTransform;
+        int parentIdx = bone.parentIndex;
+        if (parentIdx < 0 || parentIdx >= static_cast<int>(bones.size()) || parentIdx == idx) {
+            worldTransforms[idx] = localTransform;
         } else {
-            worldTransforms[i] = localTransform;
+            self(self, parentIdx);
+            worldTransforms[idx] = worldTransforms[parentIdx] * localTransform;
         }
+        computed[idx] = true;
+    };
+    
+    for (size_t i = 0; i < bones.size(); i++) {
+        resolveTransform(resolveTransform, static_cast<int>(i));
     }
     
     return worldTransforms;

@@ -4,6 +4,7 @@
 #include <assimp/scene.h>
 #include <vector>
 #include <cmath>
+#include <unordered_set>
 
 // Generic topology-based automatic rigging for GoldSrc models
 
@@ -57,6 +58,12 @@ public:
     // Get error message
     const std::string& GetError() const { return m_error; }
 
+    // Set bones to ignore during rigging
+    void SetIgnoredBones(const std::unordered_set<int>& ignoredBones);
+
+    // Resolve an ignored bone to its nearest non-ignored ancestor
+    int ResolveNonIgnoredBone(int boneIndex) const;
+
 private:
     std::vector<SmdBone> m_bones;
     std::vector<std::vector<int>> m_boneChildren;
@@ -64,6 +71,7 @@ private:
     std::vector<int> m_boneDepths;      
     std::vector<float> m_boneLengths;    // Distance from parent to this bone
     std::string m_error;
+    std::unordered_set<int> m_ignoredBones;
     
     // Calculate world-space positions for all bones
     void CalculateBoneWorldPositions();

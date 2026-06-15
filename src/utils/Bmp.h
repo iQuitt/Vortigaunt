@@ -80,7 +80,7 @@ inline bool saveAsIndexed8(const char* filename, int width, int height, const ui
 
     liq_attr* attr = liq_attr_create();
     if (!attr) return false;
-    
+
     liq_set_speed(attr, 1); // Max quality i guess
     liq_set_max_colors(attr, 256);
 

@@ -29,6 +29,13 @@ set(VORTIGAUNT_CORE_HEADERS
     utils/Bmp.h
     core/extractors/IExtractor.h
     core/extractors/ExtractArchive.h
+    core/extractors/unity/UnityAssetParser.h
+    core/extractors/unity/UnityDataResolver.h
+    core/extractors/unity/UnityFsExtractor.h
+    core/extractors/unity/UnityMeshConverter.h
+    core/extractors/unity/UnityPorter.h
+    core/extractors/unity/UnityTextureDecoder.h
+    core/extractors/unity/UnityAnimationExtractor.h
 )
 
 set(VORTIGAUNT_GUI_HEADERS
@@ -71,11 +78,19 @@ set(VORTIGAUNT_CORE
     core/extractors/rez/RezExtractor.cpp
     utils/fsutils.cpp
     utils/Platform.cpp
+    utils/Dds.cpp
     core/extractors/pak/SnowCipher.cpp
     core/extractors/pak/PakFile.cpp
     core/extractors/pak/PakExtractor.cpp
     core/extractors/ExtractArchive.cpp
     core/VortigauntLog.cpp
+    core/extractors/unity/UnityAssetParser.cpp
+    core/extractors/unity/UnityDataResolver.cpp
+    core/extractors/unity/UnityFsExtractor.cpp
+    core/extractors/unity/UnityMeshConverter.cpp
+    core/extractors/unity/UnityPorter.cpp
+    core/extractors/unity/UnityTextureDecoder.cpp
+    core/extractors/unity/UnityAnimationExtractor.cpp
 )
 
 # Granny2 source files (Windows only)
@@ -140,8 +155,9 @@ target_include_directories(VortigauntTool PRIVATE
     ./utils
 )
 target_link_libraries(VortigauntTool PRIVATE
-    assimp_includes zlib_headers lzma
+    assimp_includes zlib_headers lzma lz4
     gcl_headers audio_headers libimagequant
+    unordered_dense::unordered_dense
 )
 if(ENABLE_LITHTECH)
     target_link_libraries(VortigauntTool PRIVATE lithtech)
@@ -187,9 +203,10 @@ if(BUILD_GUI)
         ./utils
     )
     target_link_libraries(VortigauntTool_gui PRIVATE
-        assimp_includes zlib_headers lzma discord_partner_sdk
+        assimp_includes zlib_headers lzma lz4 discord_partner_sdk
         gcl_headers audio_headers libimagequant
         Qt6::Widgets Qt6::Network Qt6::OpenGL Qt6::OpenGLWidgets Qt6::Multimedia
+        unordered_dense::unordered_dense
     )
     if(ENABLE_LITHTECH)
         target_link_libraries(VortigauntTool_gui PRIVATE lithtech)

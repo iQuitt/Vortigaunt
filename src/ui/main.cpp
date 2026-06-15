@@ -40,6 +40,7 @@
 #include "core/extractors/rez/RezExtractor.h"
 #include "core/extractors/pak/PakExtractor.h"
 #include "core/extractors/xfs/XfsExtractor.h"
+#include "core/extractors/unity/UnityFsExtractor.h"
 
 int main(int argc, char* argv[])
 {
@@ -58,6 +59,7 @@ int main(int argc, char* argv[])
     registry.Register(std::make_shared<RezExtractor>());
     registry.Register(std::make_shared<PakExtractor>());
     registry.Register(std::make_shared<XfsExtractor>());
+    registry.Register(std::make_shared<UnityFsExtractor>());
     registry.Init();
 
 

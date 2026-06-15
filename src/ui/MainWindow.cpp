@@ -43,6 +43,8 @@
 #include <memory>
 
 #include "Platform.h"
+#include "core/extractors/unity/UnityFsExtractor.h"
+#include "core/extractors/unity/UnityPorter.h"
 //#include "ui/dialogs/SettingsDialog.h"
 
 #include <filesystem>
@@ -349,6 +351,7 @@ MainWindow::MainWindow(QWidget* parent)
     //m_operationCombo->addItem(tr("Multi-REZ extract (folder with  REZ)"));
     m_operationCombo->addItem(tr("PAK (Counter Strike Online)"));
     //m_operationCombo->addItem(tr("Multi-PAK extract (folder with PAK)"));
+    m_operationCombo->addItem(tr("Extract UnityFS / Assets"));
     opLayout->addWidget(m_operationCombo, 1);
     optionsLayout->addLayout(opLayout);
 
@@ -770,110 +773,120 @@ void MainWindow::loadGr2Animations()
 
 void MainWindow::updateOperationComboForFile(const QString& filePath)
 {
-    int currentIndex = m_operationCombo->currentIndex();
-    
     m_operationCombo->clear();
-    
-    QString ext = grabFileExt(filePath).toLower();
-    QString dotExt = "." + ext;
-    
-    QFileInfo fileInfo(filePath);
-    bool isFile = fileInfo.isFile();
-    bool isDir = fileInfo.isDir();
-    
 
-    //if (m_selectedInputFiles.size() > 1)
-    //{
-    //    m_operationCombo->addItem(tr("Multiple Type of Files"));
-    //}
-
-    // If it's a directory, show all options
-    if (isDir || filePath.isEmpty())
-    {
 #ifdef ENABLE_LITHTECH
-        m_operationCombo->addItem(tr("Convert LTB "));
+    m_operationCombo->addItem(tr("Convert LTB "));
 #endif
 #ifdef ENABLE_GRANNY2
-        m_operationCombo->addItem(tr("Convert GR2 "));
+    m_operationCombo->addItem(tr("Convert GR2 "));
 #endif
-        m_operationCombo->addItem(tr("Extract REZ File"));
-        m_operationCombo->addItem(tr("Extract PAK File (Counter Strike Online)"));
-        m_operationCombo->addItem(tr("Extract XFS File (Xenesis)"));
-        
-        // Restore selection if valid
-        if (currentIndex >= 0 && currentIndex < m_operationCombo->count())
-            m_operationCombo->setCurrentIndex(currentIndex);
+    m_operationCombo->addItem(tr("Extract REZ File"));
+    m_operationCombo->addItem(tr("Extract PAK File (Counter Strike Online)"));
+    m_operationCombo->addItem(tr("Extract XFS File (Xenesis)"));
+    m_operationCombo->addItem(tr("Extract UnityFS / Assets"));
+
+    QFileInfo fileInfo(filePath);
+    if (filePath.isEmpty() || fileInfo.isDir())
+    {
         return;
     }
-    
-    // Filter based on file extension
-#ifdef ENABLE_LITHTECH
-    if (ext == "ltb")
+
+    QString ext = grabFileExt(filePath).toLower();
+    int selectIndex = -1;
+
+    for (int i = 0; i < m_operationCombo->count(); ++i)
     {
-        m_operationCombo->addItem(tr("Convert LTB "));
-        m_operationCombo->setCurrentIndex(0);
+        QString itemText = m_operationCombo->itemText(i).toLower();
+        if (ext == "ltb" && itemText.contains("ltb")) {
+            selectIndex = i;
+            break;
+        }
+        else if (ext == "gr2" && itemText.contains("gr2")) {
+            selectIndex = i;
+            break;
+        }
+        else if (ext == "rez" && itemText.contains("rez")) {
+            selectIndex = i;
+            break;
+        }
+        else if (ext == "pak" && itemText.contains("pak")) {
+            selectIndex = i;
+            break;
+        }
+        else if (ext == "xfs" && itemText.contains("xfs")) {
+            selectIndex = i;
+            break;
+        }
+        else if ((ext == "unity3d" || ext == "bundle" || ext == "assets") && itemText.contains("unity")) {
+            selectIndex = i;
+            break;
+        }
     }
-    else
-#endif
-#ifdef ENABLE_GRANNY2
-    if (ext == "gr2")
+
+    if (selectIndex != -1)
     {
-        m_operationCombo->addItem(tr("Convert GR2 "));
-        m_operationCombo->setCurrentIndex(0);
-    }
-    else
-#endif
-	// FIXME: Not Ready yet. much better just view on MSE Window
-    //if (ext == "mse")
-    //{
-    //    m_operationCombo->addItem(tr("Convert MSE Effect (Metin2 Effect Script)"));
-    //    m_operationCombo->setCurrentIndex(0);
-    //}
-    if (ext == "rez")
-    {
-        m_operationCombo->addItem(tr("Extract REZ"));
-        m_operationCombo->setCurrentIndex(0);
-    }
-    else if (ext == "pak")
-    {
-        m_operationCombo->addItem(tr("Extract PAK (Counter Strike Online)"));
-        m_operationCombo->setCurrentIndex(0);
-    }
-    else if (ext == "xfs")
-    {
-        m_operationCombo->addItem(tr("Extract XFS "));
-        m_operationCombo->setCurrentIndex(0);
-    }
-    else
-    {
-#ifdef ENABLE_LITHTECH
-        m_operationCombo->addItem(tr("Convert LTB "));
-#endif
-#ifdef ENABLE_GRANNY2
-        m_operationCombo->addItem(tr("Convert GR2 "));
-#endif
-		//  m_operationCombo->addItem(tr("Convert MSE Effect (Metin2 Effect Script)")); NOT READY YET
-        m_operationCombo->addItem(tr("Extract REZ "));
-        m_operationCombo->addItem(tr("Extract PAK (Counter Strike Online)"));
-        m_operationCombo->addItem(tr("Extract XFS"));
-            
-        // Restore selection if valid
-        if (currentIndex >= 0 && currentIndex < m_operationCombo->count())
-            m_operationCombo->setCurrentIndex(currentIndex);
+        m_operationCombo->setCurrentIndex(selectIndex);
     }
 }
 
 void MainWindow::onBrowseInput()
 {
     QString current = m_inputPathEdit->text();
-    QString baseExtensions = "*.ltb *.gr2 *.rez *.pak *.mse *.xfs";
-    QString filterStr = tr("Supported files (%1);;All files (*.*)").arg(baseExtensions);
-    
+    QString modeText = m_operationCombo->currentText();
+    QString filterStr;
+
+    bool isUnityMode = modeText.contains("Unity", Qt::CaseInsensitive) || modeText.contains("Extract UnityFS", Qt::CaseInsensitive);
+
+    if (isUnityMode)
+    {
+        filterStr = tr("All files (*.*)");
+    }
+    else
+    {
+        QString baseExtensions = "*.ltb *.gr2 *.rez *.pak *.mse *.xfs *.unity3d *.bundle *.assets";
+        filterStr = tr("Supported files (%1);;All files (*.*)").arg(baseExtensions);
+    }
 
     QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Input File(s)"), current, filterStr);
     
     if (!files.isEmpty())
     {
+        if (isUnityMode)
+        {
+            QStringList rejectedFiles;
+            QStringList acceptedFiles;
+            for (const QString& f : files)
+            {
+                QFileInfo fi(f);
+                QString ext = fi.suffix().toLower();
+                if (ext == "pak" || ext == "rez" || ext == "xfs" || ext == "gr2" || ext == "ltb")
+                {
+                    rejectedFiles << fi.fileName();
+                }
+                else
+                {
+                    acceptedFiles << f;
+                }
+            }
+
+            if (!rejectedFiles.isEmpty())
+            {
+                QString warnMsg = tr("Seçtiğiniz şu dosyalar bu projenin diğer formatlarına (PAK, REZ, XFS, GR2, LTB) ait olduğu için Unity modunda seçilemez:\n\n");
+                for (const QString& name : rejectedFiles)
+                {
+                    warnMsg += QStringLiteral("  - %1\n").arg(name);
+                }
+                QMessageBox::warning(this, tr("Uyumsuz Dosya Seçimi"), warnMsg);
+                files = acceptedFiles;
+            }
+        }
+
+        if (files.isEmpty())
+        {
+            return;
+        }
+
         m_selectedInputFiles = files;
         
         if (files.size() == 1)
@@ -925,6 +938,44 @@ void MainWindow::onRun()
     QString modeText = m_operationCombo->currentText();
     QStringList selectedFiles = m_selectedInputFiles;
     if (selectedFiles.isEmpty()) selectedFiles << inputPath;
+
+    // Check if Unity mode is selected but some files belong to other supported formats
+    if (modeText.contains("Unity", Qt::CaseInsensitive))
+    {
+        QStringList ignoredFiles;
+        QStringList filteredFiles;
+        for (const QString& f : selectedFiles)
+        {
+            QFileInfo fi(f);
+            if (fi.isFile())
+            {
+                QString ext = fi.suffix().toLower();
+                if (ext == "pak" || ext == "rez" || ext == "xfs" || ext == "gr2" || ext == "ltb")
+                {
+                    ignoredFiles << fi.fileName();
+                    continue;
+                }
+            }
+            filteredFiles << f;
+        }
+
+        if (!ignoredFiles.isEmpty())
+        {
+            QString warnMsg = tr("The following files were ignored because they belong to other formats supported by this project (e.g. PAK, REZ, XFS, GR2, LTB):\n\n");
+            for (const QString& name : ignoredFiles)
+            {
+                warnMsg += QStringLiteral("  - %1\n").arg(name);
+            }
+            QMessageBox::warning(this, tr("Unsupported Formats Ignored for Unity Mode"), warnMsg);
+            
+            selectedFiles = filteredFiles;
+            if (selectedFiles.isEmpty())
+            {
+                VortigauntLog::Vortigaunt_Printf(QStringLiteral("^1Error:^7 All input files were ignored as they are incompatible with Unity mode."));
+                return;
+            }
+        }
+    }
     
     // Capture settings for LTB converter
     ltbConverterSetting ltbEncSettings;
@@ -953,7 +1004,7 @@ void MainWindow::onRun()
 
         // When you choose Rez pak xfs at the same time, Vortigaunt was crashing
         // so i did this
-        if (modeText.contains("Multi Process Mode", Qt::CaseInsensitive) || selectedFiles.size() > 1)
+        if ((modeText.contains("Multi Process Mode", Qt::CaseInsensitive) || selectedFiles.size() > 1) && !modeText.contains("Unity", Qt::CaseInsensitive))
         {
             QStringList ltbList, gr2List, rezList, pakList, xfsList;
             
@@ -999,6 +1050,15 @@ void MainWindow::onRun()
         else if (modeText.contains("XFS", Qt::CaseInsensitive))
         {
             extractArchiveXfs(QStringList{inputPath}, outputDir);
+        }
+        else if (modeText.contains("Unity", Qt::CaseInsensitive) || modeText.contains("Extract UnityFS", Qt::CaseInsensitive))
+        {
+            // UnityFS extraction and processing
+            UnityPorter porter;
+            for (const QString& f : selectedFiles)
+            {
+                porter.Process(f.toStdString(), outputDir.toStdString());
+            }
         }
 
         // Cleanup callbacks
