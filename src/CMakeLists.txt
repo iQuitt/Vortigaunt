@@ -35,7 +35,6 @@ set(VORTIGAUNT_CORE_HEADERS
     core/extractors/unity/UnityMeshConverter.h
     core/extractors/unity/UnityPorter.h
     core/extractors/unity/UnityTextureDecoder.h
-    core/extractors/unity/UnityAnimationExtractor.h
     core/extractors/vpk/VpkFile.h
     core/extractors/vpk/VpkExtractor.h
 )
@@ -95,7 +94,6 @@ set(VORTIGAUNT_CORE
     core/extractors/unity/UnityMeshConverter.cpp
     core/extractors/unity/UnityPorter.cpp
     core/extractors/unity/UnityTextureDecoder.cpp
-    core/extractors/unity/UnityAnimationExtractor.cpp
 )
 
 # Granny2 source files (Windows only)
