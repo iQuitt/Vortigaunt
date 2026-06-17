@@ -127,6 +127,7 @@ private slots:
     // Create tab
     void onBrowseFrames();
     void onCreateSprite();
+    void onCreateFrameListContextMenu(const QPoint& pos);
     
     // Sprite Fix tab
     void onAddSpritesToFix();

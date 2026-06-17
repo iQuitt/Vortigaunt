@@ -845,6 +845,8 @@ QWidget* SpriteViewerWindow::createCreateTabWidget()
     m_createFrameList->setSpacing(5);
     m_createFrameList->setResizeMode(QListView::Adjust);
     m_createFrameList->setMovement(QListView::Static);
+    m_createFrameList->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_createFrameList, &QWidget::customContextMenuRequested, this, &SpriteViewerWindow::onCreateFrameListContextMenu);
     m_browseFramesButton = new QPushButton(tr("Browse Frames..."));
     
     frameLayout->addWidget(m_createFrameList);
@@ -2002,6 +2004,44 @@ void SpriteViewerWindow::onCreateSprite()
     QMessageBox::information(this, tr("Success"), tr("Sprite created successfully."));
 }
 
+void SpriteViewerWindow::onCreateFrameListContextMenu(const QPoint& pos)
+{
+    QListWidgetItem* item = m_createFrameList->itemAt(pos);
+    if (!item)
+        return;
+        
+    int row = m_createFrameList->row(item);
+    int count = m_createFrameList->count();
+    
+    QMenu menu(this);
+    
+    QAction* moveLeftAct = menu.addAction(tr("Move Left"));
+    moveLeftAct->setEnabled(row > 0);
+    
+    QAction* moveRightAct = menu.addAction(tr("Move Right"));
+    moveRightAct->setEnabled(row < count - 1);
+    
+    menu.addSeparator();
+    
+    QAction* removeAct = menu.addAction(tr("Remove"));
+    
+    QAction* selectedAct = menu.exec(m_createFrameList->mapToGlobal(pos));
+    if (!selectedAct)
+        return;
+        
+    if (selectedAct == moveLeftAct) {
+        m_createFrameList->takeItem(row);
+        m_createFrameList->insertItem(row - 1, item);
+        m_createFrameList->setCurrentItem(item);
+    } else if (selectedAct == moveRightAct) {
+        m_createFrameList->takeItem(row);
+        m_createFrameList->insertItem(row + 1, item);
+        m_createFrameList->setCurrentItem(item);
+    } else if (selectedAct == removeAct) {
+        delete m_createFrameList->takeItem(row);
+        m_createSpriteButton->setEnabled(m_createFrameList->count() > 0 && !m_createOutputPathEdit->text().isEmpty());
+    }
+}
 
 void SpriteViewerWindow::onAnimationTimer()
 {
