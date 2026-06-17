@@ -1902,7 +1902,7 @@ void SpriteViewerWindow::onBrowseFrames()
     }
     
     QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Frame Images"), startDir, 
-        tr("Image files (*.bmp *.png *.jpg);;All files (*.*)"));
+        tr("Image files (*.bmp *.png *.jpg *.jpeg *.gif *.tga *.tiff *.tif);;All files (*.*)"));
     
     if (files.isEmpty())
         return;
