@@ -142,6 +142,47 @@ static bool ReadFileToBuffer(const std::string& inputFilePath, std::vector<char>
     return true;
 }
 
+static aiVector3D CrossProduct(const aiVector3D& a, const aiVector3D& b)
+{
+    return aiVector3D(
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    );
+}
+
+static aiMatrix4x4 GetScaleFreeMatrix(const aiMatrix4x4& M, const aiVector3D& scaleSigns)
+{
+    aiVector3D position(M.a4, M.b4, M.c4);
+    
+    aiVector3D col0(M.a1, M.b1, M.c1);
+    aiVector3D col1(M.a2, M.b2, M.c2);
+    aiVector3D col2(M.a3, M.b3, M.c3);
+    
+    // Negate the columns that have negative accumulated scale signs to resolve reflection
+    if (scaleSigns.x < 0.0f) col0 = -col0;
+    if (scaleSigns.y < 0.0f) col1 = -col1;
+    if (scaleSigns.z < 0.0f) col2 = -col2;
+    
+    // Gram-Schmidt Orthonormalization
+    col0.Normalize();
+    
+    float dot01 = col0.x * col1.x + col0.y * col1.y + col0.z * col1.z;
+    col1 = col1 - col0 * dot01;
+    col1.Normalize();
+    
+    col2 = CrossProduct(col0, col1);
+    
+    aiMatrix4x4 R;
+    R.a1 = col0.x; R.a2 = col1.x; R.a3 = col2.x; R.a4 = position.x;
+    R.b1 = col0.y; R.b2 = col1.y; R.b3 = col2.y; R.b4 = position.y;
+    R.c1 = col0.z; R.c2 = col1.z; R.c3 = col2.z; R.c4 = position.z;
+    R.d1 = 0.0f;   R.d2 = 0.0f;   R.d3 = 0.0f;   R.d4 = 1.0f;
+    
+    return R;
+}
+
+
 std::vector<std::string> Gr2Converter::GetAnimationNames(const std::string& inputFilePath)
 {
     std::vector<std::string> names;
@@ -558,16 +599,16 @@ bool Gr2Converter::convertToAssimpScene()
             meshNode->mMeshes[i] = static_cast<unsigned int>(i);
         }
 
-        // Apply InitialPlacement transform to mesh node
+        // Apply InitialPlacement transform to mesh node (transposed from row-major to column-major)
         if (grannyModel && grannyModel->InitialPlacement.Flags != 0)
         {
             float initialPlacementTransform[16];
             GrannyBuildCompositeTransform4x4(&grannyModel->InitialPlacement, initialPlacementTransform);
             meshNode->mTransformation = aiMatrix4x4(
-                initialPlacementTransform[0], initialPlacementTransform[1], initialPlacementTransform[2], initialPlacementTransform[3],
-                initialPlacementTransform[4], initialPlacementTransform[5], initialPlacementTransform[6], initialPlacementTransform[7],
-                initialPlacementTransform[8], initialPlacementTransform[9], initialPlacementTransform[10], initialPlacementTransform[11],
-                initialPlacementTransform[12], initialPlacementTransform[13], initialPlacementTransform[14], initialPlacementTransform[15]
+                initialPlacementTransform[0], initialPlacementTransform[4], initialPlacementTransform[8], initialPlacementTransform[12],
+                initialPlacementTransform[1], initialPlacementTransform[5], initialPlacementTransform[9], initialPlacementTransform[13],
+                initialPlacementTransform[2], initialPlacementTransform[6], initialPlacementTransform[10], initialPlacementTransform[14],
+                initialPlacementTransform[3], initialPlacementTransform[7], initialPlacementTransform[11], initialPlacementTransform[15]
             );
         }
 
@@ -635,6 +676,7 @@ bool Gr2Converter::convertMeshesFromGranny()
                 continue;
             }
 
+            std::vector<aiMesh*> currentMeshBindings;
             std::string meshName = grannyMesh->Name ? grannyMesh->Name : "Unnamed";
             Vortigaunt_Printf("DEBUG:   Mesh '" + meshName + "' MaterialBindingCount: " + std::to_string(grannyMesh->MaterialBindingCount));
             
@@ -746,6 +788,7 @@ bool Gr2Converter::convertMeshesFromGranny()
 
                 // Will add bone weights later (after this block)
                 m_meshes.push_back(assimpMesh);
+                currentMeshBindings.push_back(assimpMesh);
             }
             else
             {
@@ -856,6 +899,7 @@ bool Gr2Converter::convertMeshesFromGranny()
                     m_meshToOriginalIndices[subMesh] = newToOldVertex;
                     
                     m_meshes.push_back(subMesh);
+                    currentMeshBindings.push_back(subMesh);
                     Vortigaunt_Printf("DEBUG: Created sub-mesh '" + subMeshName + "' with " + std::to_string(subMeshVertexCount) + " vertices, " + std::to_string(triCount) + " faces");
                 }
             }
@@ -937,7 +981,7 @@ bool Gr2Converter::convertMeshesFromGranny()
                 
                 // For each mesh created from this granny mesh, add bone weights
                 // We need to iterate over all recently added meshes
-                for (aiMesh* assimpMesh : m_meshes)
+                for (aiMesh* assimpMesh : currentMeshBindings)
                 {
                     if (assimpMesh->mNumBones > 0) continue; // Already has bones
                     
@@ -973,18 +1017,17 @@ bool Gr2Converter::convertMeshesFromGranny()
                             grannyBone->InverseWorld4x4[0][3], grannyBone->InverseWorld4x4[1][3], grannyBone->InverseWorld4x4[2][3], grannyBone->InverseWorld4x4[3][3]
                         );
                         
-                        // Get mesh transform (InitialPlacement) if present
+                        // Get mesh transform (InitialPlacement) if present (transposed to column-major)
                         aiMatrix4x4 meshTransform;
                         if (grannyModel->InitialPlacement.Flags != 0)
                         {
                             float meshTransformArray[16];
                             GrannyBuildCompositeTransform4x4(&grannyModel->InitialPlacement, meshTransformArray);
-                            // i hate this fuckin shit
                             meshTransform = aiMatrix4x4(
-                                meshTransformArray[0], meshTransformArray[1], meshTransformArray[2], meshTransformArray[3],
-                                meshTransformArray[4], meshTransformArray[5], meshTransformArray[6], meshTransformArray[7],
-                                meshTransformArray[8], meshTransformArray[9], meshTransformArray[10], meshTransformArray[11],
-                                meshTransformArray[12], meshTransformArray[13], meshTransformArray[14], meshTransformArray[15]
+                                meshTransformArray[0], meshTransformArray[4], meshTransformArray[8], meshTransformArray[12],
+                                meshTransformArray[1], meshTransformArray[5], meshTransformArray[9], meshTransformArray[13],
+                                meshTransformArray[2], meshTransformArray[6], meshTransformArray[10], meshTransformArray[14],
+                                meshTransformArray[3], meshTransformArray[7], meshTransformArray[11], meshTransformArray[15]
                             );
                         }
                         else
@@ -1040,11 +1083,10 @@ bool Gr2Converter::convertMeshesFromGranny()
                                     float meshTransformArray[16];
                                     GrannyBuildCompositeTransform4x4(&grannyModel->InitialPlacement, meshTransformArray);
                                     meshTransform = aiMatrix4x4(
-                                        // i hate fuckin this shit
-                                        meshTransformArray[0], meshTransformArray[1], meshTransformArray[2], meshTransformArray[3],
-                                        meshTransformArray[4], meshTransformArray[5], meshTransformArray[6], meshTransformArray[7],
-                                        meshTransformArray[8], meshTransformArray[9], meshTransformArray[10], meshTransformArray[11],
-                                        meshTransformArray[12], meshTransformArray[13], meshTransformArray[14], meshTransformArray[15]
+                                        meshTransformArray[0], meshTransformArray[4], meshTransformArray[8], meshTransformArray[12],
+                                        meshTransformArray[1], meshTransformArray[5], meshTransformArray[9], meshTransformArray[13],
+                                        meshTransformArray[2], meshTransformArray[6], meshTransformArray[10], meshTransformArray[14],
+                                        meshTransformArray[3], meshTransformArray[7], meshTransformArray[11], meshTransformArray[15]
                                     );
                                 }
                                 else
@@ -1185,16 +1227,20 @@ bool Gr2Converter::convertSkeletonFromGranny()
         GrannyBuildCompositeTransform4x4(&grannyModel->InitialPlacement, initialPlacementTransform);
     }
     aiMatrix4x4 initialPlacementMatrix(
-        initialPlacementTransform[0], initialPlacementTransform[1], initialPlacementTransform[2], initialPlacementTransform[3],
-        initialPlacementTransform[4], initialPlacementTransform[5], initialPlacementTransform[6], initialPlacementTransform[7],
-        initialPlacementTransform[8], initialPlacementTransform[9], initialPlacementTransform[10], initialPlacementTransform[11],
-        initialPlacementTransform[12], initialPlacementTransform[13], initialPlacementTransform[14], initialPlacementTransform[15]
+        initialPlacementTransform[0], initialPlacementTransform[4], initialPlacementTransform[8], initialPlacementTransform[12],
+        initialPlacementTransform[1], initialPlacementTransform[5], initialPlacementTransform[9], initialPlacementTransform[13],
+        initialPlacementTransform[2], initialPlacementTransform[6], initialPlacementTransform[10], initialPlacementTransform[14],
+        initialPlacementTransform[3], initialPlacementTransform[7], initialPlacementTransform[11], initialPlacementTransform[15]
     );
 
     // Create bone nodes - with duplicate name handling
     std::map<int, aiNode*> boneIndexToNode;
     std::map<std::string, int> boneNameCount;  // Track bone name occurrences for duplicate handling
-    std::map<int, std::string> boneIndexToFinalName;  // Store final names for animation channel consistency
+    m_boneIndexToFinalName.clear();            // Store final names for animation channel consistency
+    
+    std::vector<aiMatrix4x4> globalTransforms(boneCount);
+    std::vector<aiMatrix4x4> scaleFreeGlobalTransforms(boneCount);
+    std::vector<aiVector3D> accumulatedScaleSigns(boneCount, aiVector3D(1.0f, 1.0f, 1.0f));
     
     for (int boneIdx = 0; boneIdx < boneCount; ++boneIdx)
     {
@@ -1215,105 +1261,91 @@ bool Gr2Converter::convertSkeletonFromGranny()
         }
         
         boneNode->mName = finalName;
-        boneIndexToFinalName[boneIdx] = finalName;
+        m_boneIndexToFinalName[boneIdx] = finalName;
         
-        // Extract transform components directly from LocalTransform (like reference implementation)
-        // This ensures position is correctly extracted
+        // Build local matrix using Granny's built-in function to preserve scale-shear
         granny_transform& localTransform = grannyBone->LocalTransform;
+        float localTransformMatrix[16];
+        GrannyBuildCompositeTransform4x4(&localTransform, localTransformMatrix);
         
-        // Start with identity transform
-        aiVector3D position(0.0f, 0.0f, 0.0f);
-        aiQuaternion rotation(1.0f, 0.0f, 0.0f, 0.0f); // Identity quaternion
-        aiVector3D scaling(1.0f, 1.0f, 1.0f);
+        aiMatrix4x4 L_i(
+            localTransformMatrix[0], localTransformMatrix[4], localTransformMatrix[8], localTransformMatrix[12],
+            localTransformMatrix[1], localTransformMatrix[5], localTransformMatrix[9], localTransformMatrix[13],
+            localTransformMatrix[2], localTransformMatrix[6], localTransformMatrix[10], localTransformMatrix[14],
+            localTransformMatrix[3], localTransformMatrix[7], localTransformMatrix[11], localTransformMatrix[15]
+        );
         
-        // Extract position if present
-        if (localTransform.Flags & GrannyHasPosition)
-        {
-            position = aiVector3D(
-                localTransform.Position[0],
-                localTransform.Position[1],
-                localTransform.Position[2]
-            );
+        // Track accumulated scale signs down the hierarchy
+        float sx = 1.0f, sy = 1.0f, sz = 1.0f;
+        if (localTransform.Flags & GrannyHasScaleShear) {
+            sx = localTransform.ScaleShear[0][0];
+            sy = localTransform.ScaleShear[1][1];
+            sz = localTransform.ScaleShear[2][2];
         }
+        float signX = (sx < 0.0f) ? -1.0f : 1.0f;
+        float signY = (sy < 0.0f) ? -1.0f : 1.0f;
+        float signZ = (sz < 0.0f) ? -1.0f : 1.0f;
         
-        // Extract orientation if present
-        // Granny stores quaternion as (x, y, z, w), but aiQuaternion expects (w, x, y, z)
-        if (localTransform.Flags & GrannyHasOrientation)
+        aiMatrix4x4 G_i;
+        int parentIdx = grannyBone->ParentIndex;
+        if (parentIdx == GrannyNoParentBone)
         {
-            rotation = aiQuaternion(
-                localTransform.Orientation[3], // w
-                localTransform.Orientation[0], // x
-                localTransform.Orientation[1], // y
-                localTransform.Orientation[2]  // z
-            );
-            // Normalize quaternion to prevent animation jitter from floating point errors
-            rotation.Normalize();
-        }
-        
-        // Extract scale if present
-        if (localTransform.Flags & GrannyHasScaleShear)
-        {
-            scaling = aiVector3D(
-                localTransform.ScaleShear[0][0],
-                localTransform.ScaleShear[1][1],
-                localTransform.ScaleShear[2][2]
-            );
-        }
-        
-        // Build transform matrix from components
-        aiMatrix4x4 finalTransform(scaling, rotation, position);
-
-        // Apply InitialPlacement to root bone only
-        // Root bone has ParentIndex == GrannyNoParentBone (-1)
-        if (grannyBone->ParentIndex == GrannyNoParentBone)
-        {
-            // Build InitialPlacement transform from components (like reference implementation)
+            // Build InitialPlacement transform using Granny's built-in function
             granny_transform& initialPlacement = grannyModel->InitialPlacement;
+            float initialPlacementMatrix[16];
+            GrannyBuildCompositeTransform4x4(&initialPlacement, initialPlacementMatrix);
             
-            aiVector3D initialPosition(0.0f, 0.0f, 0.0f);
-            aiQuaternion initialRotation(1.0f, 0.0f, 0.0f, 0.0f);
-            aiVector3D initialScaling(1.0f, 1.0f, 1.0f);
+            aiMatrix4x4 initialTransform(
+                initialPlacementMatrix[0], initialPlacementMatrix[4], initialPlacementMatrix[8], initialPlacementMatrix[12],
+                initialPlacementMatrix[1], initialPlacementMatrix[5], initialPlacementMatrix[9], initialPlacementMatrix[13],
+                initialPlacementMatrix[2], initialPlacementMatrix[6], initialPlacementMatrix[10], initialPlacementMatrix[14],
+                initialPlacementMatrix[3], initialPlacementMatrix[7], initialPlacementMatrix[11], initialPlacementMatrix[15]
+            );
             
-            if (initialPlacement.Flags & GrannyHasPosition)
-            {
-                initialPosition = aiVector3D(
-                    initialPlacement.Position[0],
-                    initialPlacement.Position[1],
-                    initialPlacement.Position[2]
-                );
+            // Apply InitialPlacement to root bone
+            G_i = initialTransform * L_i;
+            
+            float ipsx = 1.0f, ipsy = 1.0f, ipsz = 1.0f;
+            if (initialPlacement.Flags & GrannyHasScaleShear) {
+                ipsx = initialPlacement.ScaleShear[0][0];
+                ipsy = initialPlacement.ScaleShear[1][1];
+                ipsz = initialPlacement.ScaleShear[2][2];
             }
+            float ipSignX = (ipsx < 0.0f) ? -1.0f : 1.0f;
+            float ipSignY = (ipsy < 0.0f) ? -1.0f : 1.0f;
+            float ipSignZ = (ipsz < 0.0f) ? -1.0f : 1.0f;
             
-            if (initialPlacement.Flags & GrannyHasOrientation)
-            {
-                // Granny stores quaternion as (x, y, z, w), but aiQuaternion expects (w, x, y, z)
-                initialRotation = aiQuaternion(
-                    initialPlacement.Orientation[3], // w
-                    initialPlacement.Orientation[0], // x
-                    initialPlacement.Orientation[1], // y
-                    initialPlacement.Orientation[2]  // z
-                );
-            }
-            
-            if (initialPlacement.Flags & GrannyHasScaleShear)
-            {
-                initialScaling = aiVector3D(
-                    initialPlacement.ScaleShear[0][0],
-                    initialPlacement.ScaleShear[1][1],
-                    initialPlacement.ScaleShear[2][2]
-                );
-            }
-            
-            aiMatrix4x4 initialTransform(initialScaling, initialRotation, initialPosition);
-            
-            // Reference implementation: initialTransform * finalTransform
-            // This means InitialPlacement is applied first, then local transform
-            boneNode->mTransformation = initialTransform * finalTransform;
+            accumulatedScaleSigns[boneIdx] = aiVector3D(ipSignX * signX, ipSignY * signY, ipSignZ * signZ);
         }
         else
         {
-            boneNode->mTransformation = finalTransform;
+            G_i = globalTransforms[parentIdx] * L_i;
+            accumulatedScaleSigns[boneIdx] = aiVector3D(
+                accumulatedScaleSigns[parentIdx].x * signX,
+                accumulatedScaleSigns[parentIdx].y * signY,
+                accumulatedScaleSigns[parentIdx].z * signZ
+            );
         }
-
+        globalTransforms[boneIdx] = G_i;
+        
+        // Get scale-free and reflection-free global transform using accumulated scale signs
+        aiMatrix4x4 G_prime_i = GetScaleFreeMatrix(G_i, accumulatedScaleSigns[boneIdx]);
+        scaleFreeGlobalTransforms[boneIdx] = G_prime_i;
+        
+        // Calculate new scale-free local transform relative to parent's scale-free global
+        aiMatrix4x4 L_prime_i;
+        if (parentIdx == GrannyNoParentBone)
+        {
+            L_prime_i = G_prime_i;
+        }
+        else
+        {
+            aiMatrix4x4 parentGPrimeInverse = scaleFreeGlobalTransforms[parentIdx];
+            parentGPrimeInverse.Inverse();
+            L_prime_i = parentGPrimeInverse * G_prime_i;
+        }
+        
+        boneNode->mTransformation = L_prime_i;
         boneIndexToNode[boneIdx] = boneNode;
         m_skeletonNodes.push_back(boneNode);
     }
@@ -1505,11 +1537,17 @@ bool Gr2Converter::convertAnimationsFromGranny(granny_model* modelToSample)
         int totalSteps = static_cast<int>(std::ceil(grannyAnim->Duration * samplingFPS)) + 1;
         if (totalSteps < 1) totalSteps = 1;
         
-        // Prepare node animations (one for each bone)
+        // Prepare node animations (one for each bone) and get bind pose rotations for hemisphere alignment
         std::vector<aiNodeAnim*> nodeAnims(skeleton->BoneCount);
+        std::vector<aiQuaternion> bindRotations(skeleton->BoneCount);
         for (int bIdx = 0; bIdx < skeleton->BoneCount; ++bIdx) {
             nodeAnims[bIdx] = new aiNodeAnim();
-            nodeAnims[bIdx]->mNodeName = skeleton->Bones[bIdx].Name;
+            auto nameIt = m_boneIndexToFinalName.find(bIdx);
+            if (nameIt != m_boneIndexToFinalName.end()) {
+                nodeAnims[bIdx]->mNodeName = nameIt->second;
+            } else {
+                nodeAnims[bIdx]->mNodeName = skeleton->Bones[bIdx].Name;
+            }
             
             nodeAnims[bIdx]->mNumPositionKeys = totalSteps;
             nodeAnims[bIdx]->mPositionKeys = new aiVectorKey[totalSteps];
@@ -1517,6 +1555,57 @@ bool Gr2Converter::convertAnimationsFromGranny(granny_model* modelToSample)
             nodeAnims[bIdx]->mRotationKeys = new aiQuatKey[totalSteps];
             nodeAnims[bIdx]->mNumScalingKeys = totalSteps;
             nodeAnims[bIdx]->mScalingKeys = new aiVectorKey[totalSteps];
+            
+            // Decompose bind pose to get rotation for quaternion alignment
+            aiVector3D bindPos, bindScale;
+            aiQuaternion bindRot;
+            if (static_cast<size_t>(bIdx) < m_skeletonNodes.size() && m_skeletonNodes[bIdx] != nullptr) {
+                m_skeletonNodes[bIdx]->mTransformation.Decompose(bindScale, bindRot, bindPos);
+                bindRot.Normalize();
+                bindRotations[bIdx] = bindRot;
+            } else {
+                bindRotations[bIdx] = aiQuaternion(1.0f, 0.0f, 0.0f, 0.0f);
+            }
+        }
+
+        // Calculate accumulated scale signs for animation bone baking
+        std::vector<aiVector3D> accumulatedScaleSigns(skeleton->BoneCount, aiVector3D(1.0f, 1.0f, 1.0f));
+        for (int boneIdx = 0; boneIdx < skeleton->BoneCount; ++boneIdx) {
+            granny_bone* grannyBone = &skeleton->Bones[boneIdx];
+            granny_transform& localTransform = grannyBone->LocalTransform;
+            
+            float sx = 1.0f, sy = 1.0f, sz = 1.0f;
+            if (localTransform.Flags & GrannyHasScaleShear) {
+                sx = localTransform.ScaleShear[0][0];
+                sy = localTransform.ScaleShear[1][1];
+                sz = localTransform.ScaleShear[2][2];
+            }
+            
+            float signX = (sx < 0.0f) ? -1.0f : 1.0f;
+            float signY = (sy < 0.0f) ? -1.0f : 1.0f;
+            float signZ = (sz < 0.0f) ? -1.0f : 1.0f;
+            
+            int parentIdx = grannyBone->ParentIndex;
+            if (parentIdx == GrannyNoParentBone) {
+                granny_transform& initialPlacement = modelToSample->InitialPlacement;
+                float ipsx = 1.0f, ipsy = 1.0f, ipsz = 1.0f;
+                if (initialPlacement.Flags & GrannyHasScaleShear) {
+                    ipsx = initialPlacement.ScaleShear[0][0];
+                    ipsy = initialPlacement.ScaleShear[1][1];
+                    ipsz = initialPlacement.ScaleShear[2][2];
+                }
+                float ipSignX = (ipsx < 0.0f) ? -1.0f : 1.0f;
+                float ipSignY = (ipsy < 0.0f) ? -1.0f : 1.0f;
+                float ipSignZ = (ipsz < 0.0f) ? -1.0f : 1.0f;
+                
+                accumulatedScaleSigns[boneIdx] = aiVector3D(ipSignX * signX, ipSignY * signY, ipSignZ * signZ);
+            } else {
+                accumulatedScaleSigns[boneIdx] = aiVector3D(
+                    accumulatedScaleSigns[parentIdx].x * signX,
+                    accumulatedScaleSigns[parentIdx].y * signY,
+                    accumulatedScaleSigns[parentIdx].z * signZ
+                );
+            }
         }
 
         // Sampling pass
@@ -1527,20 +1616,82 @@ bool Gr2Converter::convertAnimationsFromGranny(granny_model* modelToSample)
             GrannySetControlClock(control, currentTime);
             GrannySampleModelAnimations(modelInstance, 0, skeleton->BoneCount, localPose);
             
+            std::vector<aiMatrix4x4> animGlobalTransforms(skeleton->BoneCount);
+            std::vector<aiMatrix4x4> animScaleFreeGlobalTransforms(skeleton->BoneCount);
+            
             for (int bIdx = 0; bIdx < skeleton->BoneCount; ++bIdx) {
                 granny_transform* transform = GrannyGetLocalPoseTransform(localPose, bIdx);
+                granny_bone* grannyBone = &skeleton->Bones[bIdx];
+                
+                float animLocalMatrix[16];
+                GrannyBuildCompositeTransform4x4(transform, animLocalMatrix);
+                
+                aiMatrix4x4 L_i(
+                    animLocalMatrix[0], animLocalMatrix[4], animLocalMatrix[8], animLocalMatrix[12],
+                    animLocalMatrix[1], animLocalMatrix[5], animLocalMatrix[9], animLocalMatrix[13],
+                    animLocalMatrix[2], animLocalMatrix[6], animLocalMatrix[10], animLocalMatrix[14],
+                    animLocalMatrix[3], animLocalMatrix[7], animLocalMatrix[11], animLocalMatrix[15]
+                );
+                
+                aiMatrix4x4 G_i;
+                int parentIdx = grannyBone->ParentIndex;
+                if (parentIdx == GrannyNoParentBone) {
+                    // Apply InitialPlacement to root bone
+                    granny_transform& initialPlacement = modelToSample->InitialPlacement;
+                    float initialPlacementMatrix[16];
+                    GrannyBuildCompositeTransform4x4(&initialPlacement, initialPlacementMatrix);
+                    
+                    aiMatrix4x4 initialTransform(
+                        initialPlacementMatrix[0], initialPlacementMatrix[4], initialPlacementMatrix[8], initialPlacementMatrix[12],
+                        initialPlacementMatrix[1], initialPlacementMatrix[5], initialPlacementMatrix[9], initialPlacementMatrix[13],
+                        initialPlacementMatrix[2], initialPlacementMatrix[6], initialPlacementMatrix[10], initialPlacementMatrix[14],
+                        initialPlacementMatrix[3], initialPlacementMatrix[7], initialPlacementMatrix[11], initialPlacementMatrix[15]
+                    );
+                    G_i = initialTransform * L_i;
+                } else {
+                    G_i = animGlobalTransforms[parentIdx] * L_i;
+                }
+                animGlobalTransforms[bIdx] = G_i;
+                
+                // Get scale-free and reflection-free global transform using accumulated scale signs
+                aiMatrix4x4 G_prime_i = GetScaleFreeMatrix(G_i, accumulatedScaleSigns[bIdx]);
+                animScaleFreeGlobalTransforms[bIdx] = G_prime_i;
+                
+                // Calculate new scale-free local transform relative to parent's scale-free global
+                aiMatrix4x4 L_prime_i;
+                if (parentIdx == GrannyNoParentBone) {
+                    L_prime_i = G_prime_i;
+                } else {
+                    aiMatrix4x4 parentGPrimeInverse = animScaleFreeGlobalTransforms[parentIdx];
+                    parentGPrimeInverse.Inverse();
+                    L_prime_i = parentGPrimeInverse * G_prime_i;
+                }
+                
+                // Decompose L_prime_i to extract position and rotation keys
+                aiVector3D localPos, localScale;
+                aiQuaternion localRot;
+                L_prime_i.Decompose(localScale, localRot, localPos);
+                localRot.Normalize();
                 
                 nodeAnims[bIdx]->mPositionKeys[s].mTime = currentTime;
-                nodeAnims[bIdx]->mPositionKeys[s].mValue = aiVector3D(transform->Position[0], transform->Position[1], transform->Position[2]);
+                nodeAnims[bIdx]->mPositionKeys[s].mValue = localPos;
                 
                 nodeAnims[bIdx]->mRotationKeys[s].mTime = currentTime;
-                // Normalize quaternion to prevent animation jitter from floating point errors
-                aiQuaternion animQuat(transform->Orientation[3], transform->Orientation[0], transform->Orientation[1], transform->Orientation[2]);
-                animQuat.Normalize();
-                nodeAnims[bIdx]->mRotationKeys[s].mValue = animQuat;
+                
+                // Anti-flipping: Align quaternion hemisphere to prevent twisting/shattering
+                aiQuaternion targetRot = (s > 0) ? nodeAnims[bIdx]->mRotationKeys[s-1].mValue : bindRotations[bIdx];
+                float dot = targetRot.x * localRot.x + targetRot.y * localRot.y + targetRot.z * localRot.z + targetRot.w * localRot.w;
+                if (dot < 0.0f) {
+                    localRot.x = -localRot.x;
+                    localRot.y = -localRot.y;
+                    localRot.z = -localRot.z;
+                    localRot.w = -localRot.w;
+                }
+                
+                nodeAnims[bIdx]->mRotationKeys[s].mValue = localRot;
                 
                 nodeAnims[bIdx]->mScalingKeys[s].mTime = currentTime;
-                nodeAnims[bIdx]->mScalingKeys[s].mValue = aiVector3D(transform->ScaleShear[0][0], transform->ScaleShear[1][1], transform->ScaleShear[2][2]);
+                nodeAnims[bIdx]->mScalingKeys[s].mValue = aiVector3D(1.0f, 1.0f, 1.0f);
             }
         }
 
@@ -2072,6 +2223,7 @@ void Gr2Converter::clearData()
     m_skeletonNodes.clear();
     m_animations.clear();
     m_meshToOriginalIndices.clear();
+    m_boneIndexToFinalName.clear();
     
     m_assimpScene = nullptr;
 }

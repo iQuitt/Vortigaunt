@@ -107,6 +107,7 @@ private:
     std::vector<struct aiMesh*> m_meshes;
     std::vector<struct aiNode*> m_skeletonNodes;
     std::vector<struct aiAnimation*> m_animations;
+    std::map<int, std::string> m_boneIndexToFinalName;
 };
 
 #else // ENABLE_GRANNY2 
