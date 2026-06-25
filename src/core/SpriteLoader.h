@@ -74,7 +74,7 @@ public:
     size_t getFrameCount() const { return m_frames.size(); }
 
     // Extract frames to BMP files
-    bool extractFramesToBmp(const std::string& filePath, const std::string& outputDir);
+    bool extractFramesToBmp(const std::string& filePath, const std::string& outputDir, const std::string& prefix = "frame");
 
     // Create sprite from frames
     bool createSpriteV2(const std::string& outputPath,
@@ -100,7 +100,7 @@ public:
     bool exportLithtechToGoldSrc(const std::string& outputPath,
                                  int32_t spriteType = 2,
                                  int32_t textureFormat = 2);
-    bool exportLithtechFramesToBmp(const std::string& outputDir);
+    bool exportLithtechFramesToBmp(const std::string& outputDir, const std::string& prefix = "frame");
     bool isLithtech() const { return m_header.version == SpriteVersion::LITHTECH; }
     const std::string& getFilePath() const { return m_filePath; }
 

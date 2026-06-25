@@ -1775,8 +1775,9 @@ void SpriteViewerWindow::onExtractFrame()
     if (!ok)
         return;
     
+    QString defaultPrefix = m_currentSpritePath.isEmpty() ? QStringLiteral("frame") : QFileInfo(m_currentSpritePath).baseName();
     QString outputPath = QFileDialog::getSaveFileName(this, tr("Save Frame"), 
-        QString("frame_%1.png").arg(frameIndex), tr("PNG files (*.png);;Bitmap files (*.bmp)"));
+        QString("%1_%2.png").arg(defaultPrefix).arg(frameIndex), tr("PNG files (*.png);;Bitmap files (*.bmp)"));
     
     if (outputPath.isEmpty())
         return;
@@ -1806,12 +1807,18 @@ void SpriteViewerWindow::onExtractAllFrames()
         return;
     }
 
-    // --- Format selection dialog ---
     QDialog formatDialog(this);
     formatDialog.setWindowTitle(tr("Export Format"));
-    formatDialog.setFixedSize(280, 120);
 
     auto* dlgLayout = new QVBoxLayout(&formatDialog);
+
+    auto* prefixLayout = new QHBoxLayout();
+    prefixLayout->addWidget(new QLabel(tr("Frame Prefix Name:")));
+    auto* prefixEdit = new QLineEdit();
+    QString defaultPrefix = m_currentSpritePath.isEmpty() ? QStringLiteral("frame") : QFileInfo(m_currentSpritePath).baseName();
+    prefixEdit->setText(defaultPrefix);
+    prefixLayout->addWidget(prefixEdit, 1);
+    dlgLayout->addLayout(prefixLayout);
 
     auto* formatLayout = new QHBoxLayout();
     formatLayout->addWidget(new QLabel(tr("Format:")));
@@ -1833,10 +1840,17 @@ void SpriteViewerWindow::onExtractAllFrames()
     connect(okBtn, &QPushButton::clicked, &formatDialog, &QDialog::accept);
     connect(cancelBtn, &QPushButton::clicked, &formatDialog, &QDialog::reject);
 
+    formatDialog.setMinimumWidth(320);
+    formatDialog.adjustSize();
+
     if (formatDialog.exec() != QDialog::Accepted)
         return;
 
     QString chosenFormat = formatCombo->currentData().toString(); // "bmp", "png", or "jpg"
+    QString prefix = prefixEdit->text().trimmed();
+    if (prefix.isEmpty()) {
+        prefix = QStringLiteral("frame");
+    }
 
     // --- Select output directory ---
     QString outputDir = QFileDialog::getExistingDirectory(this, tr("Select Output Directory"));
@@ -1861,7 +1875,7 @@ void SpriteViewerWindow::onExtractAllFrames()
         if (frame.image.isNull())
             continue;
 
-        QString outputPath = outputDir + QString("/frame_%1.%2").arg(i, 4, 10, QChar('0')).arg(chosenFormat);
+        QString outputPath = outputDir + QString("/%1_%2.%3").arg(prefix).arg(i, 4, 10, QChar('0')).arg(chosenFormat);
 
         bool saved = false;
         if (chosenFormat == "bmp") {
@@ -2899,11 +2913,19 @@ void SpriteViewerWindow::onExportLithtechFrames()
 {
     if (!m_spriteLoader.isLithtech()) return;
     
+    bool okInput;
+    QString defaultPrefix = m_currentSpritePath.isEmpty() ? QStringLiteral("frame") : QFileInfo(m_currentSpritePath).baseName();
+    QString prefix = QInputDialog::getText(this, tr("Export Lithtech Frames"),
+                                           tr("Frame Prefix:"), QLineEdit::Normal,
+                                           defaultPrefix, &okInput);
+    if (!okInput) return;
+    if (prefix.isEmpty()) prefix = QStringLiteral("frame");
+
     QString outputDir = QFileDialog::getExistingDirectory(this, tr("Select Output Directory"));
     if (outputDir.isEmpty()) return;
     
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    bool ok = m_spriteLoader.exportLithtechFramesToBmp(outputDir.toStdString());
+    bool ok = m_spriteLoader.exportLithtechFramesToBmp(outputDir.toStdString(), prefix.toStdString());
     QApplication::restoreOverrideCursor();
     
     if (ok) {

@@ -314,7 +314,7 @@ bool SpriteLoader::loadDdsFrame(const std::vector<uint8_t>& ddsData, SpriteFrame
 #endif
 }
 
-bool SpriteLoader::extractFramesToBmp(const std::string& filePath, const std::string& outputDir)
+bool SpriteLoader::extractFramesToBmp(const std::string& filePath, const std::string& outputDir, const std::string& prefix)
 {
     if (!loadFile(filePath, false))
         return false;
@@ -336,7 +336,7 @@ bool SpriteLoader::extractFramesToBmp(const std::string& filePath, const std::st
         painter.end();
         
         // Use octree quantisation (same as CLI) for best quality
-        std::string outputPath = outputDir + "/frame_" + std::to_string(i) + ".bmp";
+        std::string outputPath = outputDir + "/" + prefix + "_" + std::to_string(i) + ".bmp";
         QImage argb = rgbImg.convertToFormat(QImage::Format_ARGB32);
         if (!BMP::saveAsIndexed8(outputPath.c_str(),
                                       argb.width(), argb.height(),
@@ -1294,7 +1294,7 @@ bool SpriteLoader::exportLithtechToGoldSrc(const std::string& outputPath, int32_
 #endif
 }
 
-bool SpriteLoader::exportLithtechFramesToBmp(const std::string& outputDir)
+bool SpriteLoader::exportLithtechFramesToBmp(const std::string& outputDir, const std::string& prefix)
 {
 #ifdef QT_WIDGETS_LIB
     if (m_frames.empty())
@@ -1310,7 +1310,7 @@ bool SpriteLoader::exportLithtechFramesToBmp(const std::string& outputDir)
         if (frame.image.isNull())
             continue;
 
-        std::string filename = "frame_" + std::to_string(i) + ".bmp";
+        std::string filename = prefix + "_" + std::to_string(i) + ".bmp";
         std::string outputPath = (std::filesystem::path(outputDir) / filename).string();
 
         QImage argb = frame.image.convertToFormat(QImage::Format_ARGB32);
