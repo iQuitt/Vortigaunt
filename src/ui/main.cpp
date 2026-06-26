@@ -4,6 +4,7 @@
 #include <utility>
 #include <QIcon>
 #include <QFileInfo>
+#include <QFile>
 #include <QStyleFactory>
 #include <QPalette>
 #include <QColor>
@@ -47,10 +48,39 @@ int main(int argc, char* argv[])
     QApplication app(argc, argv);
 
     
-    // Use AppData directory for log file to avoid admin permission issues in Program Files
-    QString appDataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QDir().mkpath(appDataDir); // Ensure directory exists
-    QString logPath = QDir(appDataDir).filePath("VortigauntTool.log");
+    bool isInstalled = false;
+#ifdef _WIN32
+    QString appDir = QCoreApplication::applicationDirPath().toLower();
+    QString programFiles = QString::fromLocal8Bit(qgetenv("ProgramFiles")).toLower();
+    QString programFilesX86 = QString::fromLocal8Bit(qgetenv("ProgramFiles(x86)")).toLower();
+    
+    if ((!programFiles.isEmpty() && appDir.startsWith(programFiles)) || (!programFilesX86.isEmpty() && appDir.startsWith(programFilesX86))) 
+    {
+        isInstalled = true;
+    }
+#endif
+
+    QString logDir;
+    bool usePortable = false;
+    
+    if (!isInstalled) {
+        QString testPath = QDir(QCoreApplication::applicationDirPath()).filePath(".write_test");
+        QFile testFile(testPath);
+        if (testFile.open(QIODevice::WriteOnly)) {
+            testFile.close();
+            testFile.remove();
+            usePortable = true;
+        }
+    }
+    
+    if (usePortable) {
+        logDir = QCoreApplication::applicationDirPath();
+    } else {
+        logDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        QDir().mkpath(logDir); 
+    }
+    
+    QString logPath = QDir(logDir).filePath("VortigauntTool.log");
     VortigauntLog::Initialize(logPath.toStdString());
     
     auto& registry = ExtractArchive::Instance();
