@@ -276,6 +276,68 @@ if(BUILD_GUI)
     # Install Discord SDK DLL
     install(FILES "$<TARGET_FILE:discord_partner_sdk>" DESTINATION .)
 
+    # --- Shell Integrations (DTX Thumbnail Provider) ---
+    if(WIN32)
+        # Windows Shell Extension COM DLL
+        set(DTX_THUMBNAIL_PROVIDER_SOURCES
+            shell/windows/DtxThumbnailProvider.cpp
+            shell/windows/DtxThumbnailProvider.h
+            shell/windows/DtxThumbnailProvider.def
+            core/converters/DtxConverter.cpp
+            core/converters/LzmaDecoder.cpp
+        )
+        add_library(DtxThumbnailProvider SHARED ${DTX_THUMBNAIL_PROVIDER_SOURCES})
+        target_include_directories(DtxThumbnailProvider PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/core
+            ${CMAKE_CURRENT_SOURCE_DIR}/core/converters
+            ${CMAKE_CURRENT_SOURCE_DIR}/utils
+        )
+        target_link_libraries(DtxThumbnailProvider PRIVATE
+            assimp_includes zlib_headers lzma lz4 libimagequant
+            unordered_dense::unordered_dense
+            shlwapi
+        )
+        if(ENABLE_LITHTECH)
+            target_link_libraries(DtxThumbnailProvider PRIVATE lithtech)
+            target_compile_definitions(DtxThumbnailProvider PRIVATE ENABLE_LITHTECH)
+        endif()
+        
+        # Specify DEF file for exports to avoid mangling and export standard COM DLL entrypoints
+        set_target_properties(DtxThumbnailProvider PROPERTIES
+            LINK_FLAGS "/DEF:\"${CMAKE_CURRENT_SOURCE_DIR}/shell/windows/DtxThumbnailProvider.def\""
+        )
+        
+        # Install target
+        install(TARGETS DtxThumbnailProvider DESTINATION .)
+    else()
+        # Linux / Unix desktop thumbnailer CLI
+        set(VORTIGAUNT_THUMBNAILER_SOURCES
+            shell/linux/vortigaunt-thumbnailer.cpp
+            core/converters/DtxConverter.cpp
+            core/converters/LzmaDecoder.cpp
+        )
+        add_executable(vortigaunt-thumbnailer ${VORTIGAUNT_THUMBNAILER_SOURCES})
+        target_include_directories(vortigaunt-thumbnailer PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/core
+            ${CMAKE_CURRENT_SOURCE_DIR}/core/converters
+            ${CMAKE_CURRENT_SOURCE_DIR}/utils
+        )
+        target_link_libraries(vortigaunt-thumbnailer PRIVATE
+            Qt6::Core Qt6::Gui
+            assimp_includes zlib_headers lzma lz4 libimagequant
+            unordered_dense::unordered_dense
+        )
+        if(ENABLE_LITHTECH)
+            target_link_libraries(vortigaunt-thumbnailer PRIVATE lithtech)
+            target_compile_definitions(vortigaunt-thumbnailer PRIVATE ENABLE_LITHTECH)
+        endif()
+
+        install(TARGETS vortigaunt-thumbnailer RUNTIME DESTINATION bin)
+        install(FILES shell/linux/vortigaunt.thumbnailer DESTINATION share/thumbnailers)
+    endif()
+
     if(WIN32)
         # Find windeployqt
         get_target_property(_qmake_executable Qt6::qmake IMPORTED_LOCATION)

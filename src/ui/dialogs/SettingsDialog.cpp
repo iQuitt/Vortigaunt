@@ -13,6 +13,12 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QStandardPaths>
+#include <QFile>
+#include <QLibrary>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 
 #include "LanguageManager.h"
 #include "core/VortigauntLog.h"
@@ -92,6 +98,23 @@ void SettingsDialog::setupUI()
     mainLayout->addWidget(viewersGroup);
     mainLayout->addWidget(pathsGroup);
     mainLayout->addWidget(generalGroup);
+#ifdef Q_OS_WIN
+    auto* shellGroup = new QGroupBox(tr("Shells"));
+    auto* shellLayout = new QVBoxLayout();
+
+    m_thumbnailerStatusLabel = new QLabel();
+    shellLayout->addWidget(m_thumbnailerStatusLabel);
+
+    auto* shellButtonsLayout = new QHBoxLayout();
+    m_registerThumbnailerBtn = new QPushButton(tr("Register DTX Thumbnailer"));
+    m_unregisterThumbnailerBtn = new QPushButton(tr("Unregister DTX Thumbnailer"));
+    shellButtonsLayout->addWidget(m_registerThumbnailerBtn);
+    shellButtonsLayout->addWidget(m_unregisterThumbnailerBtn);
+    shellLayout->addLayout(shellButtonsLayout);
+
+    shellGroup->setLayout(shellLayout);
+    mainLayout->addWidget(shellGroup);
+#endif
     mainLayout->addStretch();
     mainLayout->addLayout(buttonLayout);
 
@@ -100,6 +123,10 @@ void SettingsDialog::setupUI()
     connect(m_browseExtractPathButton, &QPushButton::clicked, this, &SettingsDialog::onBrowseExtractPath);
     connect(saveButton, &QPushButton::clicked, this, &SettingsDialog::onSave);
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
+#ifdef Q_OS_WIN
+    connect(m_registerThumbnailerBtn, &QPushButton::clicked, this, &SettingsDialog::onRegisterThumbnailer);
+    connect(m_unregisterThumbnailerBtn, &QPushButton::clicked, this, &SettingsDialog::onUnregisterThumbnailer);
+#endif
 }
 
 void SettingsDialog::loadSettings()
@@ -108,6 +135,9 @@ void SettingsDialog::loadSettings()
     m_extractPathEdit->setText(getDefaultExtractPath());
     m_developerModeCheck->setChecked(getDeveloperMode());
 	m_discordRpcCheck->setChecked(getDiscordRpcMode());
+#ifdef Q_OS_WIN
+    updateThumbnailerStatus();
+#endif
 }
 
 void SettingsDialog::onBrowseModelViewer()
@@ -277,5 +307,109 @@ QString SettingsDialog::getLoLOutputDir(bool isDownloadFolder)
     
     return QDir(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).filePath("VortigauntExtracted/VortigauntLoL");
 }
+
+#ifdef Q_OS_WIN
+void SettingsDialog::updateThumbnailerStatus()
+{
+    if (!m_thumbnailerStatusLabel || !m_registerThumbnailerBtn || !m_unregisterThumbnailerBtn)
+        return;
+
+    HKEY hKey;
+    LSTATUS status = RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\{C4066FE0-59CE-452D-B9B2-E7B6C8A604EA}", 0, KEY_READ, &hKey);
+    bool isRegistered = (status == ERROR_SUCCESS);
+    if (isRegistered)
+    {
+        RegCloseKey(hKey);
+        m_thumbnailerStatusLabel->setText(tr("DTX Thumbnailer Status: Active"));
+        m_thumbnailerStatusLabel->setStyleSheet("color: green; font-weight: bold;");
+        m_registerThumbnailerBtn->setEnabled(false);
+        m_unregisterThumbnailerBtn->setEnabled(true);
+    }
+    else
+    {
+        m_thumbnailerStatusLabel->setText(tr("DTX Thumbnailer Status: Inactive"));
+        m_thumbnailerStatusLabel->setStyleSheet("color: gray;");
+        m_registerThumbnailerBtn->setEnabled(true);
+        m_unregisterThumbnailerBtn->setEnabled(false);
+    }
+}
+
+void SettingsDialog::onRegisterThumbnailer()
+{
+    QString dllPath = QDir(QCoreApplication::applicationDirPath()).filePath("DtxThumbnailProvider.dll");
+    if (!QFile::exists(dllPath))
+    {
+        QMessageBox::critical(this, tr("Error"), tr("DtxThumbnailProvider.dll not found in application directory:\n%1").arg(dllPath));
+        return;
+    }
+
+    QLibrary lib(dllPath);
+    if (!lib.load())
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to load DtxThumbnailProvider.dll:\n%1").arg(lib.errorString()));
+        return;
+    }
+
+    typedef HRESULT(STDAPICALLTYPE* PFN_DllRegisterServer)();
+    auto regFn = (PFN_DllRegisterServer)lib.resolve("DllRegisterServer");
+    if (!regFn)
+    {
+        QMessageBox::critical(this, tr("Error"), tr("DllRegisterServer export not found in DtxThumbnailProvider.dll."));
+        return;
+    }
+
+    HRESULT hr = regFn();
+    lib.unload();
+
+    if (SUCCEEDED(hr))
+    {
+        QMessageBox::information(this, tr("Success"), tr("DTX Thumbnailer has been successfully registered."));
+    }
+    else
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to register DTX Thumbnailer. HRESULT: 0x%1").arg(QString::number(hr, 16)));
+    }
+    updateThumbnailerStatus();
+}
+
+void SettingsDialog::onUnregisterThumbnailer()
+{
+    QString dllPath = QDir(QCoreApplication::applicationDirPath()).filePath("DtxThumbnailProvider.dll");
+    if (!QFile::exists(dllPath))
+    {
+        QMessageBox::critical(this, tr("Error"), tr("DtxThumbnailProvider.dll not found in application directory:\n%1").arg(dllPath));
+        return;
+    }
+
+    QLibrary lib(dllPath);
+    if (!lib.load())
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to load DtxThumbnailProvider.dll:\n%1").arg(lib.errorString()));
+        return;
+    }
+
+    typedef HRESULT(STDAPICALLTYPE* PFN_DllUnregisterServer)();
+    auto unregFn = (PFN_DllUnregisterServer)lib.resolve("DllUnregisterServer");
+    if (!unregFn)
+    {
+        QMessageBox::critical(this, tr("Error"), tr("DllUnregisterServer export not found in DtxThumbnailProvider.dll."));
+        return;
+    }
+
+    HRESULT hr = unregFn();
+    lib.unload();
+
+    if (SUCCEEDED(hr))
+    {
+        QMessageBox::information(this, tr("Success"), tr("DTX Thumbnailer has been successfully unregistered."));
+    }
+    else
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to unregister DTX Thumbnailer. HRESULT: 0x%1").arg(QString::number(hr, 16)));
+    }
+    updateThumbnailerStatus();
+}
+#endif
+
 
 

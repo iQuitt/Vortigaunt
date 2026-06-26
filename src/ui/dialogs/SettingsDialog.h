@@ -6,6 +6,8 @@
 #include <QCheckBox>
 #include <QSettings>
 
+class QLabel;
+
 class SettingsDialog : public QDialog
 {
     Q_OBJECT
@@ -35,10 +37,17 @@ private slots:
     void onBrowseModelViewer();
     void onBrowseExtractPath();
     void onSave();
+#ifdef Q_OS_WIN
+    void onRegisterThumbnailer();
+    void onUnregisterThumbnailer();
+#endif
 
 private:
     void setupUI();
     void loadSettings();
+#ifdef Q_OS_WIN
+    void updateThumbnailerStatus();
+#endif
 
     QLineEdit* m_modelViewerEdit;
     QLineEdit* m_extractPathEdit;
@@ -47,4 +56,11 @@ private:
     QCheckBox* m_darkModeCheck;
     QPushButton* m_browseModelViewerButton;
     QPushButton* m_browseExtractPathButton;
+
+#ifdef Q_OS_WIN
+    QLabel* m_thumbnailerStatusLabel{nullptr};
+    QPushButton* m_registerThumbnailerBtn{nullptr};
+    QPushButton* m_unregisterThumbnailerBtn{nullptr};
+#endif
 };
+

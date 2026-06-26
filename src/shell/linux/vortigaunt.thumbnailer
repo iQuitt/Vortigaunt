@@ -1,0 +1,4 @@
+[Thumbnailer Entry]
+TryExec=vortigaunt-thumbnailer
+Exec=vortigaunt-thumbnailer %s %i %o
+MimeType=image/x-dtx;application/x-dtx;image/dtx;

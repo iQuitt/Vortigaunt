@@ -6,13 +6,16 @@
 #include <fstream>
 #include "utils/FileIO.h"
 #include <filesystem>
+#include <atomic>
+#include <sstream>
+#include <thread>
 
-
-static std::string getDtxTempPath() {
-    return (std::filesystem::temp_directory_path() / "__dtx_decoded.temp").string();
+static std::string getUniqueTempPath() {
+    static std::atomic<unsigned int> counter(0);
+    std::stringstream ss;
+    ss << "__dtx_decoded_" << std::this_thread::get_id() << "_" << counter.fetch_add(1) << ".temp";
+    return (std::filesystem::temp_directory_path() / ss.str()).string();
 }
-#define DECODING_TEMP_FILE_PATH getDtxTempPath().c_str()
-
 
 // from https://github.com/YoungFine0825/LTB2FBX
 FormatMgr g_FormatMgr;
@@ -30,17 +33,20 @@ DtxConverter::~DtxConverter()
 
 int DtxConverter::ConvertSingleDTXFile(const std::string& format, const std::string& inputFilePath, const std::string& outFilePath)
 {
-	FILE* f = FileIO::openFile(DECODING_TEMP_FILE_PATH, "w");
+    std::string tempFilePath = getUniqueTempPath();
+	FILE* f = FileIO::openFile(tempFilePath, "w");
 	if (f)
 	{
 		fclose(f);
 	}
 
-	int ret = m_lzmaDecoder->Decode(inputFilePath.c_str(), DECODING_TEMP_FILE_PATH);
+	int ret = m_lzmaDecoder->Decode(inputFilePath.c_str(), tempFilePath.c_str());
 	std::string realInputFilePath;
+    bool isTemp = false;
 	if (ret == DEC_RET_SUCCESSFUL)
 	{
-		realInputFilePath = DECODING_TEMP_FILE_PATH;
+		realInputFilePath = tempFilePath;
+        isTemp = true;
 	}
 	else 
 	{
@@ -52,32 +58,46 @@ int DtxConverter::ConvertSingleDTXFile(const std::string& format, const std::str
 	if (!DecodeDTXToRGBA(realInputFilePath, pixels, w, h))
 	{
 		printf("Failed to decode DTX for BMP conversion.\n");
+        if (isTemp) {
+            std::error_code ec;
+            std::filesystem::remove(tempFilePath, ec);
+        }
 		return DTX_CONVERT_DECODING_FAILED;
 	}
 
 	if (!BMP::saveAsIndexed8(outFilePath, w, h, pixels.data()))
 	{
 		printf("Failed to write 8-bit BMP file.\n");
+        if (isTemp) {
+            std::error_code ec;
+            std::filesystem::remove(tempFilePath, ec);
+        }
 		return DTX_CONVERT_FAILED;
 	}
 
+    if (isTemp) {
+        std::error_code ec;
+        std::filesystem::remove(tempFilePath, ec);
+    }
 	return DTX_CONVERT_OK;
 }
 
 bool DtxConverter::DecodeDTXToRGBA(const std::string& inputFilePath, std::vector<unsigned int>& outPixels, int& width, int& height)
 {
-    // Handle optional LZMA compression
-    FILE* f = FileIO::openFile(DECODING_TEMP_FILE_PATH, "w");
+    std::string tempFilePath = getUniqueTempPath();
+    FILE* f = FileIO::openFile(tempFilePath, "w");
     if (f)
     {
         fclose(f);
     }
 
-    int decRet = m_lzmaDecoder->Decode(inputFilePath.c_str(), DECODING_TEMP_FILE_PATH);
+    int decRet = m_lzmaDecoder->Decode(inputFilePath.c_str(), tempFilePath.c_str());
     std::string realInputFilePath;
+    bool isTemp = false;
     if (decRet == DEC_RET_SUCCESSFUL)
     {
-        realInputFilePath = DECODING_TEMP_FILE_PATH;
+        realInputFilePath = tempFilePath;
+        isTemp = true;
     }
     else
     {
@@ -85,10 +105,21 @@ bool DtxConverter::DecodeDTXToRGBA(const std::string& inputFilePath, std::vector
     }
 
     DStream* pStream = streamsim_Open(realInputFilePath.c_str(), "rb");
-    if (!pStream)
+    if (!pStream) {
+        if (isTemp) {
+            std::error_code ec;
+            std::filesystem::remove(tempFilePath, ec);
+        }
         return false;
+    }
 
-    return DecodeStreamToRGBA(pStream, outPixels, width, height);
+    bool success = DecodeStreamToRGBA(pStream, outPixels, width, height);
+
+    if (isTemp) {
+        std::error_code ec;
+        std::filesystem::remove(tempFilePath, ec);
+    }
+    return success;
 }
 
 bool DtxConverter::DecodeDTXBufferToRGBA(const uint8_t* data, size_t dataSize, std::vector<unsigned int>& outPixels, int& width, int& height)
