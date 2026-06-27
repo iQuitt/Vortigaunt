@@ -16,4 +16,4 @@
 
 // GitHub repository for update checks
 #define VORTIGAUNT_GITHUB_OWNER "iQuitt"
-#define VORTIGAUNT_GITHUB_REPO "Vortigaunt_Private"
+#define VORTIGAUNT_GITHUB_REPO "Vortigaunt"

@@ -83,6 +83,8 @@ AudioConvertResult AudioConverter::convertToWav(const std::string& inputPath,con
         return convertMp3ToWav(inputPath, outputPath, settings);
     case AUDIO_FORMAT_OGG:
         return convertOggToWav(inputPath, outputPath, settings);
+    case AUDIO_FORMAT_WAV:
+        return convertWavToWav(inputPath, outputPath, settings);
     default:
         VortigauntLog::LogF("%s: Unsupported audio format: %s", __func__, inputPath.c_str());
         return AUDIO_CONVERT_UNSUPPORTED_FORMAT;
@@ -176,6 +178,48 @@ AudioConvertResult AudioConverter::convertOggToWav(const std::string& inputPath,
         settings,
         outputPath);
 
+    return result;
+}
+
+AudioConvertResult AudioConverter::convertWavToWav(const std::string& inputPath,
+                                                    const std::string& outputPath,
+                                                    const AudioConvertSettings& settings)
+{
+    VortigauntLog::LogF("AudioConvert: Converting WAV: %s -> %s", inputPath.c_str(), outputPath.c_str());
+    VortigauntLog::LogF("AudioConvert: Target: %d Hz, %d-bit, Mono", 
+             settings.sampleRate, settings.bitDepth);
+
+    if (!std::filesystem::exists(inputPath))
+    {
+        VortigauntLog::LogF("%s: File not found: %s", __func__, inputPath.c_str());
+        return AUDIO_CONVERT_FILE_NOT_FOUND;
+    }
+
+    // Decode WAV file
+    unsigned int wavChannels;
+    unsigned int wavSampleRate;
+    drwav_uint64 totalFrameCount;
+    float* wavSamples = drwav_open_file_and_read_pcm_frames_f32(
+        inputPath.c_str(), &wavChannels, &wavSampleRate, &totalFrameCount, nullptr);
+    
+    if (!wavSamples)
+    {
+        VortigauntLog::LogF("%s: Failed to decode WAV file", __func__);
+        return AUDIO_CONVERT_DECODE_FAILED;
+    }
+
+    VortigauntLog::LogF("AudioConvert: WAV decoded: %llu frames, %d Hz, %d channels",
+             totalFrameCount, wavSampleRate, wavChannels);
+
+    AudioConvertResult result = processAndWriteWav(
+        wavSamples,
+        static_cast<size_t>(totalFrameCount),
+        wavSampleRate,
+        wavChannels,
+        settings,
+        outputPath);
+
+    drwav_free(wavSamples, nullptr);
     return result;
 }
 

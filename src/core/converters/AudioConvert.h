@@ -86,6 +86,13 @@ public:
                                         const AudioConvertSettings& settings = AudioConvertSettings());
 
     /**
+     * Convert WAV file to target WAV format
+     */
+    AudioConvertResult convertWavToWav(const std::string& inputPath,
+                                        const std::string& outputPath,
+                                        const AudioConvertSettings& settings = AudioConvertSettings());
+
+    /**
      * Detect audio format from file extension
      */
     static AudioFormat detectFormat(const std::string& filePath);

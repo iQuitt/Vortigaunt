@@ -311,31 +311,7 @@ if(BUILD_GUI)
         # Install target
         install(TARGETS DtxThumbnailProvider DESTINATION .)
     else()
-        # Linux / Unix desktop thumbnailer CLI
-        set(VORTIGAUNT_THUMBNAILER_SOURCES
-            shell/linux/vortigaunt-thumbnailer.cpp
-            core/converters/DtxConverter.cpp
-            core/converters/LzmaDecoder.cpp
-        )
-        add_executable(vortigaunt-thumbnailer ${VORTIGAUNT_THUMBNAILER_SOURCES})
-        target_include_directories(vortigaunt-thumbnailer PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}
-            ${CMAKE_CURRENT_SOURCE_DIR}/core
-            ${CMAKE_CURRENT_SOURCE_DIR}/core/converters
-            ${CMAKE_CURRENT_SOURCE_DIR}/utils
-        )
-        target_link_libraries(vortigaunt-thumbnailer PRIVATE
-            Qt6::Core Qt6::Gui
-            assimp_includes zlib_headers lzma lz4 libimagequant
-            unordered_dense::unordered_dense
-        )
-        if(ENABLE_LITHTECH)
-            target_link_libraries(vortigaunt-thumbnailer PRIVATE lithtech)
-            target_compile_definitions(vortigaunt-thumbnailer PRIVATE ENABLE_LITHTECH)
-        endif()
-
-        install(TARGETS vortigaunt-thumbnailer RUNTIME DESTINATION bin)
-        install(FILES shell/linux/vortigaunt.thumbnailer DESTINATION share/thumbnailers)
+        # Linux / Unix desktop thumbnailer CLI is disabled because Lithtech SDK is Windows-only.
     endif()
 
     if(WIN32)

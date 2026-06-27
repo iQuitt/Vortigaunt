@@ -31,7 +31,7 @@ AudioConvertDialog::AudioConvertDialog(QWidget* parent)
     
     // Instructions
     auto* instructionLabel = new QLabel(tr(
-        "Convert MP3/OGG audio files to WAV format.\n"
+        "Convert MP3/OGG/WAV audio files to WAV format.\n"
         " Recommended Values: 16-bit, 22050 Hz, Mono\n"
     ));
     instructionLabel->setWordWrap(true);
@@ -78,7 +78,7 @@ AudioConvertDialog::AudioConvertDialog(QWidget* parent)
     m_bitDepthCombo->setCurrentIndex(1); // Set to 16-bit
     settingsLayout->addWidget(m_bitDepthCombo);
     
-
+    
     
     settingsLayout->addStretch();
     mainLayout->addWidget(settingsGroup);
@@ -191,7 +191,7 @@ void AudioConvertDialog::onAddFiles()
         this,
         tr("Select Audio Files"),
         QString(),
-        tr("Audio Files (*.mp3 *.ogg);;MP3 Files (*.mp3);;OGG Files (*.ogg);;All Files (*.*)")
+        tr("Audio Files (*.mp3 *.ogg *.wav);;MP3 Files (*.mp3);;OGG Files (*.ogg);;WAV Files (*.wav);;All Files (*.*)")
     );
     
     for (const QString& file : files)
