@@ -490,7 +490,7 @@ set(WIX_FILE_ASSOCIATIONS_CONTENT "<?xml version='1.0' encoding='UTF-8'?>
                   Name='Vortigaunt'
                   Target='[INSTALL_ROOT]VortigauntTool_gui.exe'
                   WorkingDirectory='INSTALL_ROOT' />
-        <RegistryValue Root='HKCU' Key='Software\Vortigaunt' Name='DesktopShortcut' Type='integer' Value='1' KeyPath='yes' />
+        <RegistryValue Root='HKCU' Key='Software\\Vortigaunt' Name='DesktopShortcut' Type='integer' Value='1' KeyPath='yes' />
       </Component>
     </DirectoryRef>
   </Fragment>
@@ -536,7 +536,7 @@ set(WIX_UI_CONTENT "<?xml version='1.0' encoding='UTF-8'?>
       </Control>
       
       <Control Id='Description' Type='Text' X='25' Y='23' Width='280' Height='15' Transparent='yes' NoPrefix='yes' Text='Select additional tasks to perform during installation.' />
-      <Control Id='Title' Type='Text' X='15' Y='6' Width='200' Height='15' Transparent='yes' NoPrefix='yes' Text='{\WixUI_Font_Title}Select Additional Tasks' />
+      <Control Id='Title' Type='Text' X='15' Y='6' Width='200' Height='15' Transparent='yes' NoPrefix='yes' Text='{\\WixUI_Font_Title}Select Additional Tasks' />
       <Control Id='BannerLine' Type='Line' X='0' Y='44' Width='370' Height='0' />
       <Control Id='BottomLine' Type='Line' X='0' Y='234' Width='370' Height='0' />
       <Control Id='BannerBitmap' Type='Bitmap' X='0' Y='0' Width='370' Height='44' TabSkip='no' Text='!(loc.InstallDirDlgBannerBitmap)' />
