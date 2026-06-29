@@ -8,7 +8,7 @@
 #define VORTIGAUNT_VERSION_STRING "1.0.1"
 
 // Build info (populated by CMake at configure time)
-#define VORTIGAUNT_GIT_COMMIT "7bd7cee"
+#define VORTIGAUNT_GIT_COMMIT "90a0ea2"
 #define VORTIGAUNT_GIT_BRANCH "master"
 #define VORTIGAUNT_BUILD_TYPE "Release"
 #define VORTIGAUNT_OS "Windows"
