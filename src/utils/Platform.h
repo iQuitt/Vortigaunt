@@ -24,10 +24,5 @@ namespace Platform
      */
     void restoreNormalPriority();
 
-    /**
-     * Detects if system is using dark mode (Windows only)
-     */
-    bool isSystemDarkMode();
-
 }
 

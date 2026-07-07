@@ -21,6 +21,7 @@
 #endif
 
 #include "LanguageManager.h"
+#include "ThemeManager.h"
 #include "core/VortigauntLog.h"
 
 static const QString SETTINGS_ORG = "Vortigaunt";
@@ -30,6 +31,7 @@ static const QString KEY_DEVELOPER_MODE = "General/DeveloperMode";
 static const QString KEY_MIRROR_UV_Y = "GR2/MirrorUVY";
 static const QString KEY_DISCORD_RPC = "General/DiscordRPC";
 static const QString KEY_EXTRACT_PATH = "General/ExtractPath";
+static const QString KEY_DARK_THEME = "General/DarkTheme";
 
 SettingsDialog::SettingsDialog(QWidget* parent)
     : QDialog(parent)
@@ -84,7 +86,10 @@ void SettingsDialog::setupUI()
 
 	m_discordRpcCheck = new QCheckBox(tr("Enable Discord Rich Presence"));
 	generalLayout->addWidget(m_discordRpcCheck);
-    
+
+    m_darkModeCheck = new QCheckBox(tr("Enable Dark Theme"));
+    generalLayout->addWidget(m_darkModeCheck);
+
     generalGroup->setLayout(generalLayout);
     
     // Buttons
@@ -135,6 +140,7 @@ void SettingsDialog::loadSettings()
     m_extractPathEdit->setText(getDefaultExtractPath());
     m_developerModeCheck->setChecked(getDeveloperMode());
 	m_discordRpcCheck->setChecked(getDiscordRpcMode());
+    m_darkModeCheck->setChecked(getDarkThemeMode());
 #ifdef Q_OS_WIN
     updateThumbnailerStatus();
 #endif
@@ -171,6 +177,13 @@ void SettingsDialog::onSave()
     setDefaultExtractPath(m_extractPathEdit->text().trimmed());
     setDeveloperMode(m_developerModeCheck->isChecked());
 	setDiscordRpcMode(m_discordRpcCheck->isChecked());
+
+    if (m_darkModeCheck->isChecked() != getDarkThemeMode())
+    {
+        setDarkThemeMode(m_darkModeCheck->isChecked());
+        ThemeManager::apply(m_darkModeCheck->isChecked());
+    }
+
     accept();
 }
 
@@ -218,6 +231,18 @@ void SettingsDialog::setDiscordRpcMode(bool enabled)
 {
     QSettings settings(SETTINGS_ORG, SETTINGS_APP);
     settings.setValue(KEY_DISCORD_RPC, enabled);
+}
+
+bool SettingsDialog::getDarkThemeMode()
+{
+    QSettings settings(SETTINGS_ORG, SETTINGS_APP);
+    return settings.value(KEY_DARK_THEME, true).toBool();
+}
+
+void SettingsDialog::setDarkThemeMode(bool enabled)
+{
+    QSettings settings(SETTINGS_ORG, SETTINGS_APP);
+    settings.setValue(KEY_DARK_THEME, enabled);
 }
 
 bool SettingsDialog::getMirrorUVY()
@@ -321,7 +346,7 @@ void SettingsDialog::updateThumbnailerStatus()
     {
         RegCloseKey(hKey);
         m_thumbnailerStatusLabel->setText(tr("DTX Thumbnailer Status: Active"));
-        m_thumbnailerStatusLabel->setStyleSheet("color: green; font-weight: bold;");
+        m_thumbnailerStatusLabel->setStyleSheet("color: #4CAF50; font-weight: bold;");
         m_registerThumbnailerBtn->setEnabled(false);
         m_unregisterThumbnailerBtn->setEnabled(true);
     }

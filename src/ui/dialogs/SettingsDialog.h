@@ -19,10 +19,12 @@ public:
     static bool getDeveloperMode();
     static bool getMirrorUVY();
 	static bool getDiscordRpcMode();
+    static bool getDarkThemeMode();
     static void setModelViewerPath(const QString& path);
     static void setDeveloperMode(bool enabled);
     static void setMirrorUVY(bool enabled);
 	static void setDiscordRpcMode(bool enabled);
+    static void setDarkThemeMode(bool enabled);
 
     static QString getDefaultExtractPath();
     static void setDefaultExtractPath(const QString& path);

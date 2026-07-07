@@ -62,6 +62,8 @@ set(VORTIGAUNT_GUI_HEADERS
     ui/widgets/GLBViewer.h
 
 
+    ui/ThemeManager.h
+
     core/LanguageManager.h
     core/VortigauntUpdateCheck.h
 )
@@ -124,6 +126,7 @@ set(CLI_SOURCES
 set(VORTIGAUNT_GUI
     ui/main.cpp
     ui/MainWindow.cpp
+    ui/ThemeManager.cpp
 
     ui/dialogs/DtxViewerDialog.cpp
     ui/dialogs/SpriteFixDialog.cpp
@@ -536,7 +539,7 @@ set(WIX_UI_CONTENT "<?xml version='1.0' encoding='UTF-8'?>
       </Dialog>
     </UI>
     
-    <Property Id='INSTALLDESKTOPSHORTCUT' Value='1' />
+    <Property Id='INSTALLDESKTOPSHORTCUT' Secure='yes' Value='1' />
     <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='Launch Vortigaunt' />
     <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' />
     

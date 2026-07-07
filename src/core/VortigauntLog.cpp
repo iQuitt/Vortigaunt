@@ -80,13 +80,16 @@ namespace VortigauntLog
     }
 
 #ifdef QT_CORE_LIB
+    static bool isDarkWidget(QPlainTextEdit* widget)
+    {
+        if (!widget) return true;
+        return widget->palette().color(QPalette::Window).value() < 128;
+    }
+
     static QColor getColorForCode(QChar code, QPlainTextEdit* widget)
     {
-        bool dark = true;
-        if (widget) {
-            dark = widget->palette().color(QPalette::Window).value() < 128; // Basic luminance heuristic
-        }
-        
+        bool dark = isDarkWidget(widget);
+
         switch (code.toLatin1()) {
             case '0': return dark ? QColor("#E0E0E0") : QColor("#000000"); // Default
             case '1': return QColor("#FF5555"); // Red
@@ -151,10 +154,11 @@ namespace VortigauntLog
             pathStrings.append(match.captured(1));
         }
 
-        // Default text format
+        // Default text format — follows the widget's light/dark palette
         QTextCharFormat defaultFmt;
-        defaultFmt.setForeground(QColor("#E0E0E0"));
-        
+        defaultFmt.setForeground(getColorForCode(QChar('0'), widget));
+        const QColor linkColor = isDarkWidget(widget) ? QColor("#4FC3F7") : QColor("#0B63C4");
+
         QTextCharFormat currentFmt = defaultFmt;
         int rawIdx = 0;
         int pathIdx = 0;
@@ -190,7 +194,7 @@ namespace VortigauntLog
                 // Build the format for this character
                 QTextCharFormat fmt = currentFmt;
                 if (inLink) {
-                    fmt.setForeground(QColor("#4FC3F7"));
+                    fmt.setForeground(linkColor);
                     fmt.setFontUnderline(true);
                     QString fileUrl = QUrl::fromLocalFile(pathStrings[pathIdx]).toString();
                     fmt.setAnchor(true);

@@ -11,6 +11,7 @@
 #include <QDir>
 #include <QTimer>
 #include <QStandardPaths>
+#include "ThemeManager.h"
 #include "Discord_Integration.h"
 
 // CRT Debug Heap - Memory Leak Detection (Windows Debug builds only)
@@ -47,7 +48,9 @@ int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
 
-    
+    ThemeManager::apply(SettingsDialog::getDarkThemeMode());
+
+
     bool isInstalled = false;
 #ifdef _WIN32
     QString appDir = QCoreApplication::applicationDirPath().toLower();

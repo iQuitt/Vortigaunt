@@ -43,32 +43,5 @@ namespace Platform
         nice(s_originalNice - getpriority(PRIO_PROCESS, 0));
 #endif
     }
-
-
-
-    // If the system theme is dark, the Qt application will also be dark. 
-    // The reason i created this function is to make the text appear clearer.
-    bool isSystemDarkMode() {
-#ifdef _WIN32 
-        bool isDark = false;
-        HKEY hKey;
-        const char* subKey = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
-        const char* valueName = "AppsUseLightTheme";
-
-        if (RegOpenKeyExA(HKEY_CURRENT_USER, subKey, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-            DWORD value = 0;
-            DWORD valueSize = sizeof(value);
-            if (RegQueryValueExA(hKey, valueName, nullptr, nullptr, (LPBYTE)&value, &valueSize) == ERROR_SUCCESS) {
-                // 0 = Dark, 1 = Light
-                isDark = (value == 0);
-            }
-            RegCloseKey(hKey);
-        }
-        return isDark;
-#else
-        // TODO: Detect system theme for linux.
-        return false;
-#endif
-    }
 }// namespace Platform
 

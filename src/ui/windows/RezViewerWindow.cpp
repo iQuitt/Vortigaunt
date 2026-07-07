@@ -169,7 +169,7 @@ bool RezViewerWindow::loadRez(const QString& filePath)
         "    border: 1px solid #7B2CBF;"
         "    border-radius: 3px;"
         "    text-align: center;"
-        "    background-color: #E0E0E0;"
+        "    background-color: palette(base);"
         "}"
         "QProgressBar::chunk {"
         "    background-color: #7B2CBF;"
