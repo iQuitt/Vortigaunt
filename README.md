@@ -5,7 +5,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/iQuitt/Vortigaunt?style=social)](https://github.com/iQuitt/Vortigaunt)
 [![GitHub Issues](https://img.shields.io/github/issues/iQuitt/Vortigaunt)](https://github.com/iQuitt/Vortigaunt/issues)
 [![Version](https://img.shields.io/badge/version-1.0.1b-green.svg)](https://github.com/iQuitt/Vortigaunt/releases)
-![Qt Version](https://img.shields.io/badge/Qt-6.6+-41CD52?style=flat&logo=qt&logoColor=white)
+![Qt Version](https://img.shields.io/badge/Qt-6.8+-41CD52?style=flat&logo=qt&logoColor=white)
 [![Discord](https://img.shields.io/discord/1463565216485867622?style=flat&logo=discord&logoColor=white&label=discord&color=5865F2)](https://discord.gg/PZ9JzgHHKa)
 
 
@@ -32,18 +32,20 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 - **REZ File** - Extract and browse LithTech REZ archives (Tested only Crossfire)
 - **PAK File** - Extract and browse PAK files from Counter Strike Online
 - **XFS File** - Extract and browse XFS files from Wolfteam (it May work other Softynx games etc: Rakion) [Watch Video](https://youtu.be/lNnPhTMf2fs)
+- **GMA File** - Extract and browse Garry's Mod GMA files
 
 ### Sprite Management
 - **Sprite Viewer** - View, edit, and create GoldSrc sprites [Watch Video](https://youtu.be/q3DvdgdLPls)
 - **CSO/CSN/CSOL Sprite Fix** - Extract DDS-based sprites (v3) to GoldSrc format (v2)
 - **LithTech Sprite View** (Only Windows) - View Lithtech Engine sprite and Extract as Goldsrc Sprite)
 
-### Game-Specific Features
+### Other
 - **League of Legends Integration** - Download champion models without installing the game Via [Khada](https://modelviewer.lol/)
   - The logic is simple. Vortigaunt will download and start displaying your chosen model from Khada, and you can quickly convert it to SMD, including textures, bones, and animations. [Watch Video](https://youtu.be/45ddtHjq5Cg)
 
-### Goldsrc Audio Convert
 - Convert MP3/OGG to WAV (16 Bit Resolution, 22050 Sampling rate and Mono Channel)
+- DTX Thumbnail Extension.
+	- View DTX files as thumbnails in Windows Explorer
 
 ### Support Languages
 - English

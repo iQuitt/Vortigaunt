@@ -42,6 +42,7 @@ set(VORTIGAUNT_CORE_HEADERS
 set(VORTIGAUNT_GUI_HEADERS
 
     ui/dialogs/DtxViewerDialog.h
+    ui/dialogs/VtfViewerDialog.h
     ui/dialogs/SpriteFixDialog.h
     ui/dialogs/SettingsDialog.h
     ui/dialogs/LoLModelDownloadDialog.h
@@ -131,6 +132,7 @@ set(VORTIGAUNT_GUI
     ui/ThemeManager.cpp
 
     ui/dialogs/DtxViewerDialog.cpp
+    ui/dialogs/VtfViewerDialog.cpp
     ui/dialogs/SpriteFixDialog.cpp
     ui/dialogs/SettingsDialog.cpp
     ui/dialogs/LoLModelDownloadDialog.cpp
@@ -213,7 +215,7 @@ if(BUILD_GUI)
     )
     target_link_libraries(VortigauntTool_gui PRIVATE
         assimp_includes zlib_headers lzma lz4 discord_partner_sdk
-        gcl_headers audio_headers libimagequant
+        gcl_headers audio_headers libimagequant vtflib
         Qt6::Widgets Qt6::Network Qt6::OpenGL Qt6::OpenGLWidgets Qt6::Multimedia
         unordered_dense::unordered_dense
     )
@@ -481,6 +483,18 @@ set(WIX_FILE_ASSOCIATIONS_CONTENT "<?xml version='1.0' encoding='UTF-8'?>
         <!-- VPK -->
         <ProgId Id='Vortigaunt.vpk' Description='Source Engine VPK Archive' Icon='VortigauntTool_gui.exe'>
           <Extension Id='vpk' ContentType='application/x-vpk'>
+            <Verb Id='open' Command='Open' TargetFile='VortigauntTool_gui.exe' Argument='\"%1\"'/>
+          </Extension>
+        </ProgId>
+        <!-- GMA -->
+        <ProgId Id='Vortigaunt.gma' Description='Garry&apos;s Mod Addon' Icon='VortigauntTool_gui.exe'>
+          <Extension Id='gma' ContentType='application/x-gma'>
+            <Verb Id='open' Command='Open' TargetFile='VortigauntTool_gui.exe' Argument='\"%1\"'/>
+          </Extension>
+        </ProgId>
+        <!-- VTF -->
+        <ProgId Id='Vortigaunt.vtf' Description='Valve Texture File' Icon='VortigauntTool_gui.exe'>
+          <Extension Id='vtf' ContentType='application/x-vtf'>
             <Verb Id='open' Command='Open' TargetFile='VortigauntTool_gui.exe' Argument='\"%1\"'/>
           </Extension>
         </ProgId>

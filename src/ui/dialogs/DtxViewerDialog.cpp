@@ -179,11 +179,29 @@ void DtxViewerDialog::onSaveBmp()
     if (outPath.isEmpty())
         return;
 
+    QImage imageToSave = m_currentImage;
 
+    if (imageToSave.width() > 512 || imageToSave.height() > 512)
+    {
+        const auto answer = QMessageBox::question(
+            this,
+            tr("GoldSrc Size Limit"),
+            tr("The image size (%1 x %2) does not fit GoldSrc texture limits (max 512 x 512).\n\n"
+               "Do you want to save it resized to 512 x 512?")
+                .arg(imageToSave.width())
+                .arg(imageToSave.height()),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::Yes);
 
-    QImage argb = m_currentImage.convertToFormat(QImage::Format_ARGB32);
+        if (answer == QMessageBox::Yes)
+        {
+            imageToSave = imageToSave.scaled(512, 512, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
+    }
 
-    if (m_currentImage.hasAlphaChannel()) {
+    QImage argb = imageToSave.convertToFormat(QImage::Format_ARGB32);
+
+    if (imageToSave.hasAlphaChannel()) {
         for (int y = 0; y < argb.height(); ++y) {
             QRgb* scanLine = reinterpret_cast<QRgb*>(argb.scanLine(y));
             for (int x = 0; x < argb.width(); ++x) {

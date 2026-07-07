@@ -52,6 +52,43 @@ target_include_directories(discord_partner_sdk INTERFACE
 # lzma
 add_subdirectory(lzma)
 
+# VTFLib (Valve Texture Format - from VTFEdit-Reloaded, LGPL 2.1+)
+# Patched for static/cross-platform build; DXT compression (Compressonator) removed.
+set(VTFLIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/VTFLib")
+add_library(vtflib STATIC
+    ${VTFLIB_DIR}/Error.cpp
+    ${VTFLIB_DIR}/FileReader.cpp
+    ${VTFLIB_DIR}/FileWriter.cpp
+    ${VTFLIB_DIR}/Float16.cpp
+    ${VTFLIB_DIR}/MemoryReader.cpp
+    ${VTFLIB_DIR}/MemoryWriter.cpp
+    ${VTFLIB_DIR}/Proc.cpp
+    ${VTFLIB_DIR}/ProcReader.cpp
+    ${VTFLIB_DIR}/ProcWriter.cpp
+    ${VTFLIB_DIR}/VMTFile.cpp
+    ${VTFLIB_DIR}/VMTGroupNode.cpp
+    ${VTFLIB_DIR}/VMTIntegerNode.cpp
+    ${VTFLIB_DIR}/VMTNode.cpp
+    ${VTFLIB_DIR}/VMTSingleNode.cpp
+    ${VTFLIB_DIR}/VMTStringNode.cpp
+    ${VTFLIB_DIR}/VMTValueNode.cpp
+    ${VTFLIB_DIR}/VMTWrapper.cpp
+    ${VTFLIB_DIR}/VTFFile.cpp
+    ${VTFLIB_DIR}/VTFLib.cpp
+    ${VTFLIB_DIR}/VTFMathlib.cpp
+    ${VTFLIB_DIR}/VTFWrapper.cpp
+)
+target_include_directories(vtflib PUBLIC ${VTFLIB_DIR})
+target_compile_definitions(vtflib PUBLIC VTFLIB_STATIC)
+set_target_properties(vtflib PROPERTIES
+    CXX_STANDARD 17
+    POSITION_INDEPENDENT_CODE ON
+    FOLDER "ThirdParty"
+)
+if(MSVC)
+    target_compile_definitions(vtflib PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
+endif()
+
 # lz4
 add_library(lz4 STATIC
     lz4/lib/lz4.c

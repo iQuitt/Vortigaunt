@@ -66,6 +66,7 @@
 #include <granny.h>
 #endif
 #include "DtxViewerDialog.h"
+#include "VtfViewerDialog.h"
 #include "PakViewerWindow.h"
 #include "RezViewerWindow.h"
 #include "XfsViewerWindow.h"
@@ -194,6 +195,9 @@ MainWindow::MainWindow(QWidget* parent)
 
     m_vpkViewAction = goldSrcMenu->addAction(tr("VPK / GMA Viewer (Source)..."));
     connect(m_vpkViewAction, &QAction::triggered, this, &MainWindow::onOpenVpkViewer);
+
+    m_vtfViewAction = goldSrcMenu->addAction(tr("VTF Viewer (Source)..."));
+    connect(m_vtfViewAction, &QAction::triggered, this, &MainWindow::onOpenVtfViewer);
 
     m_audioConvertAction = goldSrcMenu->addAction(tr("Convert WAV for Goldsrc..."));
     connect(m_audioConvertAction, &QAction::triggered, this, &MainWindow::onOpenAudioConverter);
@@ -1203,6 +1207,16 @@ void MainWindow::onOpenAutoRigDialog()
 void MainWindow::onOpenVpkViewer()
 {
     VpkViewerWindow* qtDialog = new VpkViewerWindow(this);
+    qtDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    qtDialog->setModal(false);
+    qtDialog->show();
+    qtDialog->raise();
+    qtDialog->activateWindow();
+}
+
+void MainWindow::onOpenVtfViewer()
+{
+    VtfViewerDialog* qtDialog = new VtfViewerDialog(this);
     qtDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     qtDialog->setModal(false);
     qtDialog->show();

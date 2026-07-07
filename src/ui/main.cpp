@@ -30,7 +30,9 @@
 #include "windows/MseViewerWindow.h"
 #endif
 #include "windows/PakViewerWindow.h"
+#include "windows/VpkViewerWindow.h"
 #include "dialogs/DtxViewerDialog.h"
+#include "dialogs/VtfViewerDialog.h"
 #include "dialogs/WadMakerDialog.h"
 #include "dialogs/SettingsDialog.h"
 
@@ -206,6 +208,19 @@ int main(int argc, char* argv[])
                 return app.exec();
             }
             
+            // VTF Viewer (Source Engine texture)
+            if (ext == "vtf") {
+                VtfViewerDialog* vtfViewer = new VtfViewerDialog();
+                vtfViewer->setAttribute(Qt::WA_DeleteOnClose);
+                vtfViewer->show();
+
+                QMetaObject::invokeMethod(vtfViewer, [vtfViewer, filePath]() {
+                    vtfViewer->loadVtfFile(filePath);
+                }, Qt::QueuedConnection);
+
+                return app.exec();
+            }
+
             // WAD Maker
             if (ext == "wad") {
                 WadMakerDialog* wadMaker = new WadMakerDialog();
@@ -224,11 +239,24 @@ int main(int argc, char* argv[])
                 PakViewerWindow* pakViewer = new PakViewerWindow();
                 pakViewer->setAttribute(Qt::WA_DeleteOnClose);
                 pakViewer->show();
-                
+
                 QMetaObject::invokeMethod(pakViewer, [pakViewer, filePath]() {
                     pakViewer->loadPak(filePath);
                 }, Qt::QueuedConnection);
-                
+
+                return app.exec();
+            }
+
+            // VPK / GMA Viewer (Source Engine)
+            if (ext == "vpk" || ext == "gma") {
+                VpkViewerWindow* vpkViewer = new VpkViewerWindow();
+                vpkViewer->setAttribute(Qt::WA_DeleteOnClose);
+                vpkViewer->show();
+
+                QMetaObject::invokeMethod(vpkViewer, [vpkViewer, filePath]() {
+                    vpkViewer->loadVpk(filePath);
+                }, Qt::QueuedConnection);
+
                 return app.exec();
             }
         }

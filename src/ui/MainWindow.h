@@ -69,6 +69,8 @@ private slots:
 
     void onOpenVpkViewer();
 
+    void onOpenVtfViewer();
+
     void onOpenAudioConverter();
 
     void onLogFilterChanged(int index);
@@ -139,6 +141,7 @@ private:
     QAction*       m_rezViewAction; // Lithtech Engine Archive
 	QAction*       m_xfsViewAction; // Xenesis File System Archive
     QAction*       m_vpkViewAction; // Source Engine VPK Archive
+    QAction*       m_vtfViewAction; // Source Engine VTF Texture Viewer
     QAction*       m_spriteViewAction; // Goldsrc Sprite Viewer
 	QAction*       m_lithtechSpriteAction; // Lithtech Sprite Viewer
 	QAction*       m_lolModelAction; // Khada LoL Model Downloader
