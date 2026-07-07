@@ -76,6 +76,8 @@ typedef vlSingle		vlFloat;			//!< Floating point number (same as vlSingled).
 #include <assert.h>
 #include <math.h>
 #include <stdarg.h>
+#include <ctype.h>  /* Vortigaunt: isspace/isdigit etc. (MSVC pulls this in transitively, GCC does not) */
+#include <string.h> /* Vortigaunt: strlen/strcpy etc. */
 
 #if _MSC_VER >= 1600 // Visual Studio 2010
 #	define STATIC_ASSERT(condition, message) static_assert(condition, message)

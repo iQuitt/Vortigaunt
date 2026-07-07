@@ -583,8 +583,8 @@ vlBool CVTFFile::Create(vlUInt uiWidth, vlUInt uiHeight, vlUInt uiFrames, vlUInt
 
 						for (vlUInt m = 1; m < this->Header->MipCount; m++)
 						{
-							vlUShort usWidth  = max(1u, this->Header->Width  >> m);
-							vlUShort usHeight = max(1u, this->Header->Height >> m);
+							vlUShort usWidth  = (vlUShort)max(1u, (vlUInt)(this->Header->Width  >> m));
+							vlUShort usHeight = (vlUShort)max(1u, (vlUInt)(this->Header->Height >> m));
 
 							if (!stbir_resize(
 								pSource, this->Header->Width, this->Header->Height, 0,
