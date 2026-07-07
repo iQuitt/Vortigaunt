@@ -10,6 +10,7 @@
  */
 
 #include <algorithm>
+#include <cstring> // Vortigaunt: std::memcpy (GCC needs the explicit include)
 #include "VTFLib.h"
 #include "VTFFile.h"
 #include "VTFFormat.h"
@@ -3586,13 +3587,13 @@ vlBool ConvertTemplated(vlByte *lpSource, vlByte *lpDest, vlUInt uiWidth, vlUInt
 			//Clamp rgb values to prevent artifacting
 			vlUInt16 modifier = SA * 16;
 			SR = (SR * modifier) / HDR_EXPOSURE;
-			SR = min(max(0, SR), 255);
+			SR = min(max((vlUInt16)0, SR), (vlUInt16)255);
 
 			SG = (SG * modifier) / HDR_EXPOSURE;
-			SG = min(max(0, SG), 255);
+			SG = min(max((vlUInt16)0, SG), (vlUInt16)255);
 
 			SB = (SB * modifier) / HDR_EXPOSURE;
-			SB = min(max(0, SB), 255);
+			SB = min(max((vlUInt16)0, SB), (vlUInt16)255);
 
 			SA = ~0;
 		}
