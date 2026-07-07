@@ -141,6 +141,9 @@ jobs:
     
     - name: Install System Dependencies
       run: |
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+                   /etc/apt/sources.list.d/azure-cli.list \
+                   /etc/apt/sources.list.d/azure-cli.sources
         sudo apt-get update
         sudo apt-get install -y \
           build-essential \
@@ -229,6 +232,11 @@ jobs:
     
     - name: Install Dependencies
       run: |
+        # Remove flaky Microsoft apt repos we don't use (they intermittently
+        # serve invalid clearsigned InRelease files and break apt-get update)
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+                   /etc/apt/sources.list.d/azure-cli.list \
+                   /etc/apt/sources.list.d/azure-cli.sources
         sudo apt-get update
         sudo apt-get install -y build-essential cmake ninja-build
     
