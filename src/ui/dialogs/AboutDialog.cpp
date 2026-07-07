@@ -99,6 +99,7 @@ AboutDialog::AboutDialog(QWidget* parent)
         "<li>Kungfulon for Crossfire REZ</li>"
         "<li>Luigi Auriemma for XFS logic</li>"
         "<li>YoungFine0825 for LTB2FBX and DTX to TGA</li>"
+        "<li>Facepunch for GMA (Garry's Mod Addon)"
         "</ul>"
     ).arg(tr("3rd Party Libraries"), tr("Special Thanks")));
     tabs->addTab(creditsBrowser, tr("Credits"));

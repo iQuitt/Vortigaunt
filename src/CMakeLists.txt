@@ -89,6 +89,8 @@ set(VORTIGAUNT_CORE
     core/extractors/ExtractArchive.cpp
     core/extractors/vpk/VpkFile.cpp
     core/extractors/vpk/VpkExtractor.cpp
+    core/extractors/gma/GmaFile.cpp
+    core/extractors/gma/GmaExtractor.cpp
     core/VortigauntLog.cpp
     core/extractors/unity/UnityAssetParser.cpp
     core/extractors/unity/UnityDataResolver.cpp

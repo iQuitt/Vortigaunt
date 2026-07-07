@@ -63,7 +63,7 @@ If you find Vortigaunt useful and want to support its development:
 | Component | Details |
 |-----------|---------|
 | **Visual Studio 2019/2022/2026** | [Download](https://visualstudio.microsoft.com/downloads/) - Select "Desktop development with C++" |
-| **Qt 6.6+** | [Qt Online Installer](https://www.qt.io/download-qt-installer) - Select MSVC 2019/2022 64-bit + Qt Multimedia |
+| **Qt 6.8+** | [Qt Online Installer](https://www.qt.io/download-qt-installer) - Select MSVC 2019/2022 64-bit + Qt Multimedia |
 | **CMake 3.15+** | [Download](https://cmake.org/download/) or included with Visual Studio |
 
 ### Linux (Ubuntu/Debian)

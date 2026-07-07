@@ -18,7 +18,7 @@ void ThemeManager::apply(bool dark)
     {
         darkActive = true;
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)// Need minimum 6.8+ Qt Ver.
         QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
 #endif
 
@@ -75,8 +75,7 @@ void ThemeManager::apply(bool dark)
 
         darkActive = false;
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
-        // Back to following the system color scheme.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0) // Need minimum 6.8+ Qt Ver.
         QGuiApplication::styleHints()->unsetColorScheme();
 #endif
 

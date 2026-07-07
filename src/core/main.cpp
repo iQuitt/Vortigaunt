@@ -17,6 +17,8 @@
 #include "core/extractors/unity/UnityPorter.h"
 #include "core/extractors/vpk/VpkFile.h"
 #include "core/extractors/vpk/VpkExtractor.h"
+#include "core/extractors/gma/GmaFile.h"
+#include "core/extractors/gma/GmaExtractor.h"
 #include "util.hpp"
 #include "fsutils.hpp"
 
@@ -42,6 +44,7 @@ auto g_xfsExtractor = std::make_unique<XfsExtractor>();
 //XfsExtractor* g_xfsExtractor = new XfsExtractor();
 
 auto g_vpkExtractor = std::make_unique<VpkExtractor>();
+auto g_gmaExtractor = std::make_unique<GmaExtractor>();
 
 #ifdef ENABLE_GRANNY2
 auto g_gr2Converter = std::make_unique<Gr2Converter>();
@@ -210,7 +213,8 @@ void recurseAndCollectFilePath(std::filesystem::path start, FilePathVec* filesVe
                 ext == ".unity3d" || ext == ".UNITY3D" ||
                 ext == ".bundle" || ext == ".BUNDLE" ||
                 ext == ".assets" || ext == ".ASSETS" ||
-                ext == ".vpk" || ext == ".VPK")
+                ext == ".vpk" || ext == ".VPK" ||
+                ext == ".gma" || ext == ".GMA")
 			{
 				filesVec->push_back(p.string());
 			}
@@ -304,6 +308,7 @@ int main(int argc,char** argv)
 		printf("    -multipakextract <folder>    Extract all .pak (CSO) files recursively\n");
 		printf("    -multixfsextract <folder>    Extract all .xfs (Xenesis) files recursively\n");
 		printf("    -multivpkextract <folder>    Extract all .vpk files recursively\n");
+		printf("    (direct input also supports .gma - Garry's Mod Addon)\n");
 		printf("\n");
 		printf(" Model Convert:\n");
 		printf("    -gr2 <input.gr2> <output.smd>    Convert GR2 to SMD\n");
@@ -938,6 +943,22 @@ int main(int argc,char** argv)
             else
             {
                 printf("VPK extraction failed for %s\n", filesVec[i].c_str());
+            }
+        }
+        else if (inFormat == "gma")
+        {
+            std::filesystem::path baseOut = std::filesystem::current_path() / "VortigauntExtracted";
+            std::filesystem::create_directories(baseOut);
+            std::string outDir = baseOut.string();
+
+            printf("Extracting .GMA : %s --> %s\n", filesVec[i].c_str(), outDir.c_str());
+            if (g_gmaExtractor->ExtractSingle(filesVec[i], outDir))
+            {
+                printf("GMA extraction successful.\n");
+            }
+            else
+            {
+                printf("GMA extraction failed for %s\n", filesVec[i].c_str());
             }
         }
 		else

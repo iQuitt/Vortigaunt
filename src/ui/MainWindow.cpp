@@ -56,6 +56,7 @@
 #include "core/extractors/rez/RezExtractor.h"
 #include "core/extractors/xfs/XfsExtractor.h"
 #include "core/extractors/vpk/VpkExtractor.h"
+#include "core/extractors/gma/GmaExtractor.h"
 #include "core/VortigauntVersion.h"
 #include "core/extractors/pak/PakExtractor.h"
 #include "core/converters/Gr2Converter.h"
@@ -130,7 +131,8 @@ void recurseAndCollectFiles(const std::filesystem::path& start, std::vector<std:
         ext == ".gr2" || ext == ".GR2" ||
         ext == ".rez" || ext == ".REZ" ||
         ext == ".pak" || ext == ".PAK" ||
-        ext == ".vpk" || ext == ".VPK")
+        ext == ".vpk" || ext == ".VPK" ||
+        ext == ".gma" || ext == ".GMA")
     {
         out.push_back(p);
     }
@@ -190,7 +192,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_pakViewAction = goldSrcMenu->addAction(tr("PAK Viewer (CSO)..."));
     connect(m_pakViewAction, &QAction::triggered, this, &MainWindow::onOpenPakViewer);
 
-    m_vpkViewAction = goldSrcMenu->addAction(tr("VPK Viewer (Source)..."));
+    m_vpkViewAction = goldSrcMenu->addAction(tr("VPK / GMA Viewer (Source)..."));
     connect(m_vpkViewAction, &QAction::triggered, this, &MainWindow::onOpenVpkViewer);
 
     m_audioConvertAction = goldSrcMenu->addAction(tr("Convert WAV for Goldsrc..."));
@@ -362,7 +364,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_operationCombo->addItem(tr("Extract REZ file"));
     //m_operationCombo->addItem(tr("Multi-REZ extract (folder with  REZ)"));
     m_operationCombo->addItem(tr("PAK (Counter Strike Online)"));
-    m_operationCombo->addItem(tr("Extract VPK (Source Engine)"));
+    m_operationCombo->addItem(tr("Extract VPK / GMA (Source Engine)"));
     //m_operationCombo->addItem(tr("Multi-PAK extract (folder with PAK)"));
     m_operationCombo->addItem(tr("Extract UnityFS / Assets"));
     opLayout->addWidget(m_operationCombo, 1);
@@ -800,7 +802,7 @@ void MainWindow::updateOperationComboForFile(const QString& filePath)
     m_operationCombo->addItem(tr("Extract PAK File (Counter Strike Online)"));
     m_operationCombo->addItem(tr("Extract XFS File (Xenesis)"));
     m_operationCombo->addItem(tr("Extract UnityFS / Assets"));
-    m_operationCombo->addItem(tr("Extract VPK (Source Engine)"));
+    m_operationCombo->addItem(tr("Extract VPK / GMA (Source Engine)"));
 
     QFileInfo fileInfo(filePath);
     if (filePath.isEmpty() || fileInfo.isDir())
@@ -841,7 +843,7 @@ void MainWindow::updateOperationComboForFile(const QString& filePath)
             selectIndex = i;
             break;
         }
-        else if (ext == "vpk" && itemText.contains("vpk")) {
+        else if ((ext == "vpk" || ext == "gma") && itemText.contains("vpk")) {
             selectIndex = i;
             break;
         }
@@ -867,7 +869,7 @@ void MainWindow::onBrowseInput()
     }
     else
     {
-        QString baseExtensions = "*.ltb *.gr2 *.rez *.pak *.mse *.xfs *.unity3d *.bundle *.assets *.vpk";
+        QString baseExtensions = "*.ltb *.gr2 *.rez *.pak *.mse *.xfs *.unity3d *.bundle *.assets *.vpk *.gma";
         filterStr = tr("Supported files (%1);;All files (*.*)").arg(baseExtensions);
     }
 
@@ -1038,7 +1040,7 @@ void MainWindow::onRun()
                 else if (ext == "gr2") gr2List << f;
                 else if (ext == "ltb") ltbList << f;
                 else if (ext == "xfs") xfsList << f;
-                else if (ext == "vpk") vpkList << f;
+                else if (ext == "vpk" || ext == "gma") vpkList << f; // VPK and GMA share the same pipeline
             }
             
             if (!ltbList.isEmpty()) {
@@ -1095,6 +1097,7 @@ void MainWindow::onRun()
         PakExtractor::SetProgressFunc(nullptr);
         XfsExtractor::SetProgressFunc(nullptr);
         VpkExtractor::SetProgressFunc(nullptr);
+        GmaExtractor::SetProgressFunc(nullptr);
         
 
         QMetaObject::invokeMethod(this, [this]() {
@@ -1638,7 +1641,7 @@ void MainWindow::extractArchiveVpk(const QStringList& paths, const QString& outp
 {
     if (paths.isEmpty())
     {
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: No VPK files selected."));
+        VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: No VPK/GMA files selected."));
         return;
     }
 
@@ -1649,22 +1652,28 @@ void MainWindow::extractArchiveVpk(const QStringList& paths, const QString& outp
     int successCount = 0;
 
     VpkExtractor vpkExtractor;
+    GmaExtractor gmaExtractor;
 
     VpkExtractor::SetProgressFunc([this](int percent) {
+        updateProgressSafe(percent);
+    });
+    GmaExtractor::SetProgressFunc([this](int percent) {
         updateProgressSafe(percent);
     });
 
     for (int i = 0; i < totalFiles; ++i)
     {
-        const QString& vpkPath = paths.at(i);
+        const QString& archivePath = paths.at(i);
+        const bool isGma = QFileInfo(archivePath).suffix().compare(QStringLiteral("gma"), Qt::CaseInsensitive) == 0;
+        const QString fmtName = isGma ? QStringLiteral("GMA") : QStringLiteral("VPK");
 
         if (isBatch)
         {
             int filePercent = ((i + 1) * 100) / totalFiles;
-            QMetaObject::invokeMethod(this, [this, filePercent, i, totalFiles]() {
+            QMetaObject::invokeMethod(this, [this, filePercent, i, totalFiles, fmtName]() {
                 if (m_progressBar) {
                     m_progressBar->setValue(filePercent);
-                    m_progressBar->setFormat(tr("VPK %1/%2: %p%").arg(i + 1).arg(totalFiles));
+                    m_progressBar->setFormat(tr("%1 %2/%3: %p%").arg(fmtName).arg(i + 1).arg(totalFiles));
                 }
             }, Qt::QueuedConnection);
         }
@@ -1672,26 +1681,31 @@ void MainWindow::extractArchiveVpk(const QStringList& paths, const QString& outp
         // Determine output directory
         QString targetDir;
         if (isBatch && m_separateFoldersCheck->isChecked())
-            targetDir = QDir(outputDir).filePath(QFileInfo(vpkPath).completeBaseName());
+            targetDir = QDir(outputDir).filePath(QFileInfo(archivePath).completeBaseName());
         else
             targetDir = outputDir.isEmpty() ? SettingsDialog::getExtractedOutputDir() : outputDir;
 
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^5Extracting VPK:^7 ^4%1^7 -> ^4%2^7").arg(vpkPath, targetDir));
+        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^5Extracting %1:^7 ^4%2^7 -> ^4%3^7").arg(fmtName, archivePath, targetDir));
 
-        if (vpkExtractor.ExtractSingle(vpkPath.toStdString(), targetDir.toStdString())) {
+        bool ok = isGma
+            ? gmaExtractor.ExtractSingle(archivePath.toStdString(), targetDir.toStdString())
+            : vpkExtractor.ExtractSingle(archivePath.toStdString(), targetDir.toStdString());
+
+        if (ok) {
             ++successCount;
         } else {
             ExtractionError err;
-            err.filename = vpkPath;
-            err.errorMessage = tr("VPK extraction failed or was incomplete");
+            err.filename = archivePath;
+            err.errorMessage = tr("%1 extraction failed or was incomplete").arg(fmtName);
             m_extractionErrors.push_back(err);
         }
     }
 
     VpkExtractor::SetProgressFunc(nullptr);
+    GmaExtractor::SetProgressFunc(nullptr);
     Platform::restoreNormalPriority();
 
-    VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2VPK extraction complete.^7 ^3%1^7 of ^3%2^7 files processed.").arg(successCount).arg(totalFiles));
+    VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2VPK/GMA extraction complete.^7 ^3%1^7 of ^3%2^7 files processed.").arg(successCount).arg(totalFiles));
 }
 
 

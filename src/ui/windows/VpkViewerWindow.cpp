@@ -1,6 +1,7 @@
 #include "VpkViewerWindow.h"
 #include "core/extractors/vpk/VpkFile.h"
 #include "core/extractors/vpk/VpkExtractor.h"
+#include "core/extractors/gma/GmaFile.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -28,7 +29,7 @@ VpkViewerWindow::~VpkViewerWindow() = default;
 
 void VpkViewerWindow::setupUI()
 {
-    setWindowTitle(tr("VPK Viewer - Source Engine"));
+    setWindowTitle(tr("VPK / GMA Viewer - Source Engine"));
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setMinimumSize(400, 300);
 
@@ -38,15 +39,15 @@ void VpkViewerWindow::setupUI()
 
     auto* mainLayout = new QVBoxLayout(this);
 
-    // VPK file selection
-    auto* fileGroup = new QGroupBox(tr("VPK File"));
+    // VPK / GMA file selection
+    auto* fileGroup = new QGroupBox(tr("Archive File (VPK / GMA)"));
     auto* fileLayout = new QHBoxLayout();
 
     m_vpkPathEdit = new QLineEdit();
     m_vpkPathEdit->setReadOnly(true);
-    m_vpkPathEdit->setPlaceholderText(tr("Select a VPK file to view..."));
+    m_vpkPathEdit->setPlaceholderText(tr("Select a VPK or GMA file to view..."));
 
-    m_openButton = new QPushButton(tr("Open VPK..."));
+    m_openButton = new QPushButton(tr("Open VPK / GMA..."));
 
     fileLayout->addWidget(m_vpkPathEdit, 1);
     fileLayout->addWidget(m_openButton);
@@ -90,7 +91,7 @@ void VpkViewerWindow::setupUI()
     m_extractAllButton = new QPushButton(tr("Extract All"));
     m_extractAllButton->setEnabled(false);
 
-    m_statusLabel = new QLabel(tr("No VPK file loaded"));
+    m_statusLabel = new QLabel(tr("No archive loaded"));
 
     m_progressBar = new QProgressBar();
     m_progressBar->setVisible(false);
@@ -124,9 +125,9 @@ void VpkViewerWindow::onOpenVpk()
 {
     QString filePath = QFileDialog::getOpenFileName(
         this,
-        tr("Open VPK File"),
+        tr("Open VPK / GMA File"),
         QString(),
-        tr("VPK files (*.vpk);;All files (*.*)")
+        tr("Source archives (*.vpk *.gma);;VPK files (*.vpk);;GMA files (*.gma);;All files (*.*)")
     );
 
     if (filePath.isEmpty())
@@ -136,6 +137,22 @@ void VpkViewerWindow::onOpenVpk()
 }
 
 bool VpkViewerWindow::loadVpk(const QString& filePath)
+{
+    QString ext = QFileInfo(filePath).suffix().toLower();
+
+    bool ok = (ext == "gma") ? loadGmaFile(filePath)
+                             : loadVpkFile(filePath);
+    if (!ok)
+        return false;
+
+    m_currentVpkPath = filePath;
+    m_vpkPathEdit->setText(filePath);
+
+    populateFileList();
+    return true;
+}
+
+bool VpkViewerWindow::loadVpkFile(const QString& filePath)
 {
     std::filesystem::path fsPath = filePath.toStdWString();
 
@@ -167,31 +184,64 @@ bool VpkViewerWindow::loadVpk(const QString& filePath)
         return false;
     }
 
-    m_currentVpkPath = filePath;
-    m_vpkPathEdit->setText(filePath);
-
-    populateFileList();
+    m_gmaFile.reset();
     return true;
+}
+
+bool VpkViewerWindow::loadGmaFile(const QString& filePath)
+{
+    m_gmaFile = std::make_unique<GmaFile>();
+
+    if (!m_gmaFile->Load(filePath.toStdString()))
+    {
+        QMessageBox::warning(this, tr("Error"), tr("Failed to load GMA file.\n\nThe file may be corrupted or not a valid Garry's Mod addon."));
+        m_gmaFile.reset();
+        return false;
+    }
+
+    m_vpkFile.reset();
+    return true;
+}
+
+bool VpkViewerWindow::hasArchive() const
+{
+    return m_vpkFile != nullptr || m_gmaFile != nullptr;
 }
 
 void VpkViewerWindow::populateFileList()
 {
     m_fileTable->setRowCount(0);
 
-    if (!m_vpkFile)
+    if (!hasArchive())
         return;
 
-    const auto& entries = m_vpkFile->GetEntries();
-    m_fileTable->setRowCount(static_cast<int>(entries.size()));
+    // Collect (path, size) rows from whichever archive type is loaded
+    struct Row { QString path; quint64 size; };
+    std::vector<Row> rows;
 
-    for (size_t i = 0; i < entries.size(); ++i)
+    if (m_vpkFile)
     {
-        const auto& entry = entries[i];
-        QString qPath = QString::fromStdString(entry.fullPath);
+        const auto& entries = m_vpkFile->GetEntries();
+        rows.reserve(entries.size());
+        for (const auto& entry : entries)
+            rows.push_back({ QString::fromStdString(entry.fullPath),
+                             entry.entryLength + static_cast<quint64>(entry.preloadData.size()) });
+    }
+    else if (m_gmaFile)
+    {
+        const auto& entries = m_gmaFile->GetEntries();
+        rows.reserve(entries.size());
+        for (const auto& entry : entries)
+            rows.push_back({ QString::fromStdString(entry.fullPath), entry.size });
+    }
 
-        auto* pathItem = new QTableWidgetItem(qPath);
-        auto* sizeItem = new QTableWidgetItem(formatSize(entry.entryLength + static_cast<uint32_t>(entry.preloadData.size())));
-        auto* typeItem = new QTableWidgetItem(getFileTypeInfo(qPath));
+    m_fileTable->setRowCount(static_cast<int>(rows.size()));
+
+    for (size_t i = 0; i < rows.size(); ++i)
+    {
+        auto* pathItem = new QTableWidgetItem(rows[i].path);
+        auto* sizeItem = new QTableWidgetItem(formatSize(rows[i].size));
+        auto* typeItem = new QTableWidgetItem(getFileTypeInfo(rows[i].path));
 
         sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
         typeItem->setTextAlignment(Qt::AlignCenter);
@@ -204,8 +254,19 @@ void VpkViewerWindow::populateFileList()
     m_fileTable->resizeColumnsToContents();
     m_fileTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
 
-    m_extractAllButton->setEnabled(!entries.empty());
-    m_statusLabel->setText(tr("%1 files").arg(entries.size()));
+    m_extractAllButton->setEnabled(!rows.empty());
+
+    if (m_gmaFile && !m_gmaFile->GetName().empty())
+    {
+        m_statusLabel->setText(tr("%1 files — %2 (by %3)")
+                                   .arg(rows.size())
+                                   .arg(QString::fromStdString(m_gmaFile->GetName()),
+                                        QString::fromStdString(m_gmaFile->GetAuthor())));
+    }
+    else
+    {
+        m_statusLabel->setText(tr("%1 files").arg(rows.size()));
+    }
 }
 
 void VpkViewerWindow::onSelectionChanged()
@@ -217,7 +278,7 @@ void VpkViewerWindow::onSelectionChanged()
 
 void VpkViewerWindow::onExtractSelected()
 {
-    if (!m_vpkFile)
+    if (!hasArchive())
         return;
 
     QList<QTableWidgetItem*> selectedItems = m_fileTable->selectedItems();
@@ -243,11 +304,11 @@ void VpkViewerWindow::onExtractSelected()
 
 void VpkViewerWindow::onExtractAll()
 {
-    if (!m_vpkFile)
+    if (!hasArchive())
         return;
 
-    const auto& entries = m_vpkFile->GetEntries();
-    if (entries.empty())
+    size_t entryCount = m_vpkFile ? m_vpkFile->GetEntryCount() : m_gmaFile->GetEntryCount();
+    if (entryCount == 0)
         return;
 
     QString outputDir = QFileDialog::getExistingDirectory(
@@ -257,7 +318,7 @@ void VpkViewerWindow::onExtractAll()
         return;
 
     std::vector<size_t> indices;
-    for (size_t i = 0; i < entries.size(); ++i)
+    for (size_t i = 0; i < entryCount; ++i)
         indices.push_back(i);
 
     extractEntries(indices, outputDir);
@@ -265,10 +326,10 @@ void VpkViewerWindow::onExtractAll()
 
 void VpkViewerWindow::extractEntries(const std::vector<size_t>& indices, const QString& outputDir)
 {
-    if (!m_vpkFile || indices.empty())
+    if (!hasArchive() || indices.empty())
         return;
 
-    const auto& entries = m_vpkFile->GetEntries();
+    const size_t entryCount = m_vpkFile ? m_vpkFile->GetEntryCount() : m_gmaFile->GetEntryCount();
 
     m_progressBar->setVisible(true);
     m_progressBar->setMaximum(static_cast<int>(indices.size()));
@@ -283,21 +344,41 @@ void VpkViewerWindow::extractEntries(const std::vector<size_t>& indices, const Q
     for (size_t i = 0; i < indices.size(); ++i)
     {
         size_t idx = indices[i];
-        if (idx >= entries.size())
+        if (idx >= entryCount)
             continue;
-
-        const auto& entry = entries[idx];
 
         try
         {
-            std::vector<uint8_t> data = m_vpkFile->ExtractEntry(entry);
-            if (data.empty())
+            std::string entryPath;
+            std::vector<uint8_t> data;
+            bool allowEmpty = false;
+
+            if (m_vpkFile)
+            {
+                const auto& entry = m_vpkFile->GetEntries()[idx];
+                entryPath = entry.fullPath;
+                data = m_vpkFile->ExtractEntry(entry);
+            }
+            else
+            {
+                const auto& entry = m_gmaFile->GetEntries()[idx];
+                if (!GmaFile::IsSafeEntryPath(entry.fullPath))
+                {
+                    ++failCount;
+                    continue;
+                }
+                entryPath = entry.fullPath;
+                data = m_gmaFile->ExtractEntry(entry);
+                allowEmpty = (entry.size == 0); // GMA may contain empty files
+            }
+
+            if (data.empty() && !allowEmpty)
             {
                 ++failCount;
                 continue;
             }
 
-            std::filesystem::path relPath(entry.fullPath);
+            std::filesystem::path relPath(entryPath);
             std::filesystem::path fullPath = outPath / relPath;
 
             std::filesystem::create_directories(fullPath.parent_path());
@@ -309,8 +390,9 @@ void VpkViewerWindow::extractEntries(const std::vector<size_t>& indices, const Q
                 continue;
             }
 
-            os.write(reinterpret_cast<const char*>(data.data()),
-                     static_cast<std::streamsize>(data.size()));
+            if (!data.empty())
+                os.write(reinterpret_cast<const char*>(data.data()),
+                         static_cast<std::streamsize>(data.size()));
             ++okCount;
         }
         catch (...)
@@ -363,18 +445,26 @@ QString VpkViewerWindow::getFileTypeInfo(const QString& path) const
         return tr("Particle System");
     if (ext == "phy")
         return tr("Physics Mesh");
+    if (ext == "lua")
+        return tr("Lua Script");
+    if (ext == "vcd")
+        return tr("Choreography Scene");
+    if (ext == "json")
+        return tr("JSON Data");
 
     return ext.toUpper();
 }
 
-QString VpkViewerWindow::formatSize(uint32_t size) const
+QString VpkViewerWindow::formatSize(quint64 size) const
 {
     if (size < 1024)
         return QString::number(size) + " B";
-    else if (size < 1024 * 1024)
+    else if (size < 1024ull * 1024)
         return QString::number(size / 1024.0, 'f', 1) + " KB";
-    else
+    else if (size < 1024ull * 1024 * 1024)
         return QString::number(size / (1024.0 * 1024.0), 'f', 2) + " MB";
+    else
+        return QString::number(size / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
 }
 
 void VpkViewerWindow::onSearchTextChanged(const QString& text)
@@ -384,7 +474,7 @@ void VpkViewerWindow::onSearchTextChanged(const QString& text)
 
 void VpkViewerWindow::onSelectAllMatches()
 {
-    if (!m_vpkFile)
+    if (!hasArchive())
         return;
 
     QString searchText = m_searchEdit->text().trimmed();
@@ -409,7 +499,7 @@ void VpkViewerWindow::onSelectAllMatches()
 
 void VpkViewerWindow::filterTable(const QString& searchText)
 {
-    if (!m_vpkFile)
+    if (!hasArchive())
         return;
 
     QString searchLower = searchText.toLower();
