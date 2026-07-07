@@ -117,6 +117,16 @@ void SettingsDialog::setupUI()
     shellButtonsLayout->addWidget(m_unregisterThumbnailerBtn);
     shellLayout->addLayout(shellButtonsLayout);
 
+    m_vtfThumbnailerStatusLabel = new QLabel();
+    shellLayout->addWidget(m_vtfThumbnailerStatusLabel);
+
+    auto* vtfShellButtonsLayout = new QHBoxLayout();
+    m_registerVtfThumbnailerBtn = new QPushButton(tr("Register VTF Thumbnailer"));
+    m_unregisterVtfThumbnailerBtn = new QPushButton(tr("Unregister VTF Thumbnailer"));
+    vtfShellButtonsLayout->addWidget(m_registerVtfThumbnailerBtn);
+    vtfShellButtonsLayout->addWidget(m_unregisterVtfThumbnailerBtn);
+    shellLayout->addLayout(vtfShellButtonsLayout);
+
     shellGroup->setLayout(shellLayout);
     mainLayout->addWidget(shellGroup);
 #endif
@@ -131,6 +141,8 @@ void SettingsDialog::setupUI()
 #ifdef Q_OS_WIN
     connect(m_registerThumbnailerBtn, &QPushButton::clicked, this, &SettingsDialog::onRegisterThumbnailer);
     connect(m_unregisterThumbnailerBtn, &QPushButton::clicked, this, &SettingsDialog::onUnregisterThumbnailer);
+    connect(m_registerVtfThumbnailerBtn, &QPushButton::clicked, this, &SettingsDialog::onRegisterVtfThumbnailer);
+    connect(m_unregisterVtfThumbnailerBtn, &QPushButton::clicked, this, &SettingsDialog::onUnregisterVtfThumbnailer);
 #endif
 }
 
@@ -143,6 +155,7 @@ void SettingsDialog::loadSettings()
     m_darkModeCheck->setChecked(getDarkThemeMode());
 #ifdef Q_OS_WIN
     updateThumbnailerStatus();
+    updateVtfThumbnailerStatus();
 #endif
 }
 
@@ -359,80 +372,103 @@ void SettingsDialog::updateThumbnailerStatus()
     }
 }
 
-void SettingsDialog::onRegisterThumbnailer()
+// Loads a shell-extension DLL from the application directory and calls
+// DllRegisterServer / DllUnregisterServer on it. Returns true on success.
+bool SettingsDialog::callThumbnailerDllFunction(const QString& dllFileName, const char* functionName)
 {
-    QString dllPath = QDir(QCoreApplication::applicationDirPath()).filePath("DtxThumbnailProvider.dll");
+    QString dllPath = QDir(QCoreApplication::applicationDirPath()).filePath(dllFileName);
     if (!QFile::exists(dllPath))
     {
-        QMessageBox::critical(this, tr("Error"), tr("DtxThumbnailProvider.dll not found in application directory:\n%1").arg(dllPath));
-        return;
+        QMessageBox::critical(this, tr("Error"), tr("%1 not found in application directory:\n%2").arg(dllFileName, dllPath));
+        return false;
     }
 
     QLibrary lib(dllPath);
     if (!lib.load())
     {
-        QMessageBox::critical(this, tr("Error"), tr("Failed to load DtxThumbnailProvider.dll:\n%1").arg(lib.errorString()));
-        return;
+        QMessageBox::critical(this, tr("Error"), tr("Failed to load %1:\n%2").arg(dllFileName, lib.errorString()));
+        return false;
     }
 
-    typedef HRESULT(STDAPICALLTYPE* PFN_DllRegisterServer)();
-    auto regFn = (PFN_DllRegisterServer)lib.resolve("DllRegisterServer");
-    if (!regFn)
+    typedef HRESULT(STDAPICALLTYPE* PFN_DllServerFunc)();
+    auto fn = (PFN_DllServerFunc)lib.resolve(functionName);
+    if (!fn)
     {
-        QMessageBox::critical(this, tr("Error"), tr("DllRegisterServer export not found in DtxThumbnailProvider.dll."));
-        return;
+        QMessageBox::critical(this, tr("Error"), tr("%1 export not found in %2.").arg(QString::fromLatin1(functionName), dllFileName));
+        return false;
     }
 
-    HRESULT hr = regFn();
+    HRESULT hr = fn();
     lib.unload();
 
-    if (SUCCEEDED(hr))
+    if (!SUCCEEDED(hr))
+    {
+        QMessageBox::critical(this, tr("Error"), tr("%1 failed for %2. HRESULT: 0x%3").arg(QString::fromLatin1(functionName), dllFileName, QString::number(hr, 16)));
+        return false;
+    }
+
+    return true;
+}
+
+void SettingsDialog::onRegisterThumbnailer()
+{
+    if (callThumbnailerDllFunction(QStringLiteral("DtxThumbnailProvider.dll"), "DllRegisterServer"))
     {
         QMessageBox::information(this, tr("Success"), tr("DTX Thumbnailer has been successfully registered."));
-    }
-    else
-    {
-        QMessageBox::critical(this, tr("Error"), tr("Failed to register DTX Thumbnailer. HRESULT: 0x%1").arg(QString::number(hr, 16)));
     }
     updateThumbnailerStatus();
 }
 
 void SettingsDialog::onUnregisterThumbnailer()
 {
-    QString dllPath = QDir(QCoreApplication::applicationDirPath()).filePath("DtxThumbnailProvider.dll");
-    if (!QFile::exists(dllPath))
-    {
-        QMessageBox::critical(this, tr("Error"), tr("DtxThumbnailProvider.dll not found in application directory:\n%1").arg(dllPath));
-        return;
-    }
-
-    QLibrary lib(dllPath);
-    if (!lib.load())
-    {
-        QMessageBox::critical(this, tr("Error"), tr("Failed to load DtxThumbnailProvider.dll:\n%1").arg(lib.errorString()));
-        return;
-    }
-
-    typedef HRESULT(STDAPICALLTYPE* PFN_DllUnregisterServer)();
-    auto unregFn = (PFN_DllUnregisterServer)lib.resolve("DllUnregisterServer");
-    if (!unregFn)
-    {
-        QMessageBox::critical(this, tr("Error"), tr("DllUnregisterServer export not found in DtxThumbnailProvider.dll."));
-        return;
-    }
-
-    HRESULT hr = unregFn();
-    lib.unload();
-
-    if (SUCCEEDED(hr))
+    if (callThumbnailerDllFunction(QStringLiteral("DtxThumbnailProvider.dll"), "DllUnregisterServer"))
     {
         QMessageBox::information(this, tr("Success"), tr("DTX Thumbnailer has been successfully unregistered."));
     }
+    updateThumbnailerStatus();
+}
+
+void SettingsDialog::updateVtfThumbnailerStatus()
+{
+    if (!m_vtfThumbnailerStatusLabel || !m_registerVtfThumbnailerBtn || !m_unregisterVtfThumbnailerBtn)
+        return;
+
+    HKEY hKey;
+    LSTATUS status = RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\{8D2F7A31-4B6C-4E95-9A47-C1E52D80B6F3}", 0, KEY_READ, &hKey);
+    bool isRegistered = (status == ERROR_SUCCESS);
+    if (isRegistered)
+    {
+        RegCloseKey(hKey);
+        m_vtfThumbnailerStatusLabel->setText(tr("VTF Thumbnailer Status: Active"));
+        m_vtfThumbnailerStatusLabel->setStyleSheet("color: #4CAF50; font-weight: bold;");
+        m_registerVtfThumbnailerBtn->setEnabled(false);
+        m_unregisterVtfThumbnailerBtn->setEnabled(true);
+    }
     else
     {
-        QMessageBox::critical(this, tr("Error"), tr("Failed to unregister DTX Thumbnailer. HRESULT: 0x%1").arg(QString::number(hr, 16)));
+        m_vtfThumbnailerStatusLabel->setText(tr("VTF Thumbnailer Status: Inactive"));
+        m_vtfThumbnailerStatusLabel->setStyleSheet("color: gray;");
+        m_registerVtfThumbnailerBtn->setEnabled(true);
+        m_unregisterVtfThumbnailerBtn->setEnabled(false);
     }
-    updateThumbnailerStatus();
+}
+
+void SettingsDialog::onRegisterVtfThumbnailer()
+{
+    if (callThumbnailerDllFunction(QStringLiteral("VtfThumbnailProvider.dll"), "DllRegisterServer"))
+    {
+        QMessageBox::information(this, tr("Success"), tr("VTF Thumbnailer has been successfully registered."));
+    }
+    updateVtfThumbnailerStatus();
+}
+
+void SettingsDialog::onUnregisterVtfThumbnailer()
+{
+    if (callThumbnailerDllFunction(QStringLiteral("VtfThumbnailProvider.dll"), "DllUnregisterServer"))
+    {
+        QMessageBox::information(this, tr("Success"), tr("VTF Thumbnailer has been successfully unregistered."));
+    }
+    updateVtfThumbnailerStatus();
 }
 #endif
 

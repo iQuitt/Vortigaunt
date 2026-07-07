@@ -42,6 +42,8 @@ private slots:
 #ifdef Q_OS_WIN
     void onRegisterThumbnailer();
     void onUnregisterThumbnailer();
+    void onRegisterVtfThumbnailer();
+    void onUnregisterVtfThumbnailer();
 #endif
 
 private:
@@ -49,6 +51,8 @@ private:
     void loadSettings();
 #ifdef Q_OS_WIN
     void updateThumbnailerStatus();
+    void updateVtfThumbnailerStatus();
+    bool callThumbnailerDllFunction(const QString& dllFileName, const char* functionName);
 #endif
 
     QLineEdit* m_modelViewerEdit;
@@ -63,6 +67,10 @@ private:
     QLabel* m_thumbnailerStatusLabel{nullptr};
     QPushButton* m_registerThumbnailerBtn{nullptr};
     QPushButton* m_unregisterThumbnailerBtn{nullptr};
+
+    QLabel* m_vtfThumbnailerStatusLabel{nullptr};
+    QPushButton* m_registerVtfThumbnailerBtn{nullptr};
+    QPushButton* m_unregisterVtfThumbnailerBtn{nullptr};
 #endif
 };
 

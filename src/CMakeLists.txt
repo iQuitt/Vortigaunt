@@ -317,6 +317,22 @@ if(BUILD_GUI)
         
         # Install target
         install(TARGETS DtxThumbnailProvider DESTINATION .)
+
+        # VTF Thumbnail Provider (Source Engine textures, uses VTFLib)
+        set(VTF_THUMBNAIL_PROVIDER_SOURCES
+            shell/windows/VtfThumbnailProvider.cpp
+            shell/windows/VtfThumbnailProvider.h
+            shell/windows/VtfThumbnailProvider.def
+        )
+        add_library(VtfThumbnailProvider SHARED ${VTF_THUMBNAIL_PROVIDER_SOURCES})
+        target_link_libraries(VtfThumbnailProvider PRIVATE
+            vtflib
+            shlwapi
+        )
+        set_target_properties(VtfThumbnailProvider PROPERTIES
+            LINK_FLAGS "/DEF:\"${CMAKE_CURRENT_SOURCE_DIR}/shell/windows/VtfThumbnailProvider.def\""
+        )
+        install(TARGETS VtfThumbnailProvider DESTINATION .)
     else()
         # Linux / Unix desktop thumbnailer CLI is disabled because Lithtech SDK is Windows-only.
     endif()
