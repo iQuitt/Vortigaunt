@@ -124,6 +124,7 @@ private:
     QCheckBox*     m_invertAlphaCheck;  // For inverting alpha in GR2 DDS textures
     QCheckBox*     m_writeQCCheck;      // For generating QC file when exporting GR2 to SMD
     QCheckBox*     m_separateFoldersCheck;  // For multiple extraction
+    QCheckBox*     m_unityBmpCheck;         // Unity mode: convert textures to 8-bit BMP (unchecked = 32-bit PNG)
     QPlainTextEdit* m_logEdit;
     
     QGroupBox*     m_gr2AnimGroup;

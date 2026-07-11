@@ -3,6 +3,7 @@
 #include "VortigauntLog.h"
 #include "core/smd/SmdWriter.h"
 #include "utils/BinaryUtils.h"
+#include <algorithm>
 #include <fstream>
 #include <filesystem>
 #include <cstdint>
@@ -13,6 +14,12 @@
 #include <cmath>
 
 
+struct PackedBits {
+    std::uint32_t numItems = 0;
+    float range = 0.0f, start = 0.0f;
+    std::vector<std::uint8_t> data;
+    std::uint32_t bitSize = 0;
+};
 
 static VertexFormat ToVertexFormat(int format, int version_major) {
     if (version_major < 2017) {
@@ -120,10 +127,137 @@ static float ReadChannelComponent(const std::uint8_t* streamData, std::size_t of
     }
 }
 
+static void ReadChannelVec(const std::vector<std::uint8_t>& rawBuf, const MeshChannel& ch, std::size_t stride, std::size_t streamStart, std::uint32_t vertexIndex, int versionMajor, bool bigEndian, int componentCount, float* out)
+{
+    VertexFormat vf = ToVertexFormat(ch.format, versionMajor);
+    std::size_t fmtSize = GetFormatSize(vf);
+    std::size_t vertOffset = streamStart + static_cast<std::size_t>(vertexIndex) * stride + ch.offset;
+
+    if (vertOffset + ch.dimension * fmtSize > rawBuf.size()) {
+        return;
+    }
+    for (int c = 0; c < componentCount; ++c) {
+        out[c] = ReadChannelComponent(rawBuf.data(), vertOffset + c * fmtSize, vf, bigEndian);
+    }
+}
+
+static float ToTolerantFloat(const UnityValue& v) {
+    switch (v.type) {
+        case UnityValue::FloatVal:
+        case UnityValue::DoubleVal:
+            return v.AsFloat();
+        case UnityValue::IntVal:
+            return static_cast<float>(v.intVal);
+        case UnityValue::UIntVal:
+            return static_cast<float>(v.uintVal);
+        default:
+            return 0.0f;
+    }
+}
+
+static PackedBits ReadPackedValue(const UnityValue& v) {
+    PackedBits p;
+    if (v.IsNull()) {
+        return p;
+    }
+    std::uint64_t numItems = v.GetField("m_NumItems").AsUInt();
+    if (numItems > 100000000ull) {
+        numItems = 100000000ull;
+    }
+    p.range = ToTolerantFloat(v.GetField("m_Range"));
+    p.start = ToTolerantFloat(v.GetField("m_Start"));
+    p.data = v.GetField("m_Data").AsByteArray();
+    std::uint64_t bitSize = v.GetField("m_BitSize").AsUInt();
+    // Values are unpacked into 32-bit integers; wider bit sizes never occur in valid files.
+    p.bitSize = static_cast<std::uint32_t>(bitSize > 32 ? 32 : bitSize);
+    // Untrusted file data: never let the item count exceed what m_Data can actually
+    // hold, so allocations sized from it stay bounded by the real payload.
+    if (p.bitSize > 0) {
+        std::uint64_t maxItems = static_cast<std::uint64_t>(p.data.size()) * 8ull / p.bitSize;
+        if (numItems > maxItems) {
+            numItems = maxItems;
+        }
+    } else if (numItems > 4000000ull) {
+        // bitSize == 0 vectors carry no backing data (every value decodes to the
+        // start constant), so keep a tighter sanity cap on their count.
+        numItems = 4000000ull;
+    }
+    p.numItems = static_cast<std::uint32_t>(numItems);
+    return p;
+}
+
+// Unpacks the raw bit-packed values. Returns fewer than numItems entries when the
+// backing data is truncated. Callers must handle bitSize == 0 themselves.
+static std::vector<std::uint32_t> UnpackRawValues(const PackedBits& p) {
+    std::vector<std::uint32_t> values;
+    if (p.numItems == 0 || p.bitSize == 0) {
+        return values;
+    }
+    values.reserve(p.numItems);
+    const std::uint32_t mask = (p.bitSize >= 32) ? 0xFFFFFFFFu : ((1u << p.bitSize) - 1u);
+    std::size_t indexPos = 0;
+    std::uint32_t bitPos = 0;
+    for (std::uint32_t i = 0; i < p.numItems; ++i) {
+        std::uint32_t value = 0;
+        std::uint32_t bits = 0;
+        while (bits < p.bitSize) {
+            if (indexPos >= p.data.size()) {
+                return values;
+            }
+            value |= (static_cast<std::uint32_t>(p.data[indexPos]) >> bitPos) << bits;
+            std::uint32_t num = std::min(p.bitSize - bits, 8u - bitPos);
+            bitPos += num;
+            bits += num;
+            if (bitPos == 8) {
+                ++indexPos;
+                bitPos = 0;
+            }
+        }
+        values.push_back(value & mask);
+    }
+    return values;
+}
+
+static std::vector<std::int32_t> UnpackInts(const PackedBits& p) {
+    std::vector<std::int32_t> result;
+    if (p.numItems == 0) {
+        return result;
+    }
+    if (p.bitSize == 0) {
+        result.assign(p.numItems, 0);
+        return result;
+    }
+    std::vector<std::uint32_t> raw = UnpackRawValues(p);
+    result.reserve(raw.size());
+    for (std::uint32_t v : raw) {
+        result.push_back(static_cast<std::int32_t>(v));
+    }
+    return result;
+}
+
+static std::vector<float> UnpackFloats(const PackedBits& p) {
+    std::vector<float> result;
+    if (p.numItems == 0) {
+        return result;
+    }
+    if (p.bitSize == 0) {
+        result.assign(p.numItems, p.start);
+        return result;
+    }
+    const std::uint32_t maxValue = (p.bitSize >= 32) ? 0xFFFFFFFFu : ((1u << p.bitSize) - 1u);
+    std::vector<std::uint32_t> raw = UnpackRawValues(p);
+    result.reserve(raw.size());
+    for (std::uint32_t v : raw) {
+        result.push_back(static_cast<float>(v) / static_cast<float>(maxValue) * p.range + p.start);
+    }
+    return result;
+}
+
 void UnityMeshConverter::Convert(const UnityObjectInfo& objInfo,
                                  const UnityAssetParser& parser,
                                  const std::string& outputDir,
-                                 const std::vector<std::string>& textures)
+                                 const std::vector<std::string>& textures,
+                                 bool texturesAreBmp)
 {
     UnityValue root = parser.DeserializeObject(objInfo);
     bool bigEndian = parser.IsBigEndian();
@@ -131,7 +265,7 @@ void UnityMeshConverter::Convert(const UnityObjectInfo& objInfo,
     // Get Index Buffer
     std::int64_t indexFormat = root.GetField("m_IndexFormat").AsInt();
     const auto& indexBuf = root.GetField("m_IndexBuffer").AsByteArray();
-    
+
     std::vector<std::uint32_t> indices;
     if (indexFormat == 0) { // 16-bit
         std::size_t count = indexBuf.size() / 2;
@@ -169,7 +303,7 @@ void UnityMeshConverter::Convert(const UnityObjectInfo& objInfo,
     int version_major = 0;
     int version_minor = 0;
     parser.GetUnityVersionParts(version_major, version_minor);
-    
+
     std::vector<MeshChannel> channels;
     const auto& channelsVal = vData.GetField("m_Channels").AsArray();
     for (const auto& chVal : channelsVal) {
@@ -181,96 +315,174 @@ void UnityMeshConverter::Convert(const UnityObjectInfo& objInfo,
         channels.push_back(c);
     }
 
-    if (vertexCount == 0 || indices.empty() || channels.empty()) {
+    // Compressed meshes carry their data in packed bit vectors instead of m_VertexData.
+    const UnityValue& cm = root.GetField("m_CompressedMesh");
+    PackedBits cmVerts = ReadPackedValue(cm.GetField("m_Vertices"));
+    bool useCompressed = cmVerts.numItems > 0;
+
+    if (!useCompressed && (vertexCount == 0 || indices.empty() || channels.empty())) {
         VortigauntLog::LogF("WARNING: Mesh PathID %lld has no vertex data or indices. Skipping.\n", static_cast<long long>(objInfo.pathId));
         return;
     }
 
-    std::unordered_map<int, std::size_t> streamStrides;
-    for (const auto& chan : channels) {
-        if (chan.dimension == 0) continue;
-        int stream = chan.stream;
-        VertexFormat vf = ToVertexFormat(chan.format, version_major);
-        std::size_t chanSize = chan.dimension * GetFormatSize(vf);
-        std::size_t maxOffset = chan.offset + chanSize;
-        if (maxOffset > streamStrides[stream]) {
-            streamStrides[stream] = maxOffset;
-        }
-    }
+    std::vector<MeshVertex> parsedVertices;
+    if (useCompressed) {
+        vertexCount = cmVerts.numItems / 3;
+        std::string displayName = objInfo.name.empty() ? std::to_string(objInfo.pathId) : objInfo.name;
+        VortigauntLog::LogF("Mesh '%s': decoding compressed mesh data (%u vertices)\n", displayName.c_str(), vertexCount);
+        parsedVertices.assign(vertexCount, MeshVertex{});
 
-    std::unordered_map<int, std::size_t> streamOffsets;
-    std::size_t currentOffset = 0;
-    int maxStream = 0;
-    for (const auto& chan : channels) {
-        if (chan.dimension > 0 && chan.stream > maxStream) {
-            maxStream = chan.stream;
+        std::vector<float> positions = UnpackFloats(cmVerts);
+        for (std::uint32_t i = 0; i < vertexCount; ++i) {
+            std::size_t base = static_cast<std::size_t>(i) * 3;
+            if (base + 2 >= positions.size()) break;
+            parsedVertices[i].x = positions[base];
+            parsedVertices[i].y = positions[base + 1];
+            parsedVertices[i].z = positions[base + 2];
         }
-    }
-    for (int s = 0; s <= maxStream; ++s) {
-        streamOffsets[s] = currentOffset;
-        if (streamStrides.count(s)) {
-            std::size_t streamDataSize = vertexCount * streamStrides[s];
-            currentOffset += streamDataSize;
-            currentOffset = (currentOffset + 15) & ~15; // 16-byte aligned stream starts
-        }
-    }
 
-    // Parse vertices
-    std::vector<MeshVertex> parsedVertices(vertexCount);
-    for (std::uint32_t v = 0; v < vertexCount; ++v) {
-        MeshVertex& vert = parsedVertices[v];
-        
-        // Position (Channel 0)
-        if (channels.size() > 0 && channels[0].dimension >= 3) {
-            const auto& ch = channels[0];
-            std::size_t stride = streamStrides[ch.stream];
-            std::size_t streamStart = streamOffsets[ch.stream];
-            std::size_t vertOffset = streamStart + v * stride + ch.offset;
-            VertexFormat vf = ToVertexFormat(ch.format, version_major);
-            std::size_t fmtSize = GetFormatSize(vf);
-            
-            if (vertOffset + ch.dimension * fmtSize <= rawBuf.size()) {
-                vert.x = ReadChannelComponent(rawBuf.data(), vertOffset, vf, bigEndian);
-                vert.y = ReadChannelComponent(rawBuf.data(), vertOffset + fmtSize, vf, bigEndian);
-                vert.z = ReadChannelComponent(rawBuf.data(), vertOffset + 2 * fmtSize, vf, bigEndian);
+        // Normals are stored as (x, y) pairs plus a sign bit for the reconstructed z.
+        PackedBits cmNormals = ReadPackedValue(cm.GetField("m_Normals"));
+        if (cmNormals.numItems > 0) {
+            std::vector<float> normalData = UnpackFloats(cmNormals);
+            std::vector<std::int32_t> signs = UnpackInts(ReadPackedValue(cm.GetField("m_NormalSigns")));
+            if (normalData.size() >= static_cast<std::size_t>(vertexCount) * 2 && signs.size() >= vertexCount) {
+                for (std::uint32_t i = 0; i < vertexCount; ++i) {
+                    std::size_t base = static_cast<std::size_t>(i) * 2;
+                    float x = normalData[base];
+                    float y = normalData[base + 1];
+                    float z = std::sqrt(std::max(0.0f, 1.0f - x * x - y * y));
+                    if (signs[i] == 0) z = -z;
+                    parsedVertices[i].nx = x;
+                    parsedVertices[i].ny = y;
+                    parsedVertices[i].nz = z;
+                }
             }
         }
-        
-        // Normal 
-        if (channels.size() > 1 && channels[1].dimension >= 3) {
-            const auto& ch = channels[1];
-            std::size_t stride = streamStrides[ch.stream];
-            std::size_t streamStart = streamOffsets[ch.stream];
-            std::size_t vertOffset = streamStart + v * stride + ch.offset;
-            VertexFormat vf = ToVertexFormat(ch.format, version_major);
-            std::size_t fmtSize = GetFormatSize(vf);
-            
-            if (vertOffset + ch.dimension * fmtSize <= rawBuf.size()) {
-                vert.nx = ReadChannelComponent(rawBuf.data(), vertOffset, vf, bigEndian);
-                vert.ny = ReadChannelComponent(rawBuf.data(), vertOffset + fmtSize, vf, bigEndian);
-                vert.nz = ReadChannelComponent(rawBuf.data(), vertOffset + 2 * fmtSize, vf, bigEndian);
+
+        PackedBits cmUV = ReadPackedValue(cm.GetField("m_UV"));
+        if (cmUV.numItems > 0) {
+            std::vector<float> uvData = UnpackFloats(cmUV);
+            std::uint64_t uvInfo = cm.GetField("m_UVInfo").AsUInt();
+            if (uvInfo != 0) {
+                // Lowest 4 uvInfo bits describe UV channel 0: 2 bits dimension-1, 1 bit exists.
+                std::uint32_t dim = static_cast<std::uint32_t>(uvInfo & 3) + 1;
+                bool exists = (uvInfo & 4) != 0;
+                if (exists) {
+                    for (std::uint32_t i = 0; i < vertexCount; ++i) {
+                        std::size_t base = static_cast<std::size_t>(i) * dim;
+                        if (base >= uvData.size()) break;
+                        parsedVertices[i].u = uvData[base];
+                        parsedVertices[i].v = (dim >= 2 && base + 1 < uvData.size()) ? uvData[base + 1] : 0.0f;
+                    }
+                }
+            } else if (cmUV.numItems >= static_cast<std::uint64_t>(vertexCount) * 2) {
+                for (std::uint32_t i = 0; i < vertexCount; ++i) {
+                    std::size_t base = static_cast<std::size_t>(i) * 2;
+                    if (base + 1 >= uvData.size()) break;
+                    parsedVertices[i].u = uvData[base];
+                    parsedVertices[i].v = uvData[base + 1];
+                }
             }
         }
-        
-        // UV
+
+        PackedBits cmTriangles = ReadPackedValue(cm.GetField("m_Triangles"));
+        if (cmTriangles.numItems > 0) {
+            std::vector<std::int32_t> triData = UnpackInts(cmTriangles);
+            indices.resize(triData.size());
+            for (std::size_t i = 0; i < triData.size(); ++i) {
+                indices[i] = static_cast<std::uint32_t>(triData[i]);
+            }
+        }
+    } else {
+        // Untrusted file data: every vertex occupies at least one byte of the vertex
+        // buffer, so a larger count can only come from a corrupt file. Bound it here
+        // before it sizes the parsedVertices allocation below.
+        if (static_cast<std::size_t>(vertexCount) > rawBuf.size()) {
+            VortigauntLog::LogF("WARNING: Mesh PathID %lld vertex count %u exceeds vertex data size %zu. Skipping.\n",
+                static_cast<long long>(objInfo.pathId), vertexCount, rawBuf.size());
+            return;
+        }
+        std::unordered_map<int, std::size_t> streamStrides;
+        for (const auto& chan : channels) {
+            if (chan.dimension == 0) continue;
+            int stream = chan.stream;
+            VertexFormat vf = ToVertexFormat(chan.format, version_major);
+            std::size_t chanSize = chan.dimension * GetFormatSize(vf);
+            std::size_t maxOffset = chan.offset + chanSize;
+            if (maxOffset > streamStrides[stream]) {
+                streamStrides[stream] = maxOffset;
+            }
+        }
+
+        std::unordered_map<int, std::size_t> streamOffsets;
+        std::size_t currentOffset = 0;
+        int maxStream = 0;
+        for (const auto& chan : channels) {
+            if (chan.dimension > 0 && chan.stream > maxStream) {
+                maxStream = chan.stream;
+            }
+        }
+        for (int s = 0; s <= maxStream; ++s) {
+            streamOffsets[s] = currentOffset;
+            if (streamStrides.count(s)) {
+                std::size_t streamDataSize = vertexCount * streamStrides[s];
+                currentOffset += streamDataSize;
+                currentOffset = (currentOffset + 15) & ~15; // 16-byte aligned stream starts
+            }
+        }
+
+        // Parse vertices
+        parsedVertices.assign(vertexCount, MeshVertex{});
         // most unity assets gave wrong UV, so all have to do is mirror Y axis to fix it
         int uvChannelIndex = (version_major >= 2018) ? 4 : 3;
-        if (channels.size() > static_cast<std::size_t>(uvChannelIndex) && channels[uvChannelIndex].dimension >= 2) {
-            const auto& ch = channels[uvChannelIndex];
-            std::size_t stride = streamStrides[ch.stream];
-            std::size_t streamStart = streamOffsets[ch.stream];
-            std::size_t vertOffset = streamStart + v * stride + ch.offset;
-            VertexFormat vf = ToVertexFormat(ch.format, version_major);
-            std::size_t fmtSize = GetFormatSize(vf);
-            
-            if (vertOffset + ch.dimension * fmtSize <= rawBuf.size()) {
-                vert.u = ReadChannelComponent(rawBuf.data(), vertOffset, vf, bigEndian);
-                vert.v = ReadChannelComponent(rawBuf.data(), vertOffset + fmtSize, vf, bigEndian);
+        for (std::uint32_t v = 0; v < vertexCount; ++v) {
+            MeshVertex& vert = parsedVertices[v];
+
+            // Position (Channel 0)
+            if (channels.size() > 0 && channels[0].dimension >= 3) {
+                const auto& ch = channels[0];
+                float pos[3] = { 0.0f, 0.0f, 0.0f };
+                ReadChannelVec(rawBuf, ch, streamStrides[ch.stream], streamOffsets[ch.stream], v, version_major, bigEndian, 3, pos);
+                vert.x = pos[0];
+                vert.y = pos[1];
+                vert.z = pos[2];
+            }
+
+            // Normal
+            if (channels.size() > 1 && channels[1].dimension >= 3) {
+                const auto& ch = channels[1];
+                float nrm[3] = { 0.0f, 0.0f, 0.0f };
+                ReadChannelVec(rawBuf, ch, streamStrides[ch.stream], streamOffsets[ch.stream], v, version_major, bigEndian, 3, nrm);
+                vert.nx = nrm[0];
+                vert.ny = nrm[1];
+                vert.nz = nrm[2];
+            }
+
+            // UV
+            if (channels.size() > static_cast<std::size_t>(uvChannelIndex) && channels[uvChannelIndex].dimension >= 2) {
+                const auto& ch = channels[uvChannelIndex];
+                float uv[2] = { 0.0f, 0.0f };
+                ReadChannelVec(rawBuf, ch, streamStrides[ch.stream], streamOffsets[ch.stream], v, version_major, bigEndian, 2, uv);
+                vert.u = uv[0];
+                vert.v = uv[1];
             }
         }
     }
 
     std::string baseName = objInfo.name.empty() ? std::to_string(objInfo.pathId) : Utils::SanitizeFilename(objInfo.name);
+
+    const char* texExtension = texturesAreBmp ? ".bmp" : ".png";
+    auto materialNameFor = [&textures, texExtension](std::size_t s) {
+        std::string matName = "material_" + std::to_string(s);
+        if (!textures.empty()) {
+            const std::string& tex = (s < textures.size()) ? textures[s] : textures[0];
+            if (!tex.empty()) {
+                matName = Utils::SanitizeFilename(tex) + texExtension;
+            }
+        }
+        return matName;
+    };
 
     // 4. Export OBJ file
     std::filesystem::path objPath = std::filesystem::path(outputDir) / (baseName + ".obj");
@@ -278,55 +490,42 @@ void UnityMeshConverter::Convert(const UnityObjectInfo& objInfo,
     if (objOfs) {
         objOfs << "# Exported by Vortigaunt\n";
         objOfs << "o " << baseName << "\n\n";
-        
+
         for (const auto& v : parsedVertices) {
             objOfs << "v " << -v.x << " " << v.y << " " << v.z << "\n";
         }
         objOfs << "\n";
-        
+
         for (const auto& v : parsedVertices) {
             objOfs << "vt " << v.u << " " << 1.0f - v.v << "\n";
         }
         objOfs << "\n";
-        
+
         for (const auto& v : parsedVertices) {
             objOfs << "vn " << -v.nx << " " << v.ny << " " << v.nz << "\n";
         }
         objOfs << "\n";
-        
+
         for (std::size_t s = 0; s < subMeshes.size(); ++s) {
             const auto& sm = subMeshes[s];
             if (sm.topology != 0) continue; // Triangles only
-            
+
             objOfs << "g submesh_" << s << "\n";
-            
-            std::string matName = "material_" + std::to_string(s);
-            if (!textures.empty()) {
-                if (s < textures.size()) {
-                    if (!textures[s].empty()) {
-                        matName = Utils::SanitizeFilename(textures[s]) + ".bmp";
-                    }
-                } else {
-                    if (!textures[0].empty()) {
-                        matName = Utils::SanitizeFilename(textures[0]) + ".bmp";
-                    }
-                }
-            }
-            objOfs << "usemtl " << matName << "\n";
-            
+            objOfs << "usemtl " << materialNameFor(s) << "\n";
+
             std::size_t indexSize = (indexFormat == 0) ? 2 : 4;
             std::size_t startIndex = sm.firstByte / indexSize;
             std::size_t numIndices = sm.indexCount;
-            
+
             for (std::size_t i = 0; i + 2 < numIndices; i += 3) {
                 if (startIndex + i + 2 >= indices.size()) break;
                 std::uint32_t idx0 = indices[startIndex + i] + 1;
                 std::uint32_t idx1 = indices[startIndex + i + 1] + 1;
                 std::uint32_t idx2 = indices[startIndex + i + 2] + 1;
-                
+
                 // Flip winding order from CW to CCW
-                objOfs << "f " << idx0 << "/" << idx0 << "/" << idx0 << " " 
-                               << idx2 << "/" << idx2 << "/" << idx2 << " " 
+                objOfs << "f " << idx0 << "/" << idx0 << "/" << idx0 << " "
+                               << idx2 << "/" << idx2 << "/" << idx2 << " "
                                << idx1 << "/" << idx1 << "/" << idx1 << "\n";
             }
             objOfs << "\n";
@@ -341,37 +540,26 @@ void UnityMeshConverter::Convert(const UnityObjectInfo& objInfo,
     for (std::size_t s = 0; s < subMeshes.size(); ++s) {
         const auto& sm = subMeshes[s];
         if (sm.topology != 0) continue; // Triangles only
-        
+
         std::size_t indexSize = (indexFormat == 0) ? 2 : 4;
         std::size_t startIndex = sm.firstByte / indexSize;
         std::size_t numIndices = sm.indexCount;
-        
-        std::string matName = "material_" + std::to_string(s);
-        if (!textures.empty()) {
-            if (s < textures.size()) {
-                if (!textures[s].empty()) {
-                    matName = Utils::SanitizeFilename(textures[s]) + ".bmp";
-                }
-            } else {
-                if (!textures[0].empty()) {
-                    matName = Utils::SanitizeFilename(textures[0]) + ".bmp";
-                }
-            }
-        }
-        
+
+        std::string matName = materialNameFor(s);
+
         for (std::size_t i = 0; i + 2 < numIndices; i += 3) {
             if (startIndex + i + 2 >= indices.size()) break;
             std::uint32_t idx0 = indices[startIndex + i];
             std::uint32_t idx1 = indices[startIndex + i + 1];
             std::uint32_t idx2 = indices[startIndex + i + 2];
-            
+
             if (idx0 >= parsedVertices.size() || idx1 >= parsedVertices.size() || idx2 >= parsedVertices.size()) {
                 continue;
             }
-            
+
             SmdTriangle tri;
             tri.material = matName;
-            
+
             // Flip winding order from CW to CCW
             const std::uint32_t vertIndices[3] = { idx0, idx2, idx1 };
             for (int v = 0; v < 3; ++v) {
@@ -393,7 +581,7 @@ void UnityMeshConverter::Convert(const UnityObjectInfo& objInfo,
 
     if (!smdTriangles.empty()) {
         SmdWriter writer;
-        
+
         // Define a root skeleton bone
         SmdBone rootBone;
         rootBone.index = 0;
@@ -406,7 +594,7 @@ void UnityMeshConverter::Convert(const UnityObjectInfo& objInfo,
         rootBone.rotY = 0.0f;
         rootBone.rotZ = 0.0f;
         writer.SetSkeleton({ rootBone });
-        
+
         std::vector<int> emptyBoneIndices;
         if (!writer.ExportSmdTriangles(smdPath.string(), smdTriangles, emptyBoneIndices)) {
             VortigauntLog::LogF("ERROR: Failed to export SMD via SmdWriter: %s\n", writer.GetError().c_str());

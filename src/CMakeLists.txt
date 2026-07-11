@@ -27,9 +27,11 @@ set(VORTIGAUNT_CORE_HEADERS
     core/VortigauntLog.h
     utils/Platform.h
     utils/Bmp.h
+    utils/Png.h
     core/extractors/IExtractor.h
     core/extractors/ExtractArchive.h
     core/extractors/unity/UnityAssetParser.h
+    core/extractors/unity/UnityClassIds.h
     core/extractors/unity/UnityDataResolver.h
     core/extractors/unity/UnityFsExtractor.h
     core/extractors/unity/UnityMeshConverter.h
@@ -84,6 +86,7 @@ set(VORTIGAUNT_CORE
     utils/fsutils.cpp
     utils/Platform.cpp
     utils/Dds.cpp
+    utils/Png.cpp
     core/extractors/pak/SnowCipher.cpp
     core/extractors/pak/PakFile.cpp
     core/extractors/pak/PakExtractor.cpp

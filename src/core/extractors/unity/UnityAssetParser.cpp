@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cstring>
+#include <unordered_map>
 
 
 
@@ -39,37 +40,120 @@ static const std::unordered_map<std::uint32_t, std::string> g_commonString = {
 };
 
 #include "utils/BinaryUtils.h"
+#include "UnityClassIds.h"
 
 using Utils::membuf;
 
-
-
 // ---------------------------------------------------------------------------
-// UnityAssetParser implementation
+// File-local helpers for the manual structural scanners
 // ---------------------------------------------------------------------------
-bool UnityAssetParser::Load(const std::vector<char>& data) {
-    m_fileData = data;
-    m_fileSize = data.size();
-    membuf buf(m_fileData.data(), m_fileData.size());
-    std::istream in(&buf);
-    in.seekg(0);
-    if (!ParseHeader(in)) {
-        VortigauntLog::LogF("^1Error:^7 Failed to parse Unity asset header.\n");
-        return false;
-    }
-    if (!ParseMetadata(in)) {
-        VortigauntLog::LogF("^1Error:^7 Failed to parse Unity asset metadata.\n");
-        return false;
-    }
 
-    // Resolve name field for all key objects (only exportable assets)
-    for (auto& obj : m_objects) {
-        if (obj.classId == 43 || obj.classId == 28 || obj.classId == 74) {
-            obj.name = GetObjectName(obj);
+// Resolves a PPtr candidate to a classId; encapsulates local vs. cross-file lookup.
+using ClassIdResolver = std::function<int32_t(int32_t fileID, int64_t pathID)>;
+
+static void ReadRawPPtr(const char* dataPtr, size_t offset, bool bigEndian, int32_t& fileID, int64_t& pathID) {
+    std::uint32_t rawFileId = 0;
+    std::uint64_t rawPathId = 0;
+    std::memcpy(&rawFileId, dataPtr + offset, 4);
+    std::memcpy(&rawPathId, dataPtr + offset + 4, 8);
+    if (bigEndian) {
+        rawFileId = Utils::Swap32(rawFileId);
+        rawPathId = Utils::Swap64(rawPathId);
+    }
+    fileID = static_cast<int32_t>(rawFileId);
+    pathID = static_cast<int64_t>(rawPathId);
+}
+
+static UnityValue MakePPtrValue(int32_t fileID, int64_t pathID) {
+    UnityValue v;
+    v.type = UnityValue::ObjectVal;
+    v.objectVal["m_FileID"].type = UnityValue::IntVal;
+    v.objectVal["m_FileID"].intVal = fileID;
+    v.objectVal["m_PathID"].type = UnityValue::IntVal;
+    v.objectVal["m_PathID"].intVal = pathID;
+    return v;
+}
+
+// Scans the payload for an int32 count followed by `count` contiguous Material
+// PPtrs; returns the array on the first full match, empty otherwise.
+static std::vector<UnityValue> ScanMaterialPPtrArray(const char* dataPtr, size_t dataSize, size_t startOffset,
+                                                     bool bigEndian, int32_t maxFileId,
+                                                     const ClassIdResolver& resolveClass) {
+    for (size_t offset = startOffset; offset + 4 <= dataSize; offset += 4) {
+        std::uint32_t rawCount = 0;
+        std::memcpy(&rawCount, dataPtr + offset, 4);
+        if (bigEndian) rawCount = Utils::Swap32(rawCount);
+        std::int32_t count = static_cast<std::int32_t>(rawCount);
+        if (count < 1 || count > 16) continue;
+        if (offset + 4 + static_cast<size_t>(count) * 12 > dataSize) continue;
+
+        bool allValid = true;
+        std::vector<UnityValue> mats;
+        for (std::int32_t i = 0; i < count; ++i) {
+            std::int32_t fileID = 0;
+            std::int64_t pathID = 0;
+            ReadRawPPtr(dataPtr, offset + 4 + static_cast<size_t>(i) * 12, bigEndian, fileID, pathID);
+            if (fileID < 0 || fileID > maxFileId || pathID == 0 ||
+                resolveClass(fileID, pathID) != UnityClass::Material) {
+                allValid = false;
+                break;
+            }
+            mats.push_back(MakePPtrValue(fileID, pathID));
+        }
+        if (allValid) {
+            return mats;
         }
     }
+    return {};
+}
 
-    return true;
+// Scans the payload for the first PPtr resolving to `targetClassId`; NullVal if none.
+static UnityValue ScanSinglePPtrOfClass(const char* dataPtr, size_t dataSize, size_t startOffset,
+                                        bool bigEndian, int32_t maxFileId, int32_t targetClassId,
+                                        const ClassIdResolver& resolveClass) {
+    for (size_t offset = startOffset; offset + 12 <= dataSize; offset += 4) {
+        std::int32_t fileID = 0;
+        std::int64_t pathID = 0;
+        ReadRawPPtr(dataPtr, offset, bigEndian, fileID, pathID);
+        if (fileID >= 0 && fileID <= maxFileId && pathID != 0 &&
+            resolveClass(fileID, pathID) == targetClassId) {
+            return MakePPtrValue(fileID, pathID);
+        }
+    }
+    return UnityValue{};
+}
+
+static UnityValue PackedFloatToValue(PackedFloatVector&& pfv) {
+    UnityValue v;
+    v.type = UnityValue::ObjectVal;
+    v.objectVal["m_NumItems"].type = UnityValue::UIntVal;
+    v.objectVal["m_NumItems"].uintVal = pfv.numItems;
+    v.objectVal["m_Range"].type = UnityValue::FloatVal;
+    v.objectVal["m_Range"].doubleVal = pfv.range;
+    v.objectVal["m_Start"].type = UnityValue::FloatVal;
+    v.objectVal["m_Start"].doubleVal = pfv.start;
+    v.objectVal["m_Data"].type = UnityValue::ByteArrayVal;
+    v.objectVal["m_Data"].byteData = std::move(pfv.data);
+    v.objectVal["m_BitSize"].type = UnityValue::UIntVal;
+    v.objectVal["m_BitSize"].uintVal = pfv.bitSize;
+    return v;
+}
+
+static UnityValue PackedIntToValue(PackedIntVector&& piv) {
+    UnityValue v;
+    v.type = UnityValue::ObjectVal;
+    v.objectVal["m_NumItems"].type = UnityValue::UIntVal;
+    v.objectVal["m_NumItems"].uintVal = piv.numItems;
+    v.objectVal["m_Data"].type = UnityValue::ByteArrayVal;
+    v.objectVal["m_Data"].byteData = std::move(piv.data);
+    v.objectVal["m_BitSize"].type = UnityValue::UIntVal;
+    v.objectVal["m_BitSize"].uintVal = piv.bitSize;
+    return v;
+}
+
+bool UnityAssetParser::Load(const std::vector<char>& data) {
+    std::vector<char> copy = data;
+    return Load(std::move(copy));
 }
 
 bool UnityAssetParser::Load(std::vector<char>&& data) {
@@ -89,7 +173,7 @@ bool UnityAssetParser::Load(std::vector<char>&& data) {
 
     // Resolve name field for all key objects (only exportable assets)
     for (auto& obj : m_objects) {
-        if (obj.classId == 43 || obj.classId == 28 || obj.classId == 74) {
+        if (obj.classId == UnityClass::Mesh || obj.classId == UnityClass::Texture2D || obj.classId == UnityClass::AnimationClip) {
             obj.name = GetObjectName(obj);
         }
     }
@@ -106,11 +190,6 @@ bool UnityAssetParser::LoadFromFile(const std::string& filePath) {
     std::vector<char> buffer(sz);
     f.read(buffer.data(), sz);
     return Load(std::move(buffer));
-}
-
-bool UnityAssetParser::LoadFromMultipleFiles(const std::vector<std::string>& files) {
-    if (files.empty()) return false;
-    return LoadFromFile(files[0]);
 }
 
 bool UnityAssetParser::ParseHeader(std::istream& in) {
@@ -191,6 +270,8 @@ bool UnityAssetParser::ParseHeader(std::istream& in) {
 
 bool UnityAssetParser::ParseMetadata(std::istream& in) {
     VortigauntLog::LogF("[UnityAssetParser] ParseMetadata started. formatVersion=%d, offset=%lld\n", m_formatVersion, static_cast<long long>(in.tellg()));
+    m_externals.clear();
+    m_externalsParsed = false;
     if (m_formatVersion >= 17) {
         if (!ParseTypesV17(in)) {
             VortigauntLog::LogF("[UnityAssetParser] ParseMetadata: ParseTypesV17 failed!\n");
@@ -200,6 +281,14 @@ bool UnityAssetParser::ParseMetadata(std::istream& in) {
         if (!ParseObjectsV17(in)) {
             VortigauntLog::LogF("[UnityAssetParser] ParseMetadata: ParseObjectsV17 failed!\n");
             return false;
+        }
+
+        if (ParseScriptTypesAndExternals(in)) {
+            m_externalsParsed = true;
+        } else {
+            VortigauntLog::LogF("[UnityAssetParser] Warning: failed to parse script types/externals table; cross-file PPtr resolution unavailable.\n");
+            m_externals.clear();
+            in.clear();
         }
     } else {
         // Fallback for version < 17: object table first, then types
@@ -393,6 +482,79 @@ bool UnityAssetParser::ParseObjectsV17(std::istream& in) {
     return true;
 }
 
+bool UnityAssetParser::ParseScriptTypesAndExternals(std::istream& in) {
+    auto remainingBytes = [&in]() -> std::int64_t {
+        std::streampos curPos = in.tellg();
+        in.seekg(0, std::ios::end);
+        std::streampos endPos = in.tellg();
+        in.seekg(curPos);
+        return static_cast<std::int64_t>(endPos - curPos);
+    };
+
+    if (m_formatVersion >= 11) {
+        std::int32_t scriptCount = ReadS32(in);
+        if (in.fail() || scriptCount < 0) {
+            VortigauntLog::LogF("[UnityAssetParser] ParseScriptTypesAndExternals: Invalid scriptCount %d\n", scriptCount);
+            return false;
+        }
+        if (static_cast<std::int64_t>(scriptCount) * 8 > remainingBytes()) {
+            VortigauntLog::LogF("[UnityAssetParser] ParseScriptTypesAndExternals: scriptCount %d exceeds stream bounds\n", scriptCount);
+            return false;
+        }
+        for (std::int32_t i = 0; i < scriptCount; ++i) {
+            ReadS32(in); // localSerializedFileIndex
+            if (m_formatVersion < 14) {
+                ReadS32(in); // localIdentifierInFile
+            } else {
+                AlignStream(in, 4);
+                ReadS64(in); // localIdentifierInFile
+            }
+            if (in.fail()) {
+                VortigauntLog::LogF("[UnityAssetParser] ParseScriptTypesAndExternals: Stream failed at script type %d of %d\n", i, scriptCount);
+                return false;
+            }
+        }
+    }
+
+    std::int32_t externalsCount = ReadS32(in);
+    if (in.fail() || externalsCount < 0) {
+        VortigauntLog::LogF("[UnityAssetParser] ParseScriptTypesAndExternals: Invalid externalsCount %d\n", externalsCount);
+        return false;
+    }
+    std::int64_t minEntrySize = 1;                  // pathName terminator
+    if (m_formatVersion >= 5) minEntrySize += 20;   // GUID + type
+    if (m_formatVersion >= 6) minEntrySize += 1;    // tempEmpty terminator
+    if (static_cast<std::int64_t>(externalsCount) * minEntrySize > remainingBytes()) {
+        VortigauntLog::LogF("[UnityAssetParser] ParseScriptTypesAndExternals: externalsCount %d exceeds stream bounds\n", externalsCount);
+        return false;
+    }
+
+    m_externals.clear();
+    m_externals.reserve(externalsCount);
+    for (std::int32_t i = 0; i < externalsCount; ++i) {
+        if (m_formatVersion >= 6) {
+            Utils::ReadNullTerminatedString(in); // tempEmpty, unused
+        }
+        if (m_formatVersion >= 5) {
+            in.seekg(16, std::ios::cur); // GUID, unused
+            ReadS32(in); // type, unused
+        }
+        std::string pathName = Utils::ReadNullTerminatedString(in);
+        if (in.fail()) {
+            VortigauntLog::LogF("[UnityAssetParser] ParseScriptTypesAndExternals: Stream failed at external %d of %d\n", i, externalsCount);
+            return false;
+        }
+        UnityExternalFile ext;
+        ext.pathName = pathName;
+        size_t sep = pathName.find_last_of("/\\");
+        ext.fileName = (sep == std::string::npos) ? pathName : pathName.substr(sep + 1);
+        m_externals.push_back(std::move(ext));
+    }
+
+    VortigauntLog::LogF("[UnityAssetParser] Externals table parsed: %d entries\n", externalsCount);
+    return true;
+}
+
 bool UnityAssetParser::ReadTypeTree(std::istream& in, UnityType& ut) {
     std::uint32_t nodeCount = ReadU32(in);
     std::uint32_t stringBufferSize = ReadU32(in);
@@ -486,16 +648,20 @@ UnityValue UnityAssetParser::DeserializeObject(const UnityObjectInfo& objInfo) c
     auto readByteArray = [this, &objInfo](std::istream& in) { return ReadByteArray(in, objInfo.size); };
     auto readFloatArray = [this, &objInfo](std::istream& in) { return ReadFloatArray(in, objInfo.size); };
     auto readUint32Array = [this, &objInfo](std::istream& in) { return ReadUint32Array(in, objInfo.size); };
-    auto getClassId = [this](int64_t pathID) { return GetClassId(pathID); };
-    auto getLocalClassId = [this](int64_t pathID) { return GetLocalClassId(pathID); };
     auto readPackedFloatVector = [this, &objInfo](std::istream& in) { return ReadPackedFloatVector(in, objInfo.size); };
     auto readPackedIntVector = [this, &objInfo](std::istream& in) { return ReadPackedIntVector(in, objInfo.size); };
     auto readPPtr = [this](std::istream& in) { return ReadPPtr(in); };
-    auto skipStringArray = [this, &objInfo](std::istream& in) { SkipStringArray(in, objInfo.size); };
-    auto deserializeRenderer = [this](std::istream& in) { return DeserializeRenderer(in); };
+
+    const bool bigEndian = (m_endianness == 1);
+    const int32_t maxFileId = m_externalsParsed ? static_cast<int32_t>(m_externals.size()) : 200;
+    auto resolvePPtrClass = [this](int32_t fileID, int64_t pathID) -> int32_t {
+        if (fileID == 0) return GetLocalClassId(pathID);
+        if (m_pptrClassResolver) return m_pptrClassResolver(fileID, pathID);
+        return -1;
+    };
 
     if (utype.nodes.empty()) {
-        if (objInfo.classId == 28) { // Texture2D
+        if (objInfo.classId == UnityClass::Texture2D) {
             std::string name = readAlignedString(stream);
             
             int version_major = 0;
@@ -661,7 +827,7 @@ UnityValue UnityAssetParser::DeserializeObject(const UnityObjectInfo& objInfo) c
             root.objectVal["image data"].type = UnityValue::ByteArrayVal;
             root.objectVal["image data"].byteData = std::move(imageData);
             
-        } else if (objInfo.classId == 43) { // Mesh
+        } else if (objInfo.classId == UnityClass::Mesh) {
             std::string name = readAlignedString(stream);
             
             int version_major = 0;
@@ -960,30 +1126,33 @@ UnityValue UnityAssetParser::DeserializeObject(const UnityObjectInfo& objInfo) c
             }
             
             if (version_major > 2 || (version_major == 2 && version_minor >= 6)) {
-                PackedFloatVector cmVertices = readPackedFloatVector(stream);
-                PackedFloatVector cmUV = readPackedFloatVector(stream);
+                UnityValue compressedMesh;
+                compressedMesh.type = UnityValue::ObjectVal;
+                compressedMesh.objectVal["m_Vertices"] = PackedFloatToValue(readPackedFloatVector(stream));
+                compressedMesh.objectVal["m_UV"] = PackedFloatToValue(readPackedFloatVector(stream));
                 if (version_major < 5) {
-                    PackedFloatVector cmBindPoses = readPackedFloatVector(stream);
+                    readPackedFloatVector(stream); // bind poses, not exported
                 }
-                PackedFloatVector cmNormals = readPackedFloatVector(stream);
-                PackedFloatVector cmTangents = readPackedFloatVector(stream);
-                PackedIntVector cmWeights = readPackedIntVector(stream);
-                PackedIntVector cmNormalSigns = readPackedIntVector(stream);
-                PackedIntVector cmTangentSigns = readPackedIntVector(stream);
+                compressedMesh.objectVal["m_Normals"] = PackedFloatToValue(readPackedFloatVector(stream));
+                compressedMesh.objectVal["m_Tangents"] = PackedFloatToValue(readPackedFloatVector(stream));
+                compressedMesh.objectVal["m_Weights"] = PackedIntToValue(readPackedIntVector(stream));
+                compressedMesh.objectVal["m_NormalSigns"] = PackedIntToValue(readPackedIntVector(stream));
+                compressedMesh.objectVal["m_TangentSigns"] = PackedIntToValue(readPackedIntVector(stream));
                 if (version_major >= 5) {
-                    PackedFloatVector cmFloatColors = readPackedFloatVector(stream);
+                    compressedMesh.objectVal["m_FloatColors"] = PackedFloatToValue(readPackedFloatVector(stream));
                 }
-                PackedIntVector cmBoneIndices = readPackedIntVector(stream);
-                PackedIntVector cmTriangles = readPackedIntVector(stream);
-                
-                std::uint32_t uvInfo = 0;
+                compressedMesh.objectVal["m_BoneIndices"] = PackedIntToValue(readPackedIntVector(stream));
+                compressedMesh.objectVal["m_Triangles"] = PackedIntToValue(readPackedIntVector(stream));
+
                 if (version_major > 3 || (version_major == 3 && version_minor >= 5)) {
                     if (version_major < 5) {
-                        PackedIntVector cmColors = readPackedIntVector(stream);
+                        readPackedIntVector(stream); // colors, not exported
                     } else {
-                        uvInfo = ReadU32(stream);
+                        compressedMesh.objectVal["m_UVInfo"].type = UnityValue::UIntVal;
+                        compressedMesh.objectVal["m_UVInfo"].uintVal = ReadU32(stream);
                     }
                 }
+                root.objectVal["m_CompressedMesh"] = std::move(compressedMesh);
             }
             
             stream.seekg(24, std::ios::cur); // localAABB
@@ -1061,12 +1230,12 @@ UnityValue UnityAssetParser::DeserializeObject(const UnityObjectInfo& objInfo) c
             streamDataVal.objectVal["path"].stringVal = streamPath;
             root.objectVal["m_StreamData"] = std::move(streamDataVal);
             
-        } else if (objInfo.classId == 74) { // AnimationClip
+        } else if (objInfo.classId == UnityClass::AnimationClip) {
             std::string name = readAlignedString(stream);
             root.type = UnityValue::ObjectVal;
             root.objectVal["m_Name"].type = UnityValue::StringVal;
             root.objectVal["m_Name"].stringVal = name;
-        } else if (objInfo.classId == 1) { // GameObject
+        } else if (objInfo.classId == UnityClass::GameObject) {
             int version_major = 0;
             int version_minor = 0;
             GetUnityVersionParts(version_major, version_minor);
@@ -1092,7 +1261,7 @@ UnityValue UnityAssetParser::DeserializeObject(const UnityObjectInfo& objInfo) c
             root.objectVal["m_Components"].type = UnityValue::ArrayVal;
             root.objectVal["m_Components"].arrayVal = std::move(components);
 
-        } else if (objInfo.classId == 33) { // MeshFilter
+        } else if (objInfo.classId == UnityClass::MeshFilter) {
             UnityValue m_GameObjectVal = readPPtr(stream);
             UnityValue m_MeshVal = readPPtr(stream);
             
@@ -1100,200 +1269,42 @@ UnityValue UnityAssetParser::DeserializeObject(const UnityObjectInfo& objInfo) c
             root.objectVal["m_GameObject"] = std::move(m_GameObjectVal);
             root.objectVal["m_Mesh"] = std::move(m_MeshVal);
 
-        } else if (objInfo.classId == 23 || objInfo.classId == 25) { // MeshRenderer / Renderer
-            // Structural Scanner for Materials inside MeshRenderer payload
+        } else if (objInfo.classId == UnityClass::MeshRenderer || objInfo.classId == UnityClass::Renderer) {
+            // Structural scanner: GameObject PPtr, then the Material PPtr array
             std::int32_t goFileID = 0;
             std::int64_t goPathID = 0;
             if (objInfo.size >= 12) {
-                std::memcpy(&goFileID, dataPtr, 4);
-                std::memcpy(&goPathID, dataPtr + 4, 8);
-                if (m_endianness == 1) {
-                    goFileID = ((goFileID & 0xFF) << 24) | ((goFileID & 0xFF00) << 8) | ((goFileID & 0xFF0000) >> 8) | ((goFileID & 0xFF000000) >> 24);
-                    uint64_t u = *reinterpret_cast<uint64_t*>(&goPathID);
-                    u = ((u & 0xFFULL) << 56) | ((u & 0xFF00ULL) << 48) | ((u & 0xFF0000ULL) << 40) | ((u & 0xFF000000ULL) << 32) | ((u & 0xFF00000000ULL) << 24) | ((u & 0xFF0000000000ULL) << 16) | ((u & 0xFF000000000000ULL) << 8) | ((u & 0xFF00000000000000ULL) >> 56);
-                    goPathID = *reinterpret_cast<int64_t*>(&u);
-                }
+                ReadRawPPtr(dataPtr, 0, bigEndian, goFileID, goPathID);
             }
-            UnityValue gameObjectVal;
-            gameObjectVal.type = UnityValue::ObjectVal;
-            gameObjectVal.objectVal["m_FileID"].type = UnityValue::IntVal;
-            gameObjectVal.objectVal["m_FileID"].intVal = goFileID;
-            gameObjectVal.objectVal["m_PathID"].type = UnityValue::IntVal;
-            gameObjectVal.objectVal["m_PathID"].intVal = goPathID;
 
-            std::vector<UnityValue> materials;
-            // Scan for a contiguous array of Material PPtrs
-            for (size_t offset = 12; offset + 4 <= objInfo.size; offset += 4) {
-                std::int32_t count = 0;
-                std::memcpy(&count, dataPtr + offset, 4);
-                if (m_endianness == 1) {
-                    count = ((count & 0xFF) << 24) | ((count & 0xFF00) << 8) | ((count & 0xFF0000) >> 8) | ((count & 0xFF000000) >> 24);
-                }
-                
-                if (count >= 1 && count <= 16) {
-                    if (offset + 4 + count * 12 <= objInfo.size) {
-                        bool allValid = true;
-                        std::vector<UnityValue> tempMats;
-                        for (std::int32_t i = 0; i < count; ++i) {
-                            size_t elemOffset = offset + 4 + i * 12;
-                            std::int32_t fileID = 0;
-                            std::int64_t pathID = 0;
-                            std::memcpy(&fileID, dataPtr + elemOffset, 4);
-                            std::memcpy(&pathID, dataPtr + elemOffset + 4, 8);
-                            
-                            if (m_endianness == 1) {
-                                fileID = ((fileID & 0xFF) << 24) | ((fileID & 0xFF00) << 8) | ((fileID & 0xFF0000) >> 8) | ((fileID & 0xFF000000) >> 24);
-                                uint64_t u = *reinterpret_cast<uint64_t*>(&pathID);
-                                u = ((u & 0xFFULL) << 56) | ((u & 0xFF00ULL) << 48) | ((u & 0xFF0000ULL) << 40) | ((u & 0xFF000000ULL) << 32) | ((u & 0xFF00000000ULL) << 24) | ((u & 0xFF0000000000ULL) << 16) | ((u & 0xFF000000000000ULL) << 8) | ((u & 0xFF00000000000000ULL) >> 56);
-                                pathID = *reinterpret_cast<int64_t*>(&u);
-                            }
-                            
-                            if (fileID >= 0 && fileID <= 200 && pathID != 0) {
-                                int32_t cid = (fileID == 0) ? getLocalClassId(pathID) : getClassId(pathID);
-                                if (cid == 21) { // Material
-                                    UnityValue matPtrVal;
-                                    matPtrVal.type = UnityValue::ObjectVal;
-                                    matPtrVal.objectVal["m_FileID"].type = UnityValue::IntVal;
-                                    matPtrVal.objectVal["m_FileID"].intVal = fileID;
-                                    matPtrVal.objectVal["m_PathID"].type = UnityValue::IntVal;
-                                    matPtrVal.objectVal["m_PathID"].intVal = pathID;
-                                    tempMats.push_back(std::move(matPtrVal));
-                                } else {
-                                    allValid = false;
-                                    break;
-                                }
-                            } else {
-                                allValid = false;
-                                break;
-                            }
-                        }
-                        
-                        if (allValid && tempMats.size() == static_cast<size_t>(count)) {
-                            materials = std::move(tempMats);
-                            break; // Successfully found materials array!
-                        }
-                    }
-                }
-            }
+            std::vector<UnityValue> materials =
+                ScanMaterialPPtrArray(dataPtr, objInfo.size, 12, bigEndian, maxFileId, resolvePPtrClass);
 
             root.type = UnityValue::ObjectVal;
-            root.objectVal["m_GameObject"] = std::move(gameObjectVal);
+            root.objectVal["m_GameObject"] = MakePPtrValue(goFileID, goPathID);
             root.objectVal["m_Materials"].type = UnityValue::ArrayVal;
             root.objectVal["m_Materials"].arrayVal = std::move(materials);
 
-        } else if (objInfo.classId == 137) { // SkinnedMeshRenderer
-            // Structural Scanner for Mesh and Materials inside SkinnedMeshRenderer payload
+        } else if (objInfo.classId == UnityClass::SkinnedMeshRenderer) {
+            // Structural scanner: GameObject PPtr, Material PPtr array, then the single Mesh PPtr
             std::int32_t goFileID = 0;
             std::int64_t goPathID = 0;
             if (objInfo.size >= 12) {
-                std::memcpy(&goFileID, dataPtr, 4);
-                std::memcpy(&goPathID, dataPtr + 4, 8);
-                if (m_endianness == 1) {
-                    goFileID = ((goFileID & 0xFF) << 24) | ((goFileID & 0xFF00) << 8) | ((goFileID & 0xFF0000) >> 8) | ((goFileID & 0xFF000000) >> 24);
-                    uint64_t u = *reinterpret_cast<uint64_t*>(&goPathID);
-                    u = ((u & 0xFFULL) << 56) | ((u & 0xFF00ULL) << 48) | ((u & 0xFF0000ULL) << 40) | ((u & 0xFF000000ULL) << 32) | ((u & 0xFF00000000ULL) << 24) | ((u & 0xFF0000000000ULL) << 16) | ((u & 0xFF000000000000ULL) << 8) | ((u & 0xFF00000000000000ULL) >> 56);
-                    goPathID = *reinterpret_cast<int64_t*>(&u);
-                }
-            }
-            UnityValue gameObjectVal;
-            gameObjectVal.type = UnityValue::ObjectVal;
-            gameObjectVal.objectVal["m_FileID"].type = UnityValue::IntVal;
-            gameObjectVal.objectVal["m_FileID"].intVal = goFileID;
-            gameObjectVal.objectVal["m_PathID"].type = UnityValue::IntVal;
-            gameObjectVal.objectVal["m_PathID"].intVal = goPathID;
-
-            std::vector<UnityValue> materials;
-            UnityValue meshVal;
-            meshVal.type = UnityValue::NullVal;
-
-            // 1. Scan for a contiguous array of Material PPtrs
-            for (size_t offset = 12; offset + 4 <= objInfo.size; offset += 4) {
-                std::int32_t count = 0;
-                std::memcpy(&count, dataPtr + offset, 4);
-                if (m_endianness == 1) {
-                    count = ((count & 0xFF) << 24) | ((count & 0xFF00) << 8) | ((count & 0xFF0000) >> 8) | ((count & 0xFF000000) >> 24);
-                }
-                
-                if (count >= 1 && count <= 16) {
-                    if (offset + 4 + count * 12 <= objInfo.size) {
-                        bool allValid = true;
-                        std::vector<UnityValue> tempMats;
-                        for (std::int32_t i = 0; i < count; ++i) {
-                            size_t elemOffset = offset + 4 + i * 12;
-                            std::int32_t fileID = 0;
-                            std::int64_t pathID = 0;
-                            std::memcpy(&fileID, dataPtr + elemOffset, 4);
-                            std::memcpy(&pathID, dataPtr + elemOffset + 4, 8);
-                            
-                            if (m_endianness == 1) {
-                                fileID = ((fileID & 0xFF) << 24) | ((fileID & 0xFF00) << 8) | ((fileID & 0xFF0000) >> 8) | ((fileID & 0xFF000000) >> 24);
-                                uint64_t u = *reinterpret_cast<uint64_t*>(&pathID);
-                                u = ((u & 0xFFULL) << 56) | ((u & 0xFF00ULL) << 48) | ((u & 0xFF0000ULL) << 40) | ((u & 0xFF000000ULL) << 32) | ((u & 0xFF00000000ULL) << 24) | ((u & 0xFF0000000000ULL) << 16) | ((u & 0xFF000000000000ULL) << 8) | ((u & 0xFF00000000000000ULL) >> 56);
-                                pathID = *reinterpret_cast<int64_t*>(&u);
-                            }
-                            
-                            if (fileID >= 0 && fileID <= 200 && pathID != 0) {
-                                int32_t cid = (fileID == 0) ? getLocalClassId(pathID) : getClassId(pathID);
-                                if (cid == 21) {
-                                    UnityValue matPtrVal;
-                                    matPtrVal.type = UnityValue::ObjectVal;
-                                    matPtrVal.objectVal["m_FileID"].type = UnityValue::IntVal;
-                                    matPtrVal.objectVal["m_FileID"].intVal = fileID;
-                                    matPtrVal.objectVal["m_PathID"].type = UnityValue::IntVal;
-                                    matPtrVal.objectVal["m_PathID"].intVal = pathID;
-                                    tempMats.push_back(std::move(matPtrVal));
-                                } else {
-                                    allValid = false;
-                                    break;
-                                }
-                            } else {
-                                allValid = false;
-                                break;
-                            }
-                        }
-                        
-                        if (allValid && tempMats.size() == static_cast<size_t>(count)) {
-                            materials = std::move(tempMats);
-                            break; // Successfully found materials array!
-                        }
-                    }
-                }
+                ReadRawPPtr(dataPtr, 0, bigEndian, goFileID, goPathID);
             }
 
-            // 2. Scan for the single Mesh PPtr (classId 43)
-            for (size_t offset = 12; offset + 12 <= objInfo.size; offset += 4) {
-                std::int32_t fileID = 0;
-                std::int64_t pathID = 0;
-                std::memcpy(&fileID, dataPtr + offset, 4);
-                std::memcpy(&pathID, dataPtr + offset + 4, 8);
-                
-                if (m_endianness == 1) {
-                    fileID = ((fileID & 0xFF) << 24) | ((fileID & 0xFF00) << 8) | ((fileID & 0xFF0000) >> 8) | ((fileID & 0xFF000000) >> 24);
-                    uint64_t u = *reinterpret_cast<uint64_t*>(&pathID);
-                    u = ((u & 0xFFULL) << 56) | ((u & 0xFF00ULL) << 48) | ((u & 0xFF0000ULL) << 40) | ((u & 0xFF000000ULL) << 32) | ((u & 0xFF00000000ULL) << 24) | ((u & 0xFF0000000000ULL) << 16) | ((u & 0xFF000000000000ULL) << 8) | ((u & 0xFF00000000000000ULL) >> 56);
-                    pathID = *reinterpret_cast<int64_t*>(&u);
-                }
-                
-                if (fileID >= 0 && fileID <= 200 && pathID != 0) {
-                    int32_t cid = (fileID == 0) ? getLocalClassId(pathID) : getClassId(pathID);
-                    if (cid == 43) { // Mesh
-                        meshVal.type = UnityValue::ObjectVal;
-                        meshVal.objectVal["m_FileID"].type = UnityValue::IntVal;
-                        meshVal.objectVal["m_FileID"].intVal = fileID;
-                        meshVal.objectVal["m_PathID"].type = UnityValue::IntVal;
-                        meshVal.objectVal["m_PathID"].intVal = pathID;
-                        break; // Stop on first mesh found
-                    }
-                }
-            }
+            std::vector<UnityValue> materials =
+                ScanMaterialPPtrArray(dataPtr, objInfo.size, 12, bigEndian, maxFileId, resolvePPtrClass);
+            UnityValue meshVal =
+                ScanSinglePPtrOfClass(dataPtr, objInfo.size, 12, bigEndian, maxFileId, UnityClass::Mesh, resolvePPtrClass);
 
             root.type = UnityValue::ObjectVal;
-            root.objectVal["m_GameObject"] = std::move(gameObjectVal);
+            root.objectVal["m_GameObject"] = MakePPtrValue(goFileID, goPathID);
             root.objectVal["m_Materials"].type = UnityValue::ArrayVal;
             root.objectVal["m_Materials"].arrayVal = std::move(materials);
             root.objectVal["m_Mesh"] = std::move(meshVal);
 
-        } else if (objInfo.classId == 21) { // Material
+        } else if (objInfo.classId == UnityClass::Material) {
             // Structural Scanner for Texture2D inside Material payload
             std::string name = readAlignedString(stream);
             UnityValue shaderPPtr = readPPtr(stream);
@@ -1301,51 +1312,38 @@ UnityValue UnityAssetParser::DeserializeObject(const UnityObjectInfo& objInfo) c
             std::streampos startOffset = stream.tellg();
             std::vector<UnityValue> texEnvs;
 
+            if (stream.fail() || startOffset < 0) {
+                startOffset = std::streampos(static_cast<std::streamoff>(objInfo.size));
+            }
+
             for (size_t offset = static_cast<size_t>(startOffset); offset + 12 <= objInfo.size; offset += 4) {
                 std::int32_t fileID = 0;
                 std::int64_t pathID = 0;
-                std::memcpy(&fileID, dataPtr + offset, 4);
-                std::memcpy(&pathID, dataPtr + offset + 4, 8);
-                
-                if (m_endianness == 1) {
-                    fileID = ((fileID & 0xFF) << 24) | ((fileID & 0xFF00) << 8) | ((fileID & 0xFF0000) >> 8) | ((fileID & 0xFF000000) >> 24);
-                    uint64_t u = *reinterpret_cast<uint64_t*>(&pathID);
-                    u = ((u & 0xFFULL) << 56) | ((u & 0xFF00ULL) << 48) | ((u & 0xFF0000ULL) << 40) | ((u & 0xFF000000ULL) << 32) | ((u & 0xFF00000000ULL) << 24) | ((u & 0xFF0000000000ULL) << 16) | ((u & 0xFF000000000000ULL) << 8) | ((u & 0xFF00000000000000ULL) >> 56);
-                    pathID = *reinterpret_cast<int64_t*>(&u);
-                }
-                
-                if (fileID >= 0 && fileID <= 200 && pathID != 0) {
-                    int32_t cid = (fileID == 0) ? getLocalClassId(pathID) : getClassId(pathID);
-                    if (cid == 28) { // Texture2D
-                        UnityValue texPPtr;
-                        texPPtr.type = UnityValue::ObjectVal;
-                        texPPtr.objectVal["m_FileID"].type = UnityValue::IntVal;
-                        texPPtr.objectVal["m_FileID"].intVal = fileID;
-                        texPPtr.objectVal["m_PathID"].type = UnityValue::IntVal;
-                        texPPtr.objectVal["m_PathID"].intVal = pathID;
-                        
-                        bool duplicate = false;
-                        for (const auto& existingEnv : texEnvs) {
-                            const auto& existingTex = existingEnv.GetField("second").GetField("m_Texture");
-                            if (existingTex.GetField("m_PathID").AsInt() == pathID) {
-                                duplicate = true;
-                                break;
-                            }
-                        }
-                        if (!duplicate) {
-                            UnityValue envVal;
-                            envVal.type = UnityValue::ObjectVal;
-                            envVal.objectVal["m_Texture"] = std::move(texPPtr);
-                            
-                            UnityValue kvPair;
-                            kvPair.type = UnityValue::ObjectVal;
-                            kvPair.objectVal["first"].type = UnityValue::StringVal;
-                            kvPair.objectVal["first"].stringVal = ""; // Dummy key
-                            kvPair.objectVal["second"] = std::move(envVal);
-                            texEnvs.push_back(std::move(kvPair));
-                        }
+                ReadRawPPtr(dataPtr, offset, bigEndian, fileID, pathID);
+
+                if (fileID < 0 || fileID > maxFileId || pathID == 0) continue;
+                if (resolvePPtrClass(fileID, pathID) != UnityClass::Texture2D) continue;
+
+                bool duplicate = false;
+                for (const auto& existingEnv : texEnvs) {
+                    const auto& existingTex = existingEnv.GetField("second").GetField("m_Texture");
+                    if (existingTex.GetField("m_PathID").AsInt() == pathID) {
+                        duplicate = true;
+                        break;
                     }
                 }
+                if (duplicate) continue;
+
+                UnityValue envVal;
+                envVal.type = UnityValue::ObjectVal;
+                envVal.objectVal["m_Texture"] = MakePPtrValue(fileID, pathID);
+
+                UnityValue kvPair;
+                kvPair.type = UnityValue::ObjectVal;
+                kvPair.objectVal["first"].type = UnityValue::StringVal;
+                kvPair.objectVal["first"].stringVal = ""; // Dummy key
+                kvPair.objectVal["second"] = std::move(envVal);
+                texEnvs.push_back(std::move(kvPair));
             }
 
             UnityValue savedProps;
@@ -1368,7 +1366,7 @@ UnityValue UnityAssetParser::DeserializeObject(const UnityObjectInfo& objInfo) c
 
     // Post-processing: resolve StreamData if companion data is loaded and target arrays are empty
     if (root.type == UnityValue::ObjectVal) {
-        if (objInfo.classId == 28) { // Texture2D
+        if (objInfo.classId == UnityClass::Texture2D) {
             auto& imgVal = root.objectVal["image data"];
             if (imgVal.IsNull() || (imgVal.type == UnityValue::ByteArrayVal && imgVal.byteData.empty())) {
                 const auto& streamData = root.GetField("m_StreamData");
@@ -1393,7 +1391,7 @@ UnityValue UnityAssetParser::DeserializeObject(const UnityObjectInfo& objInfo) c
                     }
                 }
             }
-        } else if (objInfo.classId == 43) { // Mesh
+        } else if (objInfo.classId == UnityClass::Mesh) {
             auto itVData = root.objectVal.find("m_VertexData");
             if (itVData != root.objectVal.end() && itVData->second.type == UnityValue::ObjectVal) {
                 auto& vData = itVData->second;
@@ -1444,7 +1442,7 @@ std::string UnityAssetParser::GetObjectName(const UnityObjectInfo& objInfo) cons
     std::istream stream(&buf);
 
     if (utype.nodes.empty()) {
-        if (objInfo.classId == 28 || objInfo.classId == 43 || objInfo.classId == 74) {
+        if (objInfo.classId == UnityClass::Texture2D || objInfo.classId == UnityClass::Mesh || objInfo.classId == UnityClass::AnimationClip) {
             return ReadAlignedString(stream, objInfo.size);
         }
     } else {
@@ -1755,14 +1753,6 @@ std::vector<std::uint32_t> UnityAssetParser::ReadUint32Array(std::istream& in, s
     return data;
 }
 
-int32_t UnityAssetParser::GetClassId(int64_t pathID) const {
-    if (m_pathIdToClassId) {
-        auto it = m_pathIdToClassId->find(pathID);
-        if (it != m_pathIdToClassId->end()) return it->second;
-    }
-    return -1;
-}
-
 int32_t UnityAssetParser::GetLocalClassId(int64_t pathID) const {
     auto it = m_localPathIdToClassId.find(pathID);
     if (it != m_localPathIdToClassId.end()) return it->second;
@@ -1800,98 +1790,9 @@ PackedIntVector UnityAssetParser::ReadPackedIntVector(std::istream& in, std::uin
 UnityValue UnityAssetParser::ReadPPtr(std::istream& in) const {
     std::int32_t fileID = ReadS32(in);
     std::int64_t pathID = (m_formatVersion < 14) ? ReadS32(in) : ReadS64(in);
-    
-    UnityValue pptrVal;
-    pptrVal.type = UnityValue::ObjectVal;
-    pptrVal.objectVal["m_FileID"].type = UnityValue::IntVal;
-    pptrVal.objectVal["m_FileID"].intVal = fileID;
-    pptrVal.objectVal["m_PathID"].type = UnityValue::IntVal;
-    pptrVal.objectVal["m_PathID"].intVal = pathID;
-    return pptrVal;
+    return MakePPtrValue(fileID, pathID);
 }
 
-void UnityAssetParser::SkipStringArray(std::istream& in, std::uint32_t maxSize) const {
-    std::int32_t size = ReadS32(in);
-    if (size > 0 && size < 100000) {
-        for (std::int32_t i = 0; i < size; ++i) {
-            ReadAlignedString(in, maxSize);
-        }
-    }
-}
-
-UnityValue UnityAssetParser::DeserializeRenderer(std::istream& in) const {
-    int version_major = 0;
-    int version_minor = 0;
-    GetUnityVersionParts(version_major, version_minor);
-    
-    UnityValue gameObjectVal = ReadPPtr(in); 
-    
-    if (version_major < 5) {
-        in.seekg(4, std::ios::cur); // bool, bool, bool, uint8
-    } else {
-        if (version_major > 5 || (version_major == 5 && version_minor >= 4)) {
-            in.seekg(3, std::ios::cur);
-            if (version_major > 2017 || (version_major == 2017 && version_minor >= 2)) {
-                in.seekg(1, std::ios::cur);
-            }
-            in.seekg(1, std::ios::cur);
-            in.seekg(1, std::ios::cur);
-            in.seekg(1, std::ios::cur);
-            if (version_major > 2019 || (version_major == 2019 && version_minor >= 3)) {
-                in.seekg(1, std::ios::cur);
-            }
-            if (version_major >= 2020) {
-                in.seekg(1, std::ios::cur);
-            }
-            if (version_major >= 2021) {
-                in.seekg(1, std::ios::cur);
-            }
-            AlignStream(in, 4);
-        } else {
-            in.seekg(1, std::ios::cur);
-            AlignStream(in, 4);
-            in.seekg(1, std::ios::cur);
-            in.seekg(1, std::ios::cur);
-            AlignStream(in, 4);
-        }
-        
-        if (version_major >= 2018) {
-            in.seekg(4, std::ios::cur);
-        }
-        if (version_major > 2018 || (version_major == 2018 && version_minor >= 3)) {
-            in.seekg(4, std::ios::cur);
-        }
-        in.seekg(2, std::ios::cur);
-        in.seekg(2, std::ios::cur);
-    }
-    
-    if (version_major >= 3) {
-        in.seekg(16, std::ios::cur);
-    }
-    if (version_major >= 5) {
-        in.seekg(16, std::ios::cur);
-    }
-    
-    std::int32_t matSize = ReadS32(in);
-    std::vector<UnityValue> materials;
-    if (matSize > 0 && matSize < 100000) {
-        materials.reserve(matSize);
-        for (std::int32_t i = 0; i < matSize; ++i) {
-            materials.push_back(ReadPPtr(in));
-        }
-    }
-    
-    UnityValue rendererVal;
-    rendererVal.type = UnityValue::ObjectVal;
-    rendererVal.objectVal["m_GameObject"] = std::move(gameObjectVal);
-    rendererVal.objectVal["m_Materials"].type = UnityValue::ArrayVal;
-    rendererVal.objectVal["m_Materials"].arrayVal = std::move(materials);
-    return rendererVal;
-}
-
-// ---------------------------------------------------------------------------
-// UnityValue helper implementations
-// ---------------------------------------------------------------------------
 float UnityValue::AsFloat() const {
     return static_cast<float>(doubleVal);
 }

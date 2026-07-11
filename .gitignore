@@ -24,5 +24,3 @@ src/ui/widgets/MseViewerWidget.cpp
 src/ui/widgets/MseViewerWidget.h
 
 # AnimationClip not ready.
-src/core/extractors/unity/UnityAnimationExtractor.h
-src/core/extractors/unity/UnityAnimationExtractor.cpp

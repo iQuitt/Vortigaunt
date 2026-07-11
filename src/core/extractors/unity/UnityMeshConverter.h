@@ -48,5 +48,7 @@ struct MeshChannel {
 class UnityMeshConverter {
 public:
     // Convert a Unity mesh object to GoldSrc .smd file.
-    static void Convert(const UnityObjectInfo& objInfo, const UnityAssetParser& parser, const std::string& outputDir, const std::vector<std::string>& textures = {});
+    // texturesAreBmp selects the extension used in material names (.bmp or .png),
+    // matching how UnityTextureDecoder exported the textures.
+    static void Convert(const UnityObjectInfo& objInfo, const UnityAssetParser& parser, const std::string& outputDir, const std::vector<std::string>& textures = {}, bool texturesAreBmp = true);
 };

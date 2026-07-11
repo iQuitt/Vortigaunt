@@ -5,6 +5,7 @@
 #include <ankerl/unordered_dense.h>
 #include <memory>
 #include <cstdint>
+#include <functional>
 #include <istream>
 #include <filesystem>
 #include <string>
@@ -95,6 +96,11 @@ struct UnityObjectInfo {
     std::string name;      // Object name (resolved after deserialization if available)
 };
 
+struct UnityExternalFile {
+    std::string pathName;   // raw path as stored in the file, e.g. "resources.assets" or "archive:/CAB-xxx/CAB-xxx"
+    std::string fileName;   // final path component (after last '/' or '\\'), unmodified case
+};
+
 struct PackedFloatVector {
     std::uint32_t numItems = 0;
     float range = 0.0f;
@@ -117,16 +123,19 @@ public:
     const UnityDataResolver* GetDataResolver() const { return m_dataResolver; }
     const std::vector<char>& GetFileData() const { return m_fileData; }
 
-    void SetPathIdToClassMap(const ankerl::unordered_dense::map<int64_t, int32_t>* map) { m_pathIdToClassId = map; }
-    void SetTextureNamesMap(const ankerl::unordered_dense::map<int64_t, std::string>* map) { m_textureNames = map; }
-
     bool Load(const std::vector<char>& data);
     bool Load(std::vector<char>&& data);
     bool LoadFromFile(const std::string& filePath);
-    bool LoadFromMultipleFiles(const std::vector<std::string>& files);
 
     const std::vector<UnityObjectInfo>& GetObjects() const { return m_objects; }
     const std::vector<UnityType>& GetTypesList() const { return m_typesList; }
+
+    const std::vector<UnityExternalFile>& GetExternals() const { return m_externals; }
+    bool HasExternalsTable() const { return m_externalsParsed; }
+
+  
+    using PPtrClassResolver = std::function<int32_t(int32_t fileID, int64_t pathID)>;
+    void SetPPtrClassResolver(PPtrClassResolver resolver) { m_pptrClassResolver = std::move(resolver); }
 
     UnityValue DeserializeObject(const UnityObjectInfo& objInfo) const;
     std::string ResolveString(uint32_t offset, const std::vector<char>& localBuffer) const;
@@ -143,6 +152,7 @@ private:
     bool ParseMetadata(std::istream& in);
     bool ParseTypesV17(std::istream& in);
     bool ParseObjectsV17(std::istream& in);
+    bool ParseScriptTypesAndExternals(std::istream& in);
     bool ReadTypeTree(std::istream& in, UnityType& ut);
     bool ReadSerializedType(std::istream& in, UnityType& ut, bool isRefType);
     UnityValue DeserializeNode(const std::vector<TypeTreeNode>& nodes,
@@ -163,13 +173,10 @@ private:
     std::vector<std::uint8_t> ReadByteArray(std::istream& in, std::uint32_t maxSize) const;
     std::vector<float> ReadFloatArray(std::istream& in, std::uint32_t maxSize) const;
     std::vector<std::uint32_t> ReadUint32Array(std::istream& in, std::uint32_t maxSize) const;
-    int32_t GetClassId(int64_t pathID) const;
     int32_t GetLocalClassId(int64_t pathID) const;
     PackedFloatVector ReadPackedFloatVector(std::istream& in, std::uint32_t maxSize) const;
     PackedIntVector ReadPackedIntVector(std::istream& in, std::uint32_t maxSize) const;
     UnityValue ReadPPtr(std::istream& in) const;
-    void SkipStringArray(std::istream& in, std::uint32_t maxSize) const;
-    UnityValue DeserializeRenderer(std::istream& in) const;
 
     std::vector<char> m_fileData;
     uint64_t m_fileSize = 0;
@@ -186,6 +193,7 @@ private:
     std::vector<UnityObjectInfo> m_objects;
     ankerl::unordered_dense::map<int64_t, int32_t> m_localPathIdToClassId;
     UnityDataResolver* m_dataResolver = nullptr;
-    const ankerl::unordered_dense::map<int64_t, int32_t>* m_pathIdToClassId = nullptr;
-    const ankerl::unordered_dense::map<int64_t, std::string>* m_textureNames = nullptr;
+    std::vector<UnityExternalFile> m_externals;
+    bool m_externalsParsed = false;
+    PPtrClassResolver m_pptrClassResolver;
 };

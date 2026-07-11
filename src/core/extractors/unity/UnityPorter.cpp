@@ -3,22 +3,16 @@
 #include "VortigauntLog.h"
 #include "UnityMeshConverter.h"
 #include "UnityTextureDecoder.h"
+#include "UnityClassIds.h"
 #include "utils/BinaryUtils.h"
-// #include "UnityAnimationExtractor.h"
 #include <algorithm>
 #include <filesystem>
 #include <ankerl/unordered_dense.h>
 #include <vector>
 #include <cstring>
 #include <cstdlib>
+#include <fstream>
 
-static std::string MakeGlobalKey(const std::string& assetPath, int64_t pathId) {
-    try {
-        return std::filesystem::absolute(assetPath).make_preferred().string() + "_" + std::to_string(pathId);
-    } catch (...) {
-        return assetPath + "_" + std::to_string(pathId);
-    }
-}
 
 static std::string NormalizePath(const std::string& pathStr) {
     try {
@@ -28,20 +22,30 @@ static std::string NormalizePath(const std::string& pathStr) {
     }
 }
 
+static std::string CanonicalAbsPath(const std::string& pathStr) {
+    try {
+        return std::filesystem::absolute(pathStr).make_preferred().string();
+    } catch (...) {
+        return pathStr;
+    }
+}
 
+static std::string ToLowerCopy(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    return s;
+}
 
 static bool IsUiTexture(const std::string& name) {
-    std::string lower = name;
-    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-    
+    std::string lower = ToLowerCopy(name);
+
     static const std::vector<std::string> uiKeywords = {
-        "icon", "sprite", "font", "checkmark", "cursor", "ui_", "hud_", 
+        "icon", "sprite", "font", "checkmark", "cursor", "ui_", "hud_",
         "background", "button", "logo", "label", "slider", "loading",
-        "connecticon", "ping micro", "cooldown", "arrow", "pointer", 
+        "connecticon", "ping micro", "cooldown", "arrow", "pointer",
         "scrollbar", "panel", "frame", "border", "checkmark", "checkmarksprite",
         "font texture", "please wait", "indicator", "checkmark", "loadingcircle"
     };
-    
+
     for (const auto& keyword : uiKeywords) {
         if (lower.find(keyword) != std::string::npos) {
             return true;
@@ -63,8 +67,7 @@ static std::string SelectAlbedoTexture(const std::vector<std::string>& texNames)
     };
     for (const auto& keyword : albedoKeywords) {
         for (const auto& name : cleanNames) {
-            std::string lower = name;
-            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+            std::string lower = ToLowerCopy(name);
             if (lower.find(keyword) != std::string::npos) {
                 return name;
             }
@@ -75,8 +78,7 @@ static std::string SelectAlbedoTexture(const std::vector<std::string>& texNames)
         "normal", "n_opengl", "_n", "mask", "roughness", "metallic", "emission", "emissive", "_e", "height", "specular", "ao", "gloss"
     };
     for (const auto& name : cleanNames) {
-        std::string lower = name;
-        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+        std::string lower = ToLowerCopy(name);
         bool hasUtility = false;
         for (const auto& keyword : utilityKeywords) {
             if (lower.find(keyword) != std::string::npos) {
@@ -105,7 +107,6 @@ static UnityValue GetArrayField(const UnityValue& parent, const std::string& fie
     return UnityValue{};
 }
 
-#include <fstream>
 static void DumpValue(std::ostream& os, const std::string& indent, const UnityValue& val) {
     if (val.type == UnityValue::NullVal) {
         os << "Null";
@@ -142,14 +143,469 @@ static void DumpValue(std::ostream& os, const std::string& indent, const UnityVa
     }
 }
 
+static bool HasValuableTextures(const std::vector<std::string>& texs) {
+    for (const auto& t : texs) {
+        if (!t.empty()) return true;
+    }
+    return false;
+}
 
+static bool IsSerializedAssetFile(const std::string& filepath) {
+    std::filesystem::path p(filepath);
+    std::string ext = ToLowerCopy(p.extension().string());
 
-#include <fstream>
-#include <unordered_set>
+    // Only allow real Unity serialized asset extensions or extensionless level/resources files
+    if (ext != ".assets" && ext != ".sharedassets" && ext != ".globalgamemanagers" && !ext.empty()) {
+        return false;
+    }
+
+    std::ifstream f(filepath, std::ios::binary);
+    if (!f) return false;
+    char header[16];
+    f.read(header, 16);
+    if (f.gcount() < 16) return false;
+
+    std::uint32_t version = Utils::ReadBE32(reinterpret_cast<const std::uint8_t*>(header + 8));
+    return (version >= 9);
+}
+
+static bool IsKeyClass(int32_t classId) {
+    return classId == UnityClass::GameObject ||
+           classId == UnityClass::Material ||
+           classId == UnityClass::MeshRenderer ||
+           classId == UnityClass::Renderer ||
+           classId == UnityClass::Texture2D ||
+           classId == UnityClass::MeshFilter ||
+           classId == UnityClass::Mesh ||
+           classId == UnityClass::AnimationClip ||
+           classId == UnityClass::SkinnedMeshRenderer;
+}
+
+void UnityPorter::ClearRegistries() {
+    m_summaries.clear();
+    m_summaryKeyByPath.clear();
+    m_meshTextures.clear();
+    m_meshNamesByKey.clear();
+    m_bundleExtractCounter = 0;
+}
+
+UnityPorter::ObjectRef UnityPorter::ResolveRef(int32_t currentKey, int32_t fileID, int64_t pathID) const {
+    ObjectRef ref;
+    ref.pathId = pathID;
+    if (pathID == 0) {
+        return ref; // null reference
+    }
+    if (currentKey < 0 || currentKey >= static_cast<int32_t>(m_summaries.size())) {
+        return ref;
+    }
+    if (fileID == 0) {
+        ref.fileKey = currentKey;
+        return ref;
+    }
+    const auto& externalKeys = m_summaries[currentKey].externalKeys;
+    int64_t index = static_cast<int64_t>(fileID) - 1;
+    if (index < 0 || index >= static_cast<int64_t>(externalKeys.size())) {
+        return ref;
+    }
+    ref.fileKey = externalKeys[static_cast<size_t>(index)];
+    return ref;
+}
+
+int32_t UnityPorter::LookupClassId(int32_t currentKey, int32_t fileID, int64_t pathID) const {
+    ObjectRef ref = ResolveRef(currentKey, fileID, pathID);
+    if (ref.fileKey < 0 || ref.fileKey >= static_cast<int32_t>(m_summaries.size())) {
+        return -1;
+    }
+    const auto& classIds = m_summaries[ref.fileKey].classIds;
+    auto it = classIds.find(pathID);
+    return (it != classIds.end()) ? it->second : -1;
+}
+
+std::string UnityPorter::MeshKey(const ObjectRef& ref) const {
+    std::string key;
+    if (ref.fileKey >= 0 && ref.fileKey < static_cast<int32_t>(m_summaries.size())) {
+        key = ToLowerCopy(m_summaries[ref.fileKey].absPath);
+    }
+    key += "|";
+    key += std::to_string(ref.pathId);
+    return key;
+}
+
+int32_t UnityPorter::SummarizeFile(const std::string& absPathStr) {
+    std::string absPath = CanonicalAbsPath(absPathStr);
+    std::string pathLower = ToLowerCopy(absPath);
+
+    auto itKey = m_summaryKeyByPath.find(pathLower);
+    if (itKey != m_summaryKeyByPath.end()) {
+        return itKey->second;
+    }
+
+    // Register the summary before any recursion so reference cycles terminate.
+    // NOTE: m_summaries grows during recursion; never hold a reference into it
+    // across a SummarizeFile call - always re-index via m_summaries[key].
+    int32_t key = static_cast<int32_t>(m_summaries.size());
+    m_summaries.emplace_back();
+    m_summaries[key].absPath = absPath;
+    m_summaryKeyByPath[pathLower] = key;
+
+    // Keep globalgamemanagers entries empty to avoid excessive memory usage.
+    if (pathLower.find("globalgamemanagers") != std::string::npos) {
+        return key;
+    }
+
+    // Pass A: collect key-class object metadata and the externals list.
+    std::vector<std::string> externalNames;
+    try {
+        UnityAssetParser parser;
+        if (!parser.LoadFromFile(absPath)) {
+            return key;
+        }
+        for (const auto& obj : parser.GetObjects()) {
+            if (!IsKeyClass(obj.classId)) continue;
+            m_summaries[key].classIds[obj.pathId] = obj.classId;
+            if (obj.classId == UnityClass::Texture2D && !obj.name.empty()) {
+                m_summaries[key].textureNames[obj.pathId] = obj.name;
+            } else if (obj.classId == UnityClass::Mesh && !obj.name.empty()) {
+                m_summaries[key].meshNames[obj.pathId] = obj.name;
+            }
+        }
+        if (parser.HasExternalsTable()) {
+            for (const auto& ext : parser.GetExternals()) {
+                externalNames.push_back(ext.fileName);
+            }
+        }
+    } catch (const std::exception& e) {
+        VortigauntLog::LogF("EXCEPTION: Summarizing %s failed: %s\n", absPath.c_str(), e.what());
+        return key;
+    } catch (...) {
+        return key;
+    }
+
+    // Resolve externals against regular files in the same directory (case-insensitive names).
+    // Built-in references like "unity default resources" simply will not match and stay -1.
+    ankerl::unordered_dense::map<std::string, std::string> siblingsByName;
+    std::error_code ec;
+    std::filesystem::path dir = std::filesystem::path(absPath).parent_path();
+    if (std::filesystem::is_directory(dir, ec)) {
+        for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+            if (!entry.is_regular_file()) continue;
+            siblingsByName.emplace(ToLowerCopy(entry.path().filename().string()), entry.path().string());
+        }
+    }
+    m_summaries[key].externalKeys.assign(externalNames.size(), -1);
+    for (size_t i = 0; i < externalNames.size(); ++i) {
+        if (externalNames[i].empty()) continue;
+        auto itSibling = siblingsByName.find(ToLowerCopy(externalNames[i]));
+        if (itSibling == siblingsByName.end()) continue;
+        int32_t externalKey = SummarizeFile(itSibling->second); // may grow m_summaries
+        m_summaries[key].externalKeys[i] = externalKey;
+    }
+
+    // Pass B: with externals resolved, record each Material's texture references.
+    try {
+        UnityAssetParser parser;
+        if (!parser.LoadFromFile(absPath)) {
+            return key;
+        }
+        parser.SetPPtrClassResolver([this, key](int32_t fileID, int64_t pathID) -> int32_t {
+            return LookupClassId(key, fileID, pathID);
+        });
+        for (const auto& obj : parser.GetObjects()) {
+            if (obj.classId != UnityClass::Material) continue;
+            UnityValue val = parser.DeserializeObject(obj);
+            if (val.type != UnityValue::ObjectVal) continue;
+            UnityValue texEnvs = GetArrayField(val.GetField("m_SavedProperties"), "m_TexEnvs");
+            if (texEnvs.type != UnityValue::ArrayVal) continue;
+            for (const auto& kvPair : texEnvs.arrayVal) {
+                const auto& texPtr = kvPair.GetField("second").GetField("m_Texture");
+                int32_t fileID = static_cast<int32_t>(texPtr.GetField("m_FileID").AsInt());
+                int64_t texPathId = texPtr.GetField("m_PathID").AsInt();
+                ObjectRef texRef = ResolveRef(key, fileID, texPathId);
+                if (texRef.pathId == 0 || texRef.fileKey < 0) continue;
+                auto& refs = m_summaries[key].materialTextures[obj.pathId];
+                bool alreadyKnown = false;
+                for (const auto& r : refs) {
+                    if (r.fileKey == texRef.fileKey && r.pathId == texRef.pathId) {
+                        alreadyKnown = true;
+                        break;
+                    }
+                }
+                if (!alreadyKnown) {
+                    refs.push_back(texRef);
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        VortigauntLog::LogF("EXCEPTION: Material pass failed for %s: %s\n", absPath.c_str(), e.what());
+    } catch (...) {}
+
+    return key;
+}
+
+ankerl::unordered_dense::map<int64_t, std::vector<std::string>> UnityPorter::BuildDependencyMap(
+    const UnityAssetParser& parser, int32_t mainKey) {
+
+    ankerl::unordered_dense::map<int64_t, std::vector<std::string>> meshToTexturesMap;
+
+    const auto& objects = parser.GetObjects();
+
+    // Map from PathID to classId (local to current file)
+    ankerl::unordered_dense::map<int64_t, int32_t> pathIdToClassId;
+    ankerl::unordered_dense::set<int64_t> meshes;
+    for (const auto& obj : objects) {
+        pathIdToClassId[obj.pathId] = obj.classId;
+        if (obj.classId == UnityClass::Mesh) {
+            meshes.insert(obj.pathId);
+        }
+    }
+
+    auto resolvePPtr = [this, mainKey](const UnityValue& pptr) -> ObjectRef {
+        int32_t fileID = static_cast<int32_t>(pptr.GetField("m_FileID").AsInt());
+        int64_t pathID = pptr.GetField("m_PathID").AsInt();
+        return ResolveRef(mainKey, fileID, pathID);
+    };
+
+    auto appendUniqueRef = [](std::vector<ObjectRef>& refs, const ObjectRef& ref) {
+        for (const auto& r : refs) {
+            if (r.fileKey == ref.fileKey && r.pathId == ref.pathId) return;
+        }
+        refs.push_back(ref);
+    };
+
+    auto textureNameFor = [this](const ObjectRef& ref) -> std::string {
+        if (ref.fileKey < 0 || ref.fileKey >= static_cast<int32_t>(m_summaries.size())) {
+            return std::string();
+        }
+        const auto& names = m_summaries[ref.fileKey].textureNames;
+        auto it = names.find(ref.pathId);
+        return (it != names.end()) ? it->second : std::string();
+    };
+
+    // Reference structures
+    struct MeshLink {
+        ObjectRef meshRef;
+        int64_t compPathId = 0;
+    };
+    ankerl::unordered_dense::map<std::string, MeshLink> meshLinks; // MeshKey(meshRef) -> owning component
+    ankerl::unordered_dense::map<int64_t, int64_t> compToGo;
+    ankerl::unordered_dense::map<int64_t, std::vector<int64_t>> goToGoComps;
+    ankerl::unordered_dense::map<int64_t, std::vector<ObjectRef>> rendToMats;
+    ankerl::unordered_dense::map<int64_t, std::vector<ObjectRef>> matToTexs; // local materials only
+
+    auto linkComponentToGameObject = [&](const UnityValue& goPtr, int64_t compPathId) {
+        // GameObject links stay local-only.
+        if (goPtr.GetField("m_FileID").AsInt() != 0) return;
+        int64_t goPathId = goPtr.GetField("m_PathID").AsInt();
+        if (goPathId == 0) return;
+        compToGo[compPathId] = goPathId;
+        auto& comps = goToGoComps[goPathId];
+        if (std::find(comps.begin(), comps.end(), compPathId) == comps.end()) {
+            comps.push_back(compPathId);
+        }
+    };
+
+    for (const auto& obj : objects) {
+        if (obj.classId == UnityClass::GameObject) {
+            UnityValue val = parser.DeserializeObject(obj);
+            if (val.type != UnityValue::ObjectVal) continue;
+
+            UnityValue m_Components = GetArrayField(val, "m_Component");
+            if (m_Components.type != UnityValue::ArrayVal) {
+                m_Components = GetArrayField(val, "m_Components");
+            }
+            if (m_Components.type != UnityValue::ArrayVal) continue;
+            for (const auto& compPtrVal : m_Components.arrayVal) {
+                const auto& nestedComp = compPtrVal.GetField("component");
+                const UnityValue& compPtr = nestedComp.IsNull() ? compPtrVal : nestedComp;
+                // GameObject-to-component links are always local; skip external ones.
+                if (compPtr.GetField("m_FileID").AsInt() != 0) continue;
+                int64_t compPathId = compPtr.GetField("m_PathID").AsInt();
+                if (compPathId == 0) continue;
+
+                auto itClass = pathIdToClassId.find(compPathId);
+                if (itClass == pathIdToClassId.end()) continue;
+                int32_t targetClass = itClass->second;
+                if (targetClass == UnityClass::MeshFilter ||
+                    targetClass == UnityClass::MeshRenderer ||
+                    targetClass == UnityClass::Renderer ||
+                    targetClass == UnityClass::SkinnedMeshRenderer) {
+                    auto& comps = goToGoComps[obj.pathId];
+                    if (std::find(comps.begin(), comps.end(), compPathId) == comps.end()) {
+                        comps.push_back(compPathId);
+                    }
+                    compToGo[compPathId] = obj.pathId;
+                }
+            }
+        }
+        else if (obj.classId == UnityClass::MeshFilter) {
+            UnityValue val = parser.DeserializeObject(obj);
+            if (val.type != UnityValue::ObjectVal) continue;
+
+            ObjectRef meshRef = resolvePPtr(val.GetField("m_Mesh"));
+            if (meshRef.pathId != 0 && meshRef.fileKey >= 0) {
+                meshLinks[MeshKey(meshRef)] = MeshLink{meshRef, obj.pathId};
+            }
+            linkComponentToGameObject(val.GetField("m_GameObject"), obj.pathId);
+        }
+        else if (obj.classId == UnityClass::MeshRenderer || obj.classId == UnityClass::Renderer) {
+            UnityValue val = parser.DeserializeObject(obj);
+            if (val.type != UnityValue::ObjectVal) continue;
+
+            UnityValue materialsArray = GetArrayField(val, "m_Materials");
+            if (materialsArray.type == UnityValue::ArrayVal) {
+                for (const auto& matPtrVal : materialsArray.arrayVal) {
+                    ObjectRef matRef = resolvePPtr(matPtrVal);
+                    if (matRef.pathId != 0) {
+                        appendUniqueRef(rendToMats[obj.pathId], matRef);
+                    }
+                }
+            }
+            linkComponentToGameObject(val.GetField("m_GameObject"), obj.pathId);
+        }
+        else if (obj.classId == UnityClass::SkinnedMeshRenderer) {
+            UnityValue val = parser.DeserializeObject(obj);
+            if (val.type != UnityValue::ObjectVal) continue;
+
+            ObjectRef meshRef = resolvePPtr(val.GetField("m_Mesh"));
+            if (meshRef.pathId != 0 && meshRef.fileKey >= 0) {
+                meshLinks[MeshKey(meshRef)] = MeshLink{meshRef, obj.pathId};
+            }
+            UnityValue materialsArray = GetArrayField(val, "m_Materials");
+            if (materialsArray.type == UnityValue::ArrayVal) {
+                for (const auto& matPtrVal : materialsArray.arrayVal) {
+                    ObjectRef matRef = resolvePPtr(matPtrVal);
+                    if (matRef.pathId != 0) {
+                        appendUniqueRef(rendToMats[obj.pathId], matRef);
+                    }
+                }
+            }
+            linkComponentToGameObject(val.GetField("m_GameObject"), obj.pathId);
+        }
+        else if (obj.classId == UnityClass::Material) {
+            UnityValue val = parser.DeserializeObject(obj);
+            if (val.type != UnityValue::ObjectVal) continue;
+
+            UnityValue texEnvs = GetArrayField(val.GetField("m_SavedProperties"), "m_TexEnvs");
+            if (texEnvs.type != UnityValue::ArrayVal) continue;
+            for (const auto& kvPair : texEnvs.arrayVal) {
+                ObjectRef texRef = resolvePPtr(kvPair.GetField("second").GetField("m_Texture"));
+                if (texRef.pathId != 0 && texRef.fileKey >= 0) {
+                    appendUniqueRef(matToTexs[obj.pathId], texRef);
+                }
+            }
+        }
+    }
+
+    // Map each referenced Mesh (local or external) to texture names
+    for (const auto& linkPair : meshLinks) {
+        const ObjectRef& meshRef = linkPair.second.meshRef;
+        int64_t compPathId = linkPair.second.compPathId;
+        std::vector<std::string> texturesForThisMesh;
+
+        auto itClass = pathIdToClassId.find(compPathId);
+        if (itClass != pathIdToClassId.end()) {
+            int32_t compClass = itClass->second;
+            std::vector<ObjectRef> mats;
+
+            if (compClass == UnityClass::SkinnedMeshRenderer) {
+                auto itMats = rendToMats.find(compPathId);
+                if (itMats != rendToMats.end()) {
+                    mats = itMats->second;
+                }
+            }
+            else if (compClass == UnityClass::MeshFilter) {
+                auto itGo = compToGo.find(compPathId);
+                if (itGo != compToGo.end()) {
+                    auto itComps = goToGoComps.find(itGo->second);
+                    if (itComps != goToGoComps.end()) {
+                        for (int64_t siblingCompPathId : itComps->second) {
+                            auto itSibClass = pathIdToClassId.find(siblingCompPathId);
+                            if (itSibClass == pathIdToClassId.end()) continue;
+                            if (itSibClass->second == UnityClass::MeshRenderer ||
+                                itSibClass->second == UnityClass::Renderer) {
+                                auto itMats = rendToMats.find(siblingCompPathId);
+                                if (itMats != rendToMats.end()) {
+                                    mats = itMats->second;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Map each material slot sequentially to its primary albedo texture
+            for (const ObjectRef& matRef : mats) {
+                std::vector<std::string> matTexNames;
+                const std::vector<ObjectRef>* texRefs = nullptr;
+                if (matRef.fileKey == mainKey) {
+                    auto itTexs = matToTexs.find(matRef.pathId);
+                    if (itTexs != matToTexs.end()) {
+                        texRefs = &itTexs->second;
+                    }
+                } else if (matRef.fileKey >= 0 && matRef.fileKey < static_cast<int32_t>(m_summaries.size())) {
+                    const auto& externalMats = m_summaries[matRef.fileKey].materialTextures;
+                    auto itTexs = externalMats.find(matRef.pathId);
+                    if (itTexs != externalMats.end()) {
+                        texRefs = &itTexs->second;
+                    }
+                }
+                if (texRefs) {
+                    for (const ObjectRef& texRef : *texRefs) {
+                        std::string texName = textureNameFor(texRef);
+                        if (!texName.empty() && !IsUiTexture(texName)) {
+                            matTexNames.push_back(texName);
+                        }
+                    }
+                }
+                texturesForThisMesh.push_back(SelectAlbedoTexture(matTexNames));
+            }
+        }
+
+        const std::string& globalKey = linkPair.first;
+        bool shouldStore = true;
+        auto itExisting = m_meshTextures.find(globalKey);
+        if (itExisting != m_meshTextures.end() &&
+            HasValuableTextures(itExisting->second) && !HasValuableTextures(texturesForThisMesh)) {
+            shouldStore = false;
+        }
+        if (shouldStore && !texturesForThisMesh.empty()) {
+            m_meshTextures[globalKey] = texturesForThisMesh;
+            if (meshRef.fileKey == mainKey) {
+                meshToTexturesMap[meshRef.pathId] = texturesForThisMesh;
+            }
+            if (meshRef.fileKey >= 0 && meshRef.fileKey < static_cast<int32_t>(m_summaries.size())) {
+                const auto& names = m_summaries[meshRef.fileKey].meshNames;
+                auto itName = names.find(meshRef.pathId);
+                if (itName != names.end() && !itName->second.empty()) {
+                    m_meshNamesByKey[globalKey] = itName->second;
+                }
+            }
+        }
+    }
+
+    // Enrich local mappings with accumulated ones if the local ones lack textures
+    for (int64_t meshPathId : meshes) {
+        auto itLocal = meshToTexturesMap.find(meshPathId);
+        if (itLocal != meshToTexturesMap.end() && HasValuableTextures(itLocal->second)) {
+            continue;
+        }
+        ObjectRef localRef;
+        localRef.fileKey = mainKey;
+        localRef.pathId = meshPathId;
+        auto itGlobal = m_meshTextures.find(MeshKey(localRef));
+        if (itGlobal != m_meshTextures.end() && HasValuableTextures(itGlobal->second)) {
+            meshToTexturesMap[meshPathId] = itGlobal->second;
+        }
+    }
+
+    return meshToTexturesMap;
+}
 
 void UnityPorter::WriteMeshTextureMap(const UnityAssetParser& parser,
-                                const ankerl::unordered_dense::map<int64_t, std::vector<std::string>>& meshToTextures,
-                                const std::string& outputDir) {
+                                      const ankerl::unordered_dense::map<int64_t, std::vector<std::string>>& meshToTextures,
+                                      int32_t mainKey,
+                                      const std::string& outputDir) {
     std::filesystem::path mapPath = std::filesystem::path(outputDir) / "vortigaunt_mesh_texture_map.txt";
     std::ofstream ofs(mapPath, std::ios::binary);
     if (!ofs) return;
@@ -158,39 +614,38 @@ void UnityPorter::WriteMeshTextureMap(const UnityAssetParser& parser,
 
     ankerl::unordered_dense::map<int64_t, std::string> pathIdToName;
     for (const auto& obj : parser.GetObjects()) {
-        if (obj.classId == 43) { // Mesh
+        if (obj.classId == UnityClass::Mesh) {
             pathIdToName[obj.pathId] = obj.name;
         }
     }
 
-    ankerl::unordered_dense::set<int64_t> outputtedMeshes;
     for (const auto& pair : meshToTextures) {
         std::string meshName = pathIdToName[pair.first];
         if (meshName.empty()) {
             meshName = "Unknown_" + std::to_string(pair.first);
         }
-        ofs << "Mesh: '" << meshName << "' -> Textures [VORTIGAUNT_TEST_STAMP]: ";
+        ofs << "Mesh: '" << meshName << "' -> Textures: ";
         for (const auto& texName : pair.second) {
             ofs << "'" << texName << "' ";
         }
         ofs << "\n";
-        outputtedMeshes.insert(pair.first);
     }
 
-    for (const auto& pair : m_meshToTextures) {
-        size_t underscore = pair.first.find_last_of('_');
-        if (underscore == std::string::npos) continue;
-        int64_t pathId = std::stoll(pair.first.substr(underscore + 1));
-        if (outputtedMeshes.count(pathId)) continue;
-        
-        std::string meshName = "";
-        auto itName = m_meshNames.find(pair.first);
-        if (itName != m_meshNames.end()) {
+    std::string mainKeyPrefix;
+    if (mainKey >= 0 && mainKey < static_cast<int32_t>(m_summaries.size())) {
+        mainKeyPrefix = ToLowerCopy(m_summaries[mainKey].absPath) + "|";
+    }
+    for (const auto& pair : m_meshTextures) {
+        if (!mainKeyPrefix.empty() && pair.first.starts_with(mainKeyPrefix)) continue;
+
+        std::string meshName;
+        auto itName = m_meshNamesByKey.find(pair.first);
+        if (itName != m_meshNamesByKey.end()) {
             meshName = itName->second;
-        } else {
+        }
+        if (meshName.empty()) {
             meshName = "Unknown_" + pair.first;
         }
-        
         ofs << "Mesh (Global): '" << meshName << "' -> Textures: ";
         for (const auto& texName : pair.second) {
             ofs << "'" << texName << "' ";
@@ -203,8 +658,9 @@ void UnityPorter::WriteMeshTextureMap(const UnityAssetParser& parser,
 }
 
 void UnityPorter::DumpDiagnostics(const UnityAssetParser& parser,
-                            const ankerl::unordered_dense::map<int64_t, std::vector<std::string>>& meshToTextures,
-                            const std::string& outputDir) {
+                                  const ankerl::unordered_dense::map<int64_t, std::vector<std::string>>& meshToTextures,
+                                  int32_t mainKey,
+                                  const std::string& outputDir) {
     const char* envDebug = std::getenv("VORTIGAUNT_DEBUG");
     if (!envDebug || std::strcmp(envDebug, "1") != 0) {
         return;
@@ -219,8 +675,7 @@ void UnityPorter::DumpDiagnostics(const UnityAssetParser& parser,
     const auto& objects = parser.GetObjects();
     ofs << "Total Objects parsed: " << objects.size() << "\n\n";
 
-    // Map path ID to class ID for debugging
-    ankerl::unordered_dense::map<int64_t, int32_t> pathIdToClassId;
+    ankerl::unordered_dense::map<int64_t, const UnityObjectInfo*> objByPathId;
     ankerl::unordered_dense::map<int64_t, std::string> textureNames;
     std::vector<int64_t> meshes;
     std::vector<int64_t> gameObjects;
@@ -230,20 +685,20 @@ void UnityPorter::DumpDiagnostics(const UnityAssetParser& parser,
     std::vector<int64_t> skinnedMeshRenderers;
 
     for (const auto& obj : objects) {
-        pathIdToClassId[obj.pathId] = obj.classId;
-        if (obj.classId == 28) {
+        objByPathId[obj.pathId] = &obj;
+        if (obj.classId == UnityClass::Texture2D) {
             textureNames[obj.pathId] = obj.name;
-        } else if (obj.classId == 43) {
+        } else if (obj.classId == UnityClass::Mesh) {
             meshes.push_back(obj.pathId);
-        } else if (obj.classId == 1) {
+        } else if (obj.classId == UnityClass::GameObject) {
             gameObjects.push_back(obj.pathId);
-        } else if (obj.classId == 21) {
+        } else if (obj.classId == UnityClass::Material) {
             materials.push_back(obj.pathId);
-        } else if (obj.classId == 33) {
+        } else if (obj.classId == UnityClass::MeshFilter) {
             meshFilters.push_back(obj.pathId);
-        } else if (obj.classId == 23 || obj.classId == 25) {
+        } else if (obj.classId == UnityClass::MeshRenderer || obj.classId == UnityClass::Renderer) {
             meshRenderers.push_back(obj.pathId);
-        } else if (obj.classId == 137) {
+        } else if (obj.classId == UnityClass::SkinnedMeshRenderer) {
             skinnedMeshRenderers.push_back(obj.pathId);
         }
     }
@@ -260,38 +715,34 @@ void UnityPorter::DumpDiagnostics(const UnityAssetParser& parser,
     // Trace GameObject parsing
     ofs << "--- GameObject Components Parsing ---\n";
     for (int64_t goPathId : gameObjects) {
-        // Find GameObject object
-        for (const auto& obj : objects) {
-            if (obj.pathId == goPathId) {
-                UnityValue val = parser.DeserializeObject(obj);
-                ofs << "GO [" << goPathId << "] Name: '" << val.GetField("m_Name").AsString() << "'\n";
-                UnityValue m_Components = GetArrayField(val, "m_Component");
-                if (m_Components.type != UnityValue::ArrayVal) {
-                    m_Components = GetArrayField(val, "m_Components");
-                }
-                if (m_Components.type == UnityValue::ArrayVal) {
-                    ofs << "  m_Component count: " << m_Components.arrayVal.size() << "\n";
-                    for (const auto& compPtrVal : m_Components.arrayVal) {
-                        int64_t compPathId = 0;
-                        const auto& nestedComp = compPtrVal.GetField("component");
-                        if (!nestedComp.IsNull()) {
-                            compPathId = nestedComp.GetField("m_PathID").AsInt();
-                            ofs << "    Component (Nested): PathID " << compPathId << "\n";
-                        } else {
-                            compPathId = compPtrVal.GetField("m_PathID").AsInt();
-                            ofs << "    Component (Direct): PathID " << compPathId << "\n";
-                        }
-                    }
+        auto itObj = objByPathId.find(goPathId);
+        if (itObj == objByPathId.end()) continue;
+        UnityValue val = parser.DeserializeObject(*itObj->second);
+        ofs << "GO [" << goPathId << "] Name: '" << val.GetField("m_Name").AsString() << "'\n";
+        UnityValue m_Components = GetArrayField(val, "m_Component");
+        if (m_Components.type != UnityValue::ArrayVal) {
+            m_Components = GetArrayField(val, "m_Components");
+        }
+        if (m_Components.type == UnityValue::ArrayVal) {
+            ofs << "  m_Component count: " << m_Components.arrayVal.size() << "\n";
+            for (const auto& compPtrVal : m_Components.arrayVal) {
+                int64_t compPathId = 0;
+                const auto& nestedComp = compPtrVal.GetField("component");
+                if (!nestedComp.IsNull()) {
+                    compPathId = nestedComp.GetField("m_PathID").AsInt();
+                    ofs << "    Component (Nested): PathID " << compPathId << "\n";
                 } else {
-                    ofs << "  m_Component field is NOT ArrayVal! (Type: " << m_Components.type << ")\n";
-                    if (val.type == UnityValue::ObjectVal) {
-                        ofs << "    Available fields in GameObject:\n";
-                        for (const auto& pair : val.objectVal) {
-                            ofs << "      " << pair.first << " (Type: " << pair.second.type << ")\n";
-                        }
-                    }
+                    compPathId = compPtrVal.GetField("m_PathID").AsInt();
+                    ofs << "    Component (Direct): PathID " << compPathId << "\n";
                 }
-                break;
+            }
+        } else {
+            ofs << "  m_Component field is NOT ArrayVal! (Type: " << m_Components.type << ")\n";
+            if (val.type == UnityValue::ObjectVal) {
+                ofs << "    Available fields in GameObject:\n";
+                for (const auto& pair : val.objectVal) {
+                    ofs << "      " << pair.first << " (Type: " << pair.second.type << ")\n";
+                }
             }
         }
     }
@@ -300,76 +751,66 @@ void UnityPorter::DumpDiagnostics(const UnityAssetParser& parser,
     // Trace MeshFilters
     ofs << "--- MeshFilter Parsing ---\n";
     for (int64_t mfPathId : meshFilters) {
-        for (const auto& obj : objects) {
-            if (obj.pathId == mfPathId) {
-                UnityValue val = parser.DeserializeObject(obj);
-                ofs << "MeshFilter [" << mfPathId << "]: ";
-                DumpValue(ofs, "  ", val);
-                ofs << "\n";
-                break;
-            }
-        }
+        auto itObj = objByPathId.find(mfPathId);
+        if (itObj == objByPathId.end()) continue;
+        UnityValue val = parser.DeserializeObject(*itObj->second);
+        ofs << "MeshFilter [" << mfPathId << "]: ";
+        DumpValue(ofs, "  ", val);
+        ofs << "\n";
     }
     ofs << "\n";
 
     // Trace MeshRenderers
     ofs << "--- MeshRenderer Parsing ---\n";
     for (int64_t mrPathId : meshRenderers) {
-        for (const auto& obj : objects) {
-            if (obj.pathId == mrPathId) {
-                UnityValue val = parser.DeserializeObject(obj);
-                ofs << "MeshRenderer [" << mrPathId << "]: ";
-                DumpValue(ofs, "  ", val);
-                ofs << "\n";
-                break;
-            }
-        }
+        auto itObj = objByPathId.find(mrPathId);
+        if (itObj == objByPathId.end()) continue;
+        UnityValue val = parser.DeserializeObject(*itObj->second);
+        ofs << "MeshRenderer [" << mrPathId << "]: ";
+        DumpValue(ofs, "  ", val);
+        ofs << "\n";
     }
     ofs << "\n";
 
     // Trace SkinnedMeshRenderers
     ofs << "--- SkinnedMeshRenderer Parsing ---\n";
     for (int64_t smrPathId : skinnedMeshRenderers) {
-        for (const auto& obj : objects) {
-            if (obj.pathId == smrPathId) {
-                UnityValue val = parser.DeserializeObject(obj);
-                ofs << "SkinnedMeshRenderer [" << smrPathId << "]: ";
-                DumpValue(ofs, "  ", val);
-                ofs << "\n";
-                break;
-            }
-        }
+        auto itObj = objByPathId.find(smrPathId);
+        if (itObj == objByPathId.end()) continue;
+        UnityValue val = parser.DeserializeObject(*itObj->second);
+        ofs << "SkinnedMeshRenderer [" << smrPathId << "]: ";
+        DumpValue(ofs, "  ", val);
+        ofs << "\n";
     }
     ofs << "\n";
 
     // Trace Material parsing
     ofs << "--- Material Texture Environments Parsing ---\n";
     for (int64_t matPathId : materials) {
-        for (const auto& obj : objects) {
-            if (obj.pathId == matPathId) {
-                UnityValue val = parser.DeserializeObject(obj);
-                ofs << "Material [" << matPathId << "] Name: '" << val.GetField("m_Name").AsString() << "'\n";
-                
-                const auto& savedProp = val.GetField("m_SavedProperties");
-                ofs << "  m_SavedProperties Type: " << savedProp.type << "\n";
-                if (savedProp.type == UnityValue::ObjectVal) {
-                    UnityValue texEnvs = GetArrayField(savedProp, "m_TexEnvs");
-                    if (texEnvs.type == UnityValue::ArrayVal) {
-                        ofs << "  m_TexEnvs count: " << texEnvs.arrayVal.size() << "\n";
-                        for (const auto& kvPair : texEnvs.arrayVal) {
-                            const auto& envVal = kvPair.GetField("second");
-                            int64_t texPathId = envVal.GetField("m_Texture").GetField("m_PathID").AsInt();
-                            ofs << "    Texture PathID: " << texPathId << " Name: '" << textureNames[texPathId] << "'\n";
-                        }
-                    } else {
-                        ofs << "  m_TexEnvs is NOT ArrayVal! (Type: " << texEnvs.type << ")\n";
-                        ofs << "    Available fields under m_SavedProperties:\n";
-                        for (const auto& pair : savedProp.objectVal) {
-                            ofs << "      " << pair.first << " (Type: " << pair.second.type << ")\n";
-                        }
-                    }
+        auto itObj = objByPathId.find(matPathId);
+        if (itObj == objByPathId.end()) continue;
+        UnityValue val = parser.DeserializeObject(*itObj->second);
+        ofs << "Material [" << matPathId << "] Name: '" << val.GetField("m_Name").AsString() << "'\n";
+
+        const auto& savedProp = val.GetField("m_SavedProperties");
+        ofs << "  m_SavedProperties Type: " << savedProp.type << "\n";
+        if (savedProp.type == UnityValue::ObjectVal) {
+            UnityValue texEnvs = GetArrayField(savedProp, "m_TexEnvs");
+            if (texEnvs.type == UnityValue::ArrayVal) {
+                ofs << "  m_TexEnvs count: " << texEnvs.arrayVal.size() << "\n";
+                for (const auto& kvPair : texEnvs.arrayVal) {
+                    const auto& texPtr = kvPair.GetField("second").GetField("m_Texture");
+                    int64_t texPathId = texPtr.GetField("m_PathID").AsInt();
+                    auto itTexName = textureNames.find(texPathId);
+                    ofs << "    Texture PathID: " << texPathId << " Name: '"
+                        << (itTexName != textureNames.end() ? itTexName->second : std::string()) << "'\n";
                 }
-                break;
+            } else {
+                ofs << "  m_TexEnvs is NOT ArrayVal! (Type: " << texEnvs.type << ")\n";
+                ofs << "    Available fields under m_SavedProperties:\n";
+                for (const auto& pair : savedProp.objectVal) {
+                    ofs << "      " << pair.first << " (Type: " << pair.second.type << ")\n";
+                }
             }
         }
     }
@@ -378,49 +819,37 @@ void UnityPorter::DumpDiagnostics(const UnityAssetParser& parser,
     // Trace parsed Meshes
     ofs << "--- Parsed Meshes ---\n";
     for (int64_t meshPathId : meshes) {
-        std::string meshName = "Unknown";
-        for (const auto& obj : objects) {
-            if (obj.pathId == meshPathId) {
-                meshName = obj.name;
-                break;
-            }
-        }
+        auto itObj = objByPathId.find(meshPathId);
+        std::string meshName = (itObj != objByPathId.end() && !itObj->second->name.empty())
+            ? itObj->second->name : std::string("Unknown");
         ofs << "Mesh [" << meshPathId << "] Name: '" << meshName << "'\n";
     }
     ofs << "\n";
 
-    // Trace final resolved mapping (both local and global)
+    // Trace final resolved mapping (both local and accumulated)
     ofs << "--- Final Resolved Mesh to Textures Mapping (Local & Global) ---\n";
-    ankerl::unordered_dense::set<int64_t> outputtedMeshes;
     for (const auto& pair : meshToTextures) {
-        std::string meshName = "Unknown";
-        for (const auto& obj : objects) {
-            if (obj.pathId == pair.first) {
-                meshName = obj.name;
-                break;
-            }
-        }
+        auto itObj = objByPathId.find(pair.first);
+        std::string meshName = (itObj != objByPathId.end() && !itObj->second->name.empty())
+            ? itObj->second->name : std::string("Unknown");
         ofs << "Mesh [" << pair.first << "] Name: '" << meshName << "' -> Textures: ";
         for (const auto& texName : pair.second) {
             ofs << "'" << texName << "' ";
         }
         ofs << "\n";
-        outputtedMeshes.insert(pair.first);
     }
-    for (const auto& pair : m_meshToTextures) {
-        size_t underscore = pair.first.find_last_of('_');
-        if (underscore == std::string::npos) continue;
-        int64_t pathId = std::stoll(pair.first.substr(underscore + 1));
-        if (outputtedMeshes.count(pathId)) continue;
-        
+    std::string mainKeyPrefix;
+    if (mainKey >= 0 && mainKey < static_cast<int32_t>(m_summaries.size())) {
+        mainKeyPrefix = ToLowerCopy(m_summaries[mainKey].absPath) + "|";
+    }
+    for (const auto& pair : m_meshTextures) {
+        if (!mainKeyPrefix.empty() && pair.first.starts_with(mainKeyPrefix)) continue;
         std::string meshName = "Unknown";
-        for (const auto& obj : objects) {
-            if (obj.pathId == pathId) {
-                meshName = obj.name;
-                break;
-            }
+        auto itName = m_meshNamesByKey.find(pair.first);
+        if (itName != m_meshNamesByKey.end() && !itName->second.empty()) {
+            meshName = itName->second;
         }
-        ofs << "Mesh [" << pathId << "] Name: '" << meshName << "' (Global) -> Textures: ";
+        ofs << "Mesh [" << pair.first << "] Name: '" << meshName << "' (Global) -> Textures: ";
         for (const auto& texName : pair.second) {
             ofs << "'" << texName << "' ";
         }
@@ -429,460 +858,6 @@ void UnityPorter::DumpDiagnostics(const UnityAssetParser& parser,
     ofs << "\n";
     ofs.close();
 }
-
-static bool HasValuableTextures(const std::vector<std::string>& texs) {
-    for (const auto& t : texs) {
-        if (!t.empty()) return true;
-    }
-    return false;
-}
-
-ankerl::unordered_dense::map<int64_t, std::vector<std::string>> UnityPorter::BuildDependencyMap(
-    const UnityAssetParser& parser,
-    const std::string& assetPath,
-    const std::vector<std::string>& companionFiles) {
-
-    ankerl::unordered_dense::map<int64_t, std::vector<std::string>> meshToTexturesMap;
-
-    const auto& objects = parser.GetObjects();
-
-    // Map from PathID to classId (local to current file)
-    ankerl::unordered_dense::map<int64_t, int32_t> pathIdToClassId;
-    // Map from PathID to Texture Name (local to current file)
-    ankerl::unordered_dense::map<int64_t, std::string> textureNames;
-    ankerl::unordered_dense::set<int64_t> meshes;
-
-    for (const auto& obj : objects) {
-        pathIdToClassId[obj.pathId] = obj.classId;
-        if (obj.classId == 28) {
-            textureNames[obj.pathId] = obj.name;
-            if (!obj.name.empty()) {
-                m_textureNames[MakeGlobalKey(assetPath, obj.pathId)] = obj.name;
-            }
-        } else if (obj.classId == 43) {
-            meshes.insert(obj.pathId);
-        }
-    }
-
-    // Reference structures
-    ankerl::unordered_dense::map<int64_t, int64_t> meshToFilterOrSMR;
-    ankerl::unordered_dense::map<int64_t, int64_t> compToGo;
-    ankerl::unordered_dense::map<int64_t, std::vector<int64_t>> goToGoComps;
-    ankerl::unordered_dense::map<int64_t, std::vector<int64_t>> rendToMats;
-    ankerl::unordered_dense::map<int64_t, std::vector<int64_t>> matToTexs;
-
-    for (const auto& obj : objects) {
-        if (obj.classId == 1) { // GameObject
-            UnityValue val = parser.DeserializeObject(obj);
-            if (val.type != UnityValue::ObjectVal) continue;
-            
-            UnityValue m_Components = GetArrayField(val, "m_Component");
-            if (m_Components.type != UnityValue::ArrayVal) {
-                m_Components = GetArrayField(val, "m_Components");
-            }
-            if (m_Components.type == UnityValue::ArrayVal) {
-                for (const auto& compPtrVal : m_Components.arrayVal) {
-                    int64_t compPathId = 0;
-                    const auto& nestedComp = compPtrVal.GetField("component");
-                    if (!nestedComp.IsNull()) {
-                        compPathId = nestedComp.GetField("m_PathID").AsInt();
-                    } else {
-                        compPathId = compPtrVal.GetField("m_PathID").AsInt();
-                    }
-                    
-                    if (compPathId != 0) {
-                        auto itClass = pathIdToClassId.find(compPathId);
-                        if (itClass != pathIdToClassId.end()) {
-                            int32_t targetClass = itClass->second;
-                            if (targetClass == 33 || targetClass == 23 || targetClass == 25 || targetClass == 137) {
-                                auto& comps = goToGoComps[obj.pathId];
-                                if (std::find(comps.begin(), comps.end(), compPathId) == comps.end()) {
-                                    comps.push_back(compPathId);
-                                }
-                                compToGo[compPathId] = obj.pathId;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else if (obj.classId == 33) { // MeshFilter
-            UnityValue val = parser.DeserializeObject(obj);
-            if (val.type != UnityValue::ObjectVal) continue;
-            
-            int64_t goPathId = val.GetField("m_GameObject").GetField("m_PathID").AsInt();
-            int64_t meshPathId = val.GetField("m_Mesh").GetField("m_PathID").AsInt();
-            
-            if (meshPathId != 0) {
-                meshToFilterOrSMR[meshPathId] = obj.pathId;
-            }
-            if (goPathId != 0) {
-                compToGo[obj.pathId] = goPathId;
-                auto& comps = goToGoComps[goPathId];
-                if (std::find(comps.begin(), comps.end(), obj.pathId) == comps.end()) {
-                    comps.push_back(obj.pathId);
-                }
-            }
-        }
-        else if (obj.classId == 23 || obj.classId == 25) { // MeshRenderer
-            UnityValue val = parser.DeserializeObject(obj);
-            if (val.type != UnityValue::ObjectVal) continue;
-            
-            int64_t goPathId = val.GetField("m_GameObject").GetField("m_PathID").AsInt();
-            UnityValue materialsArray = GetArrayField(val, "m_Materials");
-            if (materialsArray.type == UnityValue::ArrayVal) {
-                for (const auto& matPtrVal : materialsArray.arrayVal) {
-                    int64_t matPathId = matPtrVal.GetField("m_PathID").AsInt();
-                    if (matPathId != 0) {
-                        auto& mats = rendToMats[obj.pathId];
-                        if (std::find(mats.begin(), mats.end(), matPathId) == mats.end()) {
-                            mats.push_back(matPathId);
-                        }
-                    }
-                }
-            }
-            if (goPathId != 0) {
-                compToGo[obj.pathId] = goPathId;
-                auto& comps = goToGoComps[goPathId];
-                if (std::find(comps.begin(), comps.end(), obj.pathId) == comps.end()) {
-                    comps.push_back(obj.pathId);
-                }
-            }
-        }
-        else if (obj.classId == 137) { // SkinnedMeshRenderer
-            UnityValue val = parser.DeserializeObject(obj);
-            if (val.type != UnityValue::ObjectVal) continue;
-            
-            int64_t goPathId = val.GetField("m_GameObject").GetField("m_PathID").AsInt();
-            int64_t meshPathId = val.GetField("m_Mesh").GetField("m_PathID").AsInt();
-            UnityValue materialsArray = GetArrayField(val, "m_Materials");
-            
-            if (meshPathId != 0) {
-                meshToFilterOrSMR[meshPathId] = obj.pathId;
-            }
-            if (materialsArray.type == UnityValue::ArrayVal) {
-                for (const auto& matPtrVal : materialsArray.arrayVal) {
-                    int64_t matPathId = matPtrVal.GetField("m_PathID").AsInt();
-                    if (matPathId != 0) {
-                        auto& mats = rendToMats[obj.pathId];
-                        if (std::find(mats.begin(), mats.end(), matPathId) == mats.end()) {
-                            mats.push_back(matPathId);
-                        }
-                    }
-                }
-            }
-            if (goPathId != 0) {
-                compToGo[obj.pathId] = goPathId;
-                auto& comps = goToGoComps[goPathId];
-                if (std::find(comps.begin(), comps.end(), obj.pathId) == comps.end()) {
-                    comps.push_back(obj.pathId);
-                }
-            }
-        }
-        else if (obj.classId == 21) { // Material
-            UnityValue val = parser.DeserializeObject(obj);
-            if (val.type != UnityValue::ObjectVal) continue;
-            
-            UnityValue texEnvs = GetArrayField(val.GetField("m_SavedProperties"), "m_TexEnvs");
-            if (texEnvs.type == UnityValue::ArrayVal) {
-                for (const auto& kvPair : texEnvs.arrayVal) {
-                    const auto& envVal = kvPair.GetField("second");
-                    int64_t texPathId = envVal.GetField("m_Texture").GetField("m_PathID").AsInt();
-                    if (texPathId != 0) {
-                        auto& texs = matToTexs[obj.pathId];
-                        if (std::find(texs.begin(), texs.end(), texPathId) == texs.end()) {
-                            texs.push_back(texPathId);
-                        }
-                        
-                        std::string texName = "";
-                        auto itName = textureNames.find(texPathId);
-                        if (itName != textureNames.end()) {
-                            texName = itName->second;
-                        } else {
-                            std::string suffix = "_" + std::to_string(texPathId);
-                            for (const auto& pair : m_textureNames) {
-                                if (pair.first.size() >= suffix.size() &&
-                                    pair.first.compare(pair.first.size() - suffix.size(), suffix.size(), suffix) == 0) {
-                                    texName = pair.second;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!texName.empty()) {
-                            std::string matKey = MakeGlobalKey(assetPath, obj.pathId);
-                            auto& globalTexs = m_matToTexs[matKey];
-                            if (std::find(globalTexs.begin(), globalTexs.end(), texName) == globalTexs.end()) {
-                                globalTexs.push_back(texName);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Map each Mesh (both local and external referenced) to Texture names
-    ankerl::unordered_dense::set<int64_t> processedMeshes;
-    for (const auto& pair : meshToFilterOrSMR) {
-        int64_t meshPathId = pair.first;
-        processedMeshes.insert(meshPathId);
-        std::vector<std::string> texturesForThisMesh;
-
-        int64_t compPathId = pair.second;
-        auto itClass = pathIdToClassId.find(compPathId);
-        if (itClass != pathIdToClassId.end()) {
-            int32_t compClass = itClass->second;
-            std::vector<int64_t> mats;
-
-            if (compClass == 137) { // SkinnedMeshRenderer
-                auto itMats = rendToMats.find(compPathId);
-                if (itMats != rendToMats.end()) {
-                    mats = itMats->second;
-                }
-            }
-            else if (compClass == 33) { // MeshFilter
-                auto itGo = compToGo.find(compPathId);
-                if (itGo != compToGo.end()) {
-                    int64_t goPathId = itGo->second;
-                    auto itComps = goToGoComps.find(goPathId);
-                    if (itComps != goToGoComps.end()) {
-                        for (int64_t siblingCompPathId : itComps->second) {
-                            auto itSibClass = pathIdToClassId.find(siblingCompPathId);
-                            if (itSibClass != pathIdToClassId.end()) {
-                                int32_t sibClass = itSibClass->second;
-                                if (sibClass == 23 || sibClass == 25) { // MeshRenderer
-                                    auto itMats = rendToMats.find(siblingCompPathId);
-                                    if (itMats != rendToMats.end()) {
-                                        mats = itMats->second;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Map each material slot sequentially to its primary Albedo texture
-            for (int64_t matPathId : mats) {
-                std::vector<std::string> matTexNames;
-                bool foundLocal = false;
-                auto itTexs = matToTexs.find(matPathId);
-                if (itTexs != matToTexs.end() && !itTexs->second.empty()) {
-                    foundLocal = true;
-                    for (int64_t texPathId : itTexs->second) {
-                        std::string texName = "";
-                        auto itName = textureNames.find(texPathId);
-                        if (itName != textureNames.end() && !itName->second.empty()) {
-                            texName = itName->second;
-                        } else {
-                            std::string suffix = "_" + std::to_string(texPathId);
-                            for (const auto& pair : m_textureNames) {
-                                if (pair.first.size() >= suffix.size() &&
-                                    pair.first.compare(pair.first.size() - suffix.size(), suffix.size(), suffix) == 0) {
-                                    texName = pair.second;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!texName.empty() && !IsUiTexture(texName)) {
-                            matTexNames.push_back(texName);
-                        }
-                    }
-                }
-                if (!foundLocal) {
-                    std::string suffix = "_" + std::to_string(matPathId);
-                    for (const auto& gp : m_matToTexs) {
-                        if (gp.first.size() >= suffix.size() &&
-                            gp.first.compare(gp.first.size() - suffix.size(), suffix.size(), suffix) == 0) {
-                            for (const auto& texName : gp.second) {
-                                if (!texName.empty() && !IsUiTexture(texName)) {
-                                    matTexNames.push_back(texName);
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                std::string selectedAlbedo = SelectAlbedoTexture(matTexNames);
-                texturesForThisMesh.push_back(selectedAlbedo);
-            }
-        }
-
-        std::string globalKey = FindMeshGlobalKey(meshPathId, assetPath);
-        bool shouldStore = true;
-        auto itExisting = m_meshToTextures.find(globalKey);
-        if (itExisting != m_meshToTextures.end()) {
-            if (HasValuableTextures(itExisting->second) && !HasValuableTextures(texturesForThisMesh)) {
-                shouldStore = false;
-            }
-        }
-        
-        if (shouldStore && !texturesForThisMesh.empty()) {
-            meshToTexturesMap[meshPathId] = texturesForThisMesh;
-            m_meshToTextures[globalKey] = texturesForThisMesh;
-        }
-    }
-
-    // Enrich local mappings with global ones if the local ones are empty or non-existent
-    for (int64_t meshPathId : meshes) {
-        bool needsEnrichment = true;
-        auto itLocal = meshToTexturesMap.find(meshPathId);
-        if (itLocal != meshToTexturesMap.end() && HasValuableTextures(itLocal->second)) {
-            needsEnrichment = false;
-        }
-        
-        if (needsEnrichment) {
-            std::string globalKey = FindMeshGlobalKey(meshPathId, assetPath);
-            auto itGlobal = m_meshToTextures.find(globalKey);
-            if (itGlobal != m_meshToTextures.end() && HasValuableTextures(itGlobal->second)) {
-                meshToTexturesMap[meshPathId] = itGlobal->second;
-            }
-        }
-    }
-
-    return meshToTexturesMap;
-}
-
-static bool AreSiblingAssetsRelated(const std::string& inputPath, const std::string& siblingPath) {
-    std::filesystem::path pIn(inputPath);
-    std::filesystem::path pSib(siblingPath);
-    std::string nameIn = pIn.stem().string();
-    std::string nameSib = pSib.stem().string();
-    
-    std::transform(nameIn.begin(), nameIn.end(), nameIn.begin(), ::tolower);
-    std::transform(nameSib.begin(), nameSib.end(), nameSib.begin(), ::tolower);
-    
-    // globalgamemanagers and boot.config never have mesh/texture relation to levels
-    if (nameIn.find("globalgamemanagers") != std::string::npos || nameIn.find("boot.config") != std::string::npos) {
-        return false;
-    }
-    
-    // resources is always a shared asset file that can be related
-    if (nameSib.find("resources") != std::string::npos || nameSib.find("globalgamemanagers") != std::string::npos) {
-        return true;
-    }
-    
-    // Extract number suffix from both names
-    auto extractNum = [](const std::string& s) -> std::string {
-        std::string num;
-        for (char c : s) {
-            if (std::isdigit(static_cast<unsigned char>(c))) {
-                num.push_back(c);
-            }
-        }
-        return num;
-    };
-    
-    std::string numIn = extractNum(nameIn);
-    std::string numSib = extractNum(nameSib);
-    
-    // If both have numbers and they don't match, they are completely unrelated!
-    if (!numIn.empty() && !numSib.empty() && numIn != numSib) {
-        return false;
-    }
-    
-    return true;
-}
-
-static bool IsSerializedAssetFile(const std::string& filepath) {
-    std::filesystem::path p(filepath);
-    std::string ext = p.extension().string();
-    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-    
-    // Only allow real Unity serialized asset extensions or extensionless level/resources files
-    if (ext != ".assets" && ext != ".sharedassets" && ext != ".globalgamemanagers" && !ext.empty()) {
-        return false;
-    }
-
-    std::ifstream f(filepath, std::ios::binary);
-    if (!f) return false;
-    char header[16];
-    f.read(header, 16);
-    if (f.gcount() < 16) return false;
-    
-    // Read bytes 8-11 as big-endian uint32 (formatVersion)
-    std::uint32_t version = Utils::ReadBE32(reinterpret_cast<const std::uint8_t*>(header + 8));
-    return (version >= 9);
-}
-
-static bool IsKeyClass(int32_t classId) {
-    return classId == 1 ||   // GameObject
-           classId == 21 ||  // Material
-           classId == 23 ||  // MeshRenderer
-           classId == 25 ||  // Renderer
-           classId == 28 ||  // Texture2D
-           classId == 33 ||  // MeshFilter
-           classId == 43 ||  // Mesh
-           classId == 137 || // SkinnedMeshRenderer
-           classId == 74;    // AnimationClip
-}
-
-void UnityPorter::PreParseAssetMetadata(const std::string& assetPathStr) {
-    std::string assetPath = NormalizePath(assetPathStr);
-    std::string lowerPath = assetPath;
-    std::transform(lowerPath.begin(), lowerPath.end(), lowerPath.begin(), ::tolower);
-    if (lowerPath.find("globalgamemanagers") != std::string::npos) {
-        return;
-    }
-
-    std::string doneKey = assetPath + "_preparsed";
-    if (m_preParsedFiles.count(doneKey)) return;
-    m_preParsedFiles.insert(doneKey);
-
-    UnityAssetParser parser;
-    try {
-        if (parser.LoadFromFile(assetPath)) {
-            const auto& objects = parser.GetObjects();
-            for (const auto& obj : objects) {
-                if (IsKeyClass(obj.classId)) {
-                    std::string key = MakeGlobalKey(assetPath, obj.pathId);
-                    m_pathIdToClassId[key] = obj.classId;
-                    m_pathIdToClassIdInt[obj.pathId] = obj.classId;
-                    if (obj.classId == 28 && !obj.name.empty()) {
-                        m_textureNames[key] = obj.name;
-                    }
-                    if (obj.classId == 43 && !obj.name.empty()) {
-                        m_meshNames[key] = obj.name;
-                    }
-                    if (obj.classId == 21) { // Material
-                        // Gecikmeli çözümleme (Lazy Resolution): Ham PathID'leri topla
-                        UnityValue val = parser.DeserializeObject(obj);
-                        if (val.type == UnityValue::ObjectVal) {
-                            UnityValue texEnvs = GetArrayField(val.GetField("m_SavedProperties"), "m_TexEnvs");
-                            if (texEnvs.type == UnityValue::ArrayVal) {
-                                std::string matKey = MakeGlobalKey(assetPath, obj.pathId);
-                                auto& pathIds = m_matToTexPathIds[matKey];
-                                for (const auto& kvPair : texEnvs.arrayVal) {
-                                    const auto& envVal = kvPair.GetField("second");
-                                    int64_t texPathId = envVal.GetField("m_Texture").GetField("m_PathID").AsInt();
-                                    if (texPathId != 0) {
-                                        if (std::find(pathIds.begin(), pathIds.end(), texPathId) == pathIds.end()) {
-                                            pathIds.push_back(texPathId);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } catch (...) {}
-}
-
-std::string UnityPorter::FindMeshGlobalKey(int64_t meshPathId, const std::string& currentAssetPath) {
-    std::string suffix = "_" + std::to_string(meshPathId);
-    for (const auto& pair : m_meshNames) {
-        if (pair.first.size() >= suffix.size() &&
-            pair.first.compare(pair.first.size() - suffix.size(), suffix.size(), suffix) == 0) {
-            return pair.first;
-        }
-    }
-    return MakeGlobalKey(currentAssetPath, meshPathId);
-}
-
 
 void UnityPorter::ProcessBundle(const std::string& bundlePath, const std::string& outputDir)
 {
@@ -894,8 +869,12 @@ void UnityPorter::ProcessBundle(const std::string& bundlePath, const std::string
         return;
     }
 
-    // Create a temporary extraction directory inside the output folder
-    std::filesystem::path tempDir = std::filesystem::path(outputDir) / "unity_extracted";
+    // Create a per-bundle temporary extraction directory inside the output folder.
+    // The name must be unique within one Process() run: reusing a single path
+    // would let m_summaryKeyByPath return an earlier bundle's cached summary for
+    // a same-named file extracted from a later bundle at the same absolute path.
+    std::filesystem::path tempDir = std::filesystem::path(outputDir) /
+        ("unity_extracted_" + std::to_string(m_bundleExtractCounter++));
     std::error_code ec;
     std::filesystem::create_directories(tempDir, ec);
     if (ec)
@@ -908,6 +887,7 @@ void UnityPorter::ProcessBundle(const std::string& bundlePath, const std::string
     if (!extractor.ExtractAll(tempDir.string()))
     {
         VortigauntLog::LogF("ERROR: UnityFS extraction failed for %s\n", bundlePath.c_str());
+        std::filesystem::remove_all(tempDir, ec);
         return;
     }
 
@@ -916,8 +896,7 @@ void UnityPorter::ProcessBundle(const std::string& bundlePath, const std::string
     {
         if (!entry.is_regular_file())
             continue;
-        std::string ext = entry.path().extension().string();
-        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        std::string ext = ToLowerCopy(entry.path().extension().string());
         if (ext == ".assets" || IsSerializedAssetFile(entry.path().string()))
         {
             ProcessAssetFile(entry.path().string(), outputDir);
@@ -935,16 +914,8 @@ void UnityPorter::Process(const std::string& inputPathStr, const std::string& ou
     std::string inputPath = NormalizePath(inputPathStr);
     std::string outputDir = NormalizePath(outputDirStr);
     VortigauntLog::LogF("UnityPorter::Process starting: inputPath = %s, outputDir = %s\n", inputPath.c_str(), outputDir.c_str());
-    
-    // Clear member registries
-    m_meshToTextures.clear();
-    m_textureNames.clear();
-    m_meshNames.clear();
-    m_pathIdToClassId.clear();
-    m_pathIdToClassIdInt.clear();
-    m_matToTexs.clear();
-    m_matToTexPathIds.clear();
-    m_preParsedFiles.clear();
+
+    ClearRegistries();
 
     if (std::filesystem::is_directory(inputPath))
     {
@@ -955,8 +926,7 @@ void UnityPorter::Process(const std::string& inputPathStr, const std::string& ou
             if (!entry.is_regular_file())
                 continue;
             std::string compPath = NormalizePath(entry.path().string());
-            std::string ext = entry.path().extension().string();
-            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            std::string ext = ToLowerCopy(entry.path().extension().string());
             if (ext == ".unity3d" || ext == ".bundle")
             {
                 VortigauntLog::LogF("Processing bundle: %s\n", compPath.c_str());
@@ -972,10 +942,9 @@ void UnityPorter::Process(const std::string& inputPathStr, const std::string& ou
     else
     {
         std::filesystem::path p(inputPath);
-        std::string ext = p.extension().string();
-        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        std::string ext = ToLowerCopy(p.extension().string());
         VortigauntLog::LogF("UnityPorter::Process file: extension = %s\n", ext.c_str());
-        
+
         if (ext == ".assets" || IsSerializedAssetFile(inputPath))
         {
             ProcessAssetFile(inputPath, outputDir);
@@ -986,15 +955,8 @@ void UnityPorter::Process(const std::string& inputPathStr, const std::string& ou
         }
     }
 
-    // Clear member registries at the end to free memory
-    m_meshToTextures.clear();
-    m_textureNames.clear();
-    m_meshNames.clear();
-    m_pathIdToClassId.clear();
-    m_pathIdToClassIdInt.clear();
-    m_matToTexs.clear();
-    m_matToTexPathIds.clear();
-    m_preParsedFiles.clear();
+    // Free accumulated summaries and mappings
+    ClearRegistries();
 }
 
 void UnityPorter::ProcessAssetFile(const std::string& assetPathStr, const std::string& outputDirStr)
@@ -1002,100 +964,46 @@ void UnityPorter::ProcessAssetFile(const std::string& assetPathStr, const std::s
     std::string assetPath = NormalizePath(assetPathStr);
     std::string outputDir = NormalizePath(outputDirStr);
     VortigauntLog::LogF("UnityPorter::ProcessAssetFile started: %s\n", assetPath.c_str());
-    
-    // Direct top-level call memory safety & state isolation
-    bool isTopLevelCall = m_preParsedFiles.empty();
-    if (isTopLevelCall) {
-        m_meshToTextures.clear();
-        m_textureNames.clear();
-        m_meshNames.clear();
-        m_pathIdToClassId.clear();
-        m_pathIdToClassIdInt.clear();
-        m_matToTexs.clear();
-        m_matToTexPathIds.clear();
-        m_preParsedFiles.clear();
+
+    // Prevent attempting to parse huge globalgamemanagers assets which can cause memory blow-up
+    if (ToLowerCopy(assetPath).find("globalgamemanagers") != std::string::npos) {
+        VortigauntLog::LogF("WARNING: Skipping parsing of globalgamemanagers asset to avoid excessive memory usage.\n");
+        return;
     }
-    
+
+    // Summarize this file and everything reachable through its externals table
+    int32_t mainKey = SummarizeFile(assetPath);
+    VortigauntLog::LogF("Summarized %zu asset file(s) for cross-file reference resolution.\n", m_summaries.size());
+
     std::filesystem::path p(assetPath);
     std::filesystem::path assetDir = p.parent_path();
     std::vector<std::string> dataExtensions = {".data", ".resource", ".resS", ".sharedassets", ".globalgamemanagers"};
     std::vector<std::string> allFiles = { assetPath };
-    
+
     // Scan directory for companion files
     if (std::filesystem::exists(assetDir) && std::filesystem::is_directory(assetDir)) {
         for (const auto& compEntry : std::filesystem::directory_iterator(assetDir)) {
             if (!compEntry.is_regular_file()) continue;
             std::string compPath = NormalizePath(compEntry.path().string());
-            std::string compExt = compEntry.path().extension().string();
-            std::transform(compExt.begin(), compExt.end(), compExt.begin(), ::tolower);
+            std::string compExt = ToLowerCopy(compEntry.path().extension().string());
             if (std::find(dataExtensions.begin(), dataExtensions.end(), compExt) != dataExtensions.end()) {
                 allFiles.push_back(compPath);
             }
         }
     }
 
-    // Determine companion files for pre-parsing (only related files)
-    std::vector<std::string> assetsToPreParse = { assetPath };
-    if (std::filesystem::exists(assetDir) && std::filesystem::is_directory(assetDir)) {
-        for (const auto& entry : std::filesystem::directory_iterator(assetDir)) {
-            if (!entry.is_regular_file()) continue;
-            std::string compPath = NormalizePath(entry.path().string());
-            if (compPath != assetPath && IsSerializedAssetFile(compPath)) {
-                // Pre-parse all companion files to guarantee absolute cross-file reference resolution
-                assetsToPreParse.push_back(compPath);
-            }
-        }
-    }
-
-    VortigauntLog::LogF("Pre-parsing %zu companion files for %s...\n", assetsToPreParse.size(), p.filename().string().c_str());
-
-    // Single-pass: Gather PathIDs, ClassIDs, and Material raw PathIDs globally
-    for (const auto& assetFile : assetsToPreParse) {
-        PreParseAssetMetadata(assetFile);
-    }
-
-    // Gecikmeli Çözümleme (Lazy Resolution): Tüm ham Material-to-Texture PathID'lerini isimlere çöz
-    for (const auto& [matKey, pathIds] : m_matToTexPathIds) {
-        auto& texNames = m_matToTexs[matKey];
-        for (int64_t texPathId : pathIds) {
-            std::string texName = "";
-            std::string suffix = "_" + std::to_string(texPathId);
-            for (const auto& pair : m_textureNames) {
-                if (pair.first.size() >= suffix.size() &&
-                    pair.first.compare(pair.first.size() - suffix.size(), suffix.size(), suffix) == 0) {
-                    texName = pair.second;
-                    break;
-                }
-            }
-            if (!texName.empty()) {
-                if (std::find(texNames.begin(), texNames.end(), texName) == texNames.end()) {
-                    texNames.push_back(texName);
-                }
-            }
-        }
-    }
-
     VortigauntLog::LogF("Files to load: %zu. Base directory: %s\n", allFiles.size(), assetDir.string().c_str());
 
-    // Prevent attempting to parse huge globalgamemanagers assets which can cause memory blow‑up
-    std::string lowerPath = assetPath;
-    std::transform(lowerPath.begin(), lowerPath.end(), lowerPath.begin(), ::tolower);
-    if (lowerPath.find("globalgamemanagers") != std::string::npos) {
-        VortigauntLog::LogF("WARNING: Skipping parsing of globalgamemanagers asset to avoid excessive memory usage.\n");
-        return;
-    }
-
-    ankerl::unordered_dense::map<int64_t, std::string> dummyTextureMap;
-
     UnityDataResolver dataResolver;
-    UnityAssetParser parser;
-    parser.SetPathIdToClassMap(&m_pathIdToClassIdInt);
-    parser.SetTextureNamesMap(&dummyTextureMap);
     // Load companion data files into resolver
     dataResolver.LoadDirectory(assetDir.string(), {".data", ".resource", ".resS", ".sharedassets", ".globalgamemanagers", ""});
-    // Provide resolver to parser
+
+    UnityAssetParser parser;
     parser.SetDataResolver(&dataResolver);
-    
+    parser.SetPPtrClassResolver([this, mainKey](int32_t fileID, int64_t pathID) -> int32_t {
+        return LookupClassId(mainKey, fileID, pathID);
+    });
+
     // Ensure output directory exists
     std::error_code ec;
     std::filesystem::create_directories(outputDir, ec);
@@ -1103,15 +1011,15 @@ void UnityPorter::ProcessAssetFile(const std::string& assetPathStr, const std::s
         VortigauntLog::LogF("ERROR: Could not create output directory %s: %s\n", outputDir.c_str(), ec.message().c_str());
         return;
     }
-    // Load asset files with exception safety
+    // Load asset file with exception safety
     try {
-        VortigauntLog::LogF("Calling parser.LoadFromMultipleFiles...\n");
-        if (!parser.LoadFromMultipleFiles(allFiles)) {
+        VortigauntLog::LogF("Calling parser.LoadFromFile...\n");
+        if (!parser.LoadFromFile(assetPath)) {
             VortigauntLog::LogF("ERROR: Failed to load Unity asset file %s\n", assetPath.c_str());
             return;
         }
     } catch (const std::exception& e) {
-        VortigauntLog::LogF("EXCEPTION: LoadFromMultipleFiles threw for %s: %s\n", assetPath.c_str(), e.what());
+        VortigauntLog::LogF("EXCEPTION: LoadFromFile threw for %s: %s\n", assetPath.c_str(), e.what());
         return;
     }
     // Extraction mode: copy original asset and companion files to output directory
@@ -1129,21 +1037,22 @@ void UnityPorter::ProcessAssetFile(const std::string& assetPathStr, const std::s
     }
 
     // Build dependency mapping
-    auto meshToTextures = BuildDependencyMap(parser, assetPath, allFiles);
-    DumpDiagnostics(parser, meshToTextures, outputDir);
-    WriteMeshTextureMap(parser, meshToTextures, outputDir);
+    auto meshToTextures = BuildDependencyMap(parser, mainKey);
+    DumpDiagnostics(parser, meshToTextures, mainKey, outputDir);
+    WriteMeshTextureMap(parser, meshToTextures, mainKey, outputDir);
 
-    // Convert assets (Mesh, Texture2D, AnimationClip)
-    const auto& objects = parser.GetObjects();
-    for (const auto& objInfo : objects)
+    // Convert assets (Mesh, Texture2D); AnimationClip conversion is not supported
+    for (const auto& objInfo : parser.GetObjects())
     {
-        if (objInfo.classId == 43) // Mesh
+        if (objInfo.classId == UnityClass::Mesh)
         {
             VortigauntLog::LogF("Detected Mesh object (PathID %lld)\n", static_cast<long long>(objInfo.pathId));
             std::vector<std::string> textures;
-            std::string meshKey = MakeGlobalKey(assetPath, objInfo.pathId);
-            auto itGlobal = m_meshToTextures.find(meshKey);
-            if (itGlobal != m_meshToTextures.end()) {
+            ObjectRef meshRef;
+            meshRef.fileKey = mainKey;
+            meshRef.pathId = objInfo.pathId;
+            auto itGlobal = m_meshTextures.find(MeshKey(meshRef));
+            if (itGlobal != m_meshTextures.end()) {
                 textures = itGlobal->second;
             } else {
                 auto it = meshToTextures.find(objInfo.pathId);
@@ -1151,23 +1060,12 @@ void UnityPorter::ProcessAssetFile(const std::string& assetPathStr, const std::s
                     textures = it->second;
                 }
             }
-            UnityMeshConverter::Convert(objInfo, parser, outputDir, textures);
+            UnityMeshConverter::Convert(objInfo, parser, outputDir, textures, m_convertTexturesToBmp);
         }
-        else if (objInfo.classId == 28) // Texture2D
+        else if (objInfo.classId == UnityClass::Texture2D)
         {
             VortigauntLog::LogF("Detected Texture2D object (PathID %lld)\n", static_cast<long long>(objInfo.pathId));
-            UnityTextureDecoder::Convert(objInfo, parser, outputDir);
+            UnityTextureDecoder::Convert(objInfo, parser, outputDir, m_convertTexturesToBmp);
         }
-    }
-
-    if (isTopLevelCall) {
-        m_meshToTextures.clear();
-        m_textureNames.clear();
-        m_meshNames.clear();
-        m_pathIdToClassId.clear();
-        m_pathIdToClassIdInt.clear();
-        m_matToTexs.clear();
-        m_matToTexPathIds.clear();
-        m_preParsedFiles.clear();
     }
 }

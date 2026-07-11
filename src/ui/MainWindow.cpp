@@ -396,9 +396,15 @@ MainWindow::MainWindow(QWidget* parent)
 	m_separateFoldersCheck->setVisible(false);
     m_separateFoldersCheck->setToolTip(tr("When extracting REZ/PAK/XFS files, create a separate folder for each file"));
 
+    m_unityBmpCheck = new QCheckBox(tr("Convert textures to BMP (8-bit)"));
+    m_unityBmpCheck->setChecked(true);
+    m_unityBmpCheck->setVisible(false);
+    m_unityBmpCheck->setToolTip(tr("When unchecked, Unity textures are exported as 32-bit PNG with alpha channel"));
+
     optionsLayout->addWidget(m_ignoreMeshesCheck);
     optionsLayout->addWidget(m_ignoreAnimsCheck);
     optionsLayout->addWidget(m_separateFoldersCheck);
+    optionsLayout->addWidget(m_unityBmpCheck);
     
 
 
@@ -555,8 +561,10 @@ MainWindow::MainWindow(QWidget* parent)
 			currentText.contains("VPK", Qt::CaseInsensitive);
 
         bool isArchiveOperation = isArchiveFile || currentText.contains("XFS", Qt::CaseInsensitive) || currentText.contains("Smart Batch", Qt::CaseInsensitive);
+        bool isUnity = currentText.contains("Unity", Qt::CaseInsensitive);
         bool showOutputFormat = isGr2 || isLtb;
 
+        m_unityBmpCheck->setVisible(isUnity); // Show BMP conversion checkbox only for Unity mode
         m_gr2AnimGroup->setVisible(isGr2);
         m_mirrorUVYCheck->setVisible(isGr2); // Show Mirror UV Y checkbox only for GR2
         m_invertAlphaCheck->setVisible(isGr2); // Show Invert Alpha checkbox only for GR2
@@ -604,6 +612,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_mirrorUVYCheck->setVisible(initialGr2);
     m_invertAlphaCheck->setVisible(initialGr2);
     m_writeQCCheck->setVisible(initialGr2 || initialLtb);
+    m_unityBmpCheck->setVisible(initialText.contains("Unity", Qt::CaseInsensitive));
     
     if (m_outputFormatLabel) m_outputFormatLabel->setVisible(isModelOp);
     if (m_outputFormatCombo) {
@@ -1012,8 +1021,11 @@ void MainWindow::onRun()
     if (m_ignoreMeshesCheck) ltbEncSettings.IgnoreMeshes = m_ignoreMeshesCheck->isChecked();
     if (m_ignoreAnimsCheck) ltbEncSettings.IgnoreAnimations = m_ignoreAnimsCheck->isChecked();
 
+    // Capture Unity texture output format on the UI thread
+    bool unityTexturesToBmp = !m_unityBmpCheck || m_unityBmpCheck->isChecked();
+
     // Start background task
-    runInBackground([this, modeText, selectedFiles, inputPath, outputDir, ltbEncSettings]() mutable {
+    runInBackground([this, modeText, selectedFiles, inputPath, outputDir, ltbEncSettings, unityTexturesToBmp]() mutable {
         
 
 
@@ -1086,6 +1098,7 @@ void MainWindow::onRun()
         {
             // UnityFS extraction and processing
             UnityPorter porter;
+            porter.SetConvertTexturesToBmp(unityTexturesToBmp);
             for (const QString& f : selectedFiles)
             {
                 porter.Process(f.toStdString(), outputDir.toStdString());
