@@ -49,7 +49,14 @@ jobs:
         
         Copy-Item -Path "ThirdParty/granny2sdk/lib/win64/granny2_x64.dll" -Destination "deploy/"
         Copy-Item -Path "ThirdParty/discord_social_sdk/bin/release/discord_partner_sdk.dll" -Destination "deploy/"
-        
+
+        foreach ($dll in @("DtxThumbnailProvider.dll", "VtfThumbnailProvider.dll")) {
+          Copy-Item -Path "build/src/Release/$dll" -Destination "deploy/" -ErrorAction SilentlyContinue
+          if (-not (Test-Path "deploy/$dll")) {
+            Copy-Item -Path "build/Release/$dll" -Destination "deploy/"
+          }
+        }
+
         Write-Host "Deployment contents:"
         Get-ChildItem -Path deploy -Recurse | ForEach-Object { Write-Host $_.FullName }
     
