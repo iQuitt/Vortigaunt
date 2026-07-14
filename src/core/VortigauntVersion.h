@@ -3,12 +3,12 @@
 // cmake will generate VortigauntVersion.h from this file
 #define VORTIGAUNT_VERSION_MAJOR 1
 #define VORTIGAUNT_VERSION_MINOR 1
-#define VORTIGAUNT_VERSION_PATCH 0
+#define VORTIGAUNT_VERSION_PATCH 2
 
-#define VORTIGAUNT_VERSION_STRING "1.1.0"
+#define VORTIGAUNT_VERSION_STRING "1.1.2"
 
 // Build info (populated by CMake at configure time)
-#define VORTIGAUNT_GIT_COMMIT "a1556f4"
+#define VORTIGAUNT_GIT_COMMIT "4a13025"
 #define VORTIGAUNT_GIT_BRANCH "master"
 #define VORTIGAUNT_BUILD_TYPE "Release"
 #define VORTIGAUNT_OS "Windows"
