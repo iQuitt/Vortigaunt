@@ -910,12 +910,12 @@ void MainWindow::onBrowseInput()
 
             if (!rejectedFiles.isEmpty())
             {
-                QString warnMsg = tr("Seçtiğiniz şu dosyalar bu projenin diğer formatlarına (PAK, REZ, XFS, GR2, LTB) ait olduğu için Unity modunda seçilemez:\n\n");
+                QString warnMsg = tr("The following files you selected cannot be used in Unity mode because they belong to this project's other formats (PAK, REZ, XFS, GR2, LTB):\n\n");
                 for (const QString& name : rejectedFiles)
                 {
                     warnMsg += QStringLiteral("  - %1\n").arg(name);
                 }
-                QMessageBox::warning(this, tr("Uyumsuz Dosya Seçimi"), warnMsg);
+                QMessageBox::warning(this, tr("Incompatible File Selection"), warnMsg);
                 files = acceptedFiles;
             }
         }

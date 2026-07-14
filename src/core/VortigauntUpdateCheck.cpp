@@ -158,21 +158,38 @@ void VortigauntUpdateCheck::onNetworkReply(QNetworkReply* reply)
     }
 }
 
+static void splitVersionPart(const QString& part, int& number, QString& suffix)
+{
+    int digitEnd = 0;
+    while (digitEnd < part.size() && part[digitEnd].isDigit())
+        ++digitEnd;
+
+    number = part.left(digitEnd).toInt();
+    suffix = part.mid(digitEnd);
+}
+
 int VortigauntUpdateCheck::compareVersions(const QString& v1, const QString& v2)
 {
     QStringList parts1 = v1.split('.');
     QStringList parts2 = v2.split('.');
-    
+
     int maxLen = qMax(parts1.size(), parts2.size());
-    
+
     for (int i = 0; i < maxLen; ++i)
     {
-        int num1 = (i < parts1.size()) ? parts1[i].toInt() : 0;
-        int num2 = (i < parts2.size()) ? parts2[i].toInt() : 0;
-        
+        int num1 = 0, num2 = 0;
+        QString suffix1, suffix2;
+        if (i < parts1.size()) splitVersionPart(parts1[i], num1, suffix1);
+        if (i < parts2.size()) splitVersionPart(parts2[i], num2, suffix2);
+
         if (num1 < num2) return -1;
         if (num1 > num2) return 1;
+
+        // x.x.x < x.x.xb
+        int suffixCmp = QString::compare(suffix1, suffix2, Qt::CaseInsensitive);
+        if (suffixCmp < 0) return -1;
+        if (suffixCmp > 0) return 1;
     }
-    
-    return 0; 
+
+    return 0;
 }

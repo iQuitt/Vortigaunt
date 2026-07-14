@@ -27,12 +27,14 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 ### Textures
 - **DTX Viewer & Extract** (Only Windows) - View and Extract LithTech Engine textures
 - **WAD Maker** - Create and Edit Wad file. You can add JPG/DDS/PNG files to WAD file. Vortigaunt will convert to BMP. [Open Image](https://i.hizliresim.com/niplzjf.png)
+- **VTF Viewer** - View and Extract Valve VTF files
 
 ### Game Archive Files
 - **REZ File** - Extract and browse LithTech REZ archives (Tested only Crossfire)
 - **PAK File** - Extract and browse PAK files from Counter Strike Online
 - **XFS File** - Extract and browse XFS files from Wolfteam (it May work other Softynx games etc: Rakion) [Watch Video](https://youtu.be/lNnPhTMf2fs)
 - **GMA File** - Extract and browse Garry's Mod GMA files
+- **VPK File** - Extract and browse Valve VPK files
 
 ### Sprite Management
 - **Sprite Viewer** - View, edit, and create GoldSrc sprites [Watch Video](https://youtu.be/q3DvdgdLPls)
@@ -46,6 +48,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 - Convert MP3/OGG to WAV (16 Bit Resolution, 22050 Sampling rate and Mono Channel)
 - DTX Thumbnail Extension.
 	- View DTX files as thumbnails in Windows Explorer
+	- View VTF Files as thumbnails in Windows Explorer
 
 ### Support Languages
 - English
