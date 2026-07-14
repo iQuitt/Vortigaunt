@@ -2254,7 +2254,7 @@ void MainWindow::handleDroppedFiles(const QList<QUrl>& urls)
 // Status bar
 void MainWindow::setupStatusBar()
 {
-    m_statusLabel = new QLabel(QString("Version: %1b").arg(VORTIGAUNT_VERSION_STRING));
+    m_statusLabel = new QLabel(QString("Version: %1").arg(VORTIGAUNT_VERSION_STRING));
     m_statusLabel->setStyleSheet("QLabel { padding: 0 6px; font-size: 11px; }");
     statusBar()->addWidget(m_statusLabel);
     
