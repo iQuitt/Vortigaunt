@@ -1,6 +1,7 @@
 #include "core/extractors/rez/RezExtractor.h"
 #include "DtxViewerDialog.h"
 #include "SpriteViewerWindow.h"
+#include "ImageViewerDialog.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -95,6 +96,10 @@ void RezViewerWindow::setupUI()
     m_viewSprButton->setEnabled(false);
     m_viewSprButton->setToolTip(tr("View selected SPR file in Lithtech Sprite Viewer"));
 
+    m_viewImageButton = new QPushButton(tr("View Image"));
+    m_viewImageButton->setEnabled(false);
+    m_viewImageButton->setToolTip(tr("View selected PNG/BMP/TGA/JPG file"));
+
     m_extractSelectedButton = new QPushButton(tr("Extract Selected"));
     m_extractSelectedButton->setEnabled(false);
 
@@ -108,6 +113,7 @@ void RezViewerWindow::setupUI()
 
     buttonLayout->addWidget(m_viewDtxButton);
     buttonLayout->addWidget(m_viewSprButton);
+    buttonLayout->addWidget(m_viewImageButton);
     buttonLayout->addWidget(m_extractSelectedButton);
     buttonLayout->addWidget(m_extractAllButton);
     buttonLayout->addStretch();
@@ -124,6 +130,7 @@ void RezViewerWindow::setupUI()
     connect(m_extractAllButton, &QPushButton::clicked, this, &RezViewerWindow::onExtractAll);
     connect(m_viewDtxButton, &QPushButton::clicked, this, &RezViewerWindow::onViewDtx);
     connect(m_viewSprButton, &QPushButton::clicked, this, &RezViewerWindow::onViewSpr);
+    connect(m_viewImageButton, &QPushButton::clicked, this, &RezViewerWindow::onViewImage);
     connect(m_fileTable, &QTableWidget::itemSelectionChanged, this, &RezViewerWindow::onSelectionChanged);
     connect(m_fileTable, &QTableWidget::cellDoubleClicked, this, &RezViewerWindow::onDoubleClick);
     connect(m_fileTable, &QTableWidget::itemSelectionChanged, this, [this]() {
@@ -282,9 +289,10 @@ void RezViewerWindow::onSelectionChanged()
     bool hasSelection = !selectedItems.isEmpty();
     m_extractSelectedButton->setEnabled(hasSelection);
 
-    // Check if any selected file is a DTX or SPR
+    // Check if any selected file is a DTX, SPR, or Image
     bool hasDtx = false;
     bool hasSpr = false;
+    bool hasImage = false;
     if (hasSelection)
     {
         QSet<int> rows;
@@ -300,12 +308,15 @@ void RezViewerWindow::onSelectionChanged()
                     hasDtx = true;
                 if (canViewAsSpr(pathItem->text()))
                     hasSpr = true;
+                if (canViewAsImage(pathItem->text()))
+                    hasImage = true;
             }
         }
     }
 
     m_viewDtxButton->setEnabled(hasDtx);
     m_viewSprButton->setEnabled(hasSpr);
+    m_viewImageButton->setEnabled(hasImage);
 }
 
 void RezViewerWindow::onDoubleClick(int row, int column)
@@ -319,6 +330,8 @@ void RezViewerWindow::onDoubleClick(int row, int column)
             viewDtxEntry(static_cast<size_t>(row));
         else if (canViewAsSpr(pathItem->text()))
             viewSprEntry(static_cast<size_t>(row));
+        else if (canViewAsImage(pathItem->text()))
+            viewImageEntry(static_cast<size_t>(row));
     }
 }
 
@@ -332,6 +345,12 @@ bool RezViewerWindow::canViewAsSpr(const QString& path) const
 {
     QString ext = QFileInfo(path).suffix().toLower();
     return (ext == "spr");
+}
+
+bool RezViewerWindow::canViewAsImage(const QString& path) const
+{
+    QString ext = QFileInfo(path).suffix().toLower();
+    return (ext == "png" || ext == "bmp" || ext == "tga" || ext == "jpg" || ext == "jpeg");
 }
 
 void RezViewerWindow::onViewDtx()
@@ -372,6 +391,27 @@ void RezViewerWindow::onViewSpr()
         if (pathItem && canViewAsSpr(pathItem->text()))
         {
             viewSprEntry(static_cast<size_t>(row));
+            return;
+        }
+    }
+}
+
+void RezViewerWindow::onViewImage()
+{
+    QList<QTableWidgetItem*> selectedItems = m_fileTable->selectedItems();
+    if (selectedItems.isEmpty())
+        return;
+
+    QSet<int> rows;
+    for (auto* item : selectedItems)
+        rows.insert(item->row());
+
+    for (int row : rows)
+    {
+        auto* pathItem = m_fileTable->item(row, 0);
+        if (pathItem && canViewAsImage(pathItem->text()))
+        {
+            viewImageEntry(static_cast<size_t>(row));
             return;
         }
     }
@@ -451,6 +491,43 @@ void RezViewerWindow::viewSprEntry(size_t index)
     sprViewer->setAttribute(Qt::WA_DeleteOnClose);
     sprViewer->openSprite(tempFilePath);
     sprViewer->show();
+}
+
+void RezViewerWindow::viewImageEntry(size_t index)
+{
+    if (!m_rezExtractor)
+        return;
+
+    const auto& entries = m_rezExtractor->GetEntries();
+    if (index >= entries.size())
+        return;
+
+    const auto& entry = entries[index];
+    QString qPath = QString::fromStdString(entry.filename);
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    std::vector<char> rawData;
+    const bool extracted = m_rezExtractor->ExtractEntryToMemory(entry, rawData);
+
+    QApplication::restoreOverrideCursor();
+
+    if (!extracted || rawData.empty())
+    {
+        QMessageBox::warning(this, tr("Error"), tr("Failed to read image data from REZ file."));
+        return;
+    }
+
+    QByteArray byteArray(rawData.data(), static_cast<int>(rawData.size()));
+
+    ImageViewerDialog* dlg = new ImageViewerDialog(this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    if (!dlg->loadImageFromMemory(byteArray, QFileInfo(qPath).fileName()))
+    {
+        dlg->deleteLater();
+        return;
+    }
+    dlg->show();
 }
 
 void RezViewerWindow::onExtractSelected()
