@@ -30,6 +30,7 @@ private slots:
     void onExtractAll();
     void onViewDtx();
     void onViewSpr();
+    void onViewImage();
     void onSelectionChanged();
     void onDoubleClick(int row, int column);
     void onSearchTextChanged(const QString& text);
@@ -41,11 +42,13 @@ private:
     void extractEntries(const std::vector<size_t>& indices, const QString& outputDir);
     void viewDtxEntry(size_t index);
     void viewSprEntry(size_t index);
+    void viewImageEntry(size_t index);
     void filterTable(const QString& searchText);
     QString getFileTypeInfo(const QString& path) const;
     QString formatSize(uint32_t size) const;
     bool canViewAsDtx(const QString& path) const;
     bool canViewAsSpr(const QString& path) const;
+    bool canViewAsImage(const QString& path) const;
 
     // UI Elements
     QLineEdit*      m_rezPathEdit;
@@ -57,6 +60,7 @@ private:
     QPushButton*    m_extractAllButton;
     QPushButton*    m_viewDtxButton;
     QPushButton*    m_viewSprButton;
+    QPushButton*    m_viewImageButton;
     QLabel*         m_statusLabel;
     QProgressBar*   m_progressBar;
     

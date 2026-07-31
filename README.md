@@ -99,7 +99,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 
 cmake --build . -j$(nproc)
 
-
+```
 Special Thanks To:
 - Luís Leite for Counter Strike Online PAK (https://git.sr.ht/~leite/cso-pak)
 - Kungfulon for Crossfire REZ  (https://gist.github.com/kungfulon/dfa49323eb7a55db964f10174e57c19f)

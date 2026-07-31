@@ -46,6 +46,7 @@ set(VORTIGAUNT_GUI_HEADERS
 
     ui/dialogs/DtxViewerDialog.h
     ui/dialogs/VtfViewerDialog.h
+    ui/dialogs/ImageViewerDialog.h
     ui/dialogs/SpriteFixDialog.h
     ui/dialogs/SettingsDialog.h
     ui/dialogs/LoLModelDownloadDialog.h
@@ -138,6 +139,7 @@ set(VORTIGAUNT_GUI
 
     ui/dialogs/DtxViewerDialog.cpp
     ui/dialogs/VtfViewerDialog.cpp
+    ui/dialogs/ImageViewerDialog.cpp
     ui/dialogs/SpriteFixDialog.cpp
     ui/dialogs/SettingsDialog.cpp
     ui/dialogs/LoLModelDownloadDialog.cpp
