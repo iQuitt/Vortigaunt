@@ -34,6 +34,7 @@
 #include <fstream>
 
 #include "utils/Bmp.h"
+#include "utils/ImageUtils.h"
 
 ZoomablePreviewWidget::ZoomablePreviewWidget(QWidget* parent)
     : QWidget(parent)
@@ -1937,7 +1938,7 @@ void SpriteViewerWindow::onBrowseFrames()
         QFileInfo fileInfo(file);
         
         // Load image and create thumbnail
-        QImage image(file);
+        QImage image = ImageUtils::loadImage(file);
         QIcon icon;
         if (!image.isNull()) {
             QPixmap pixmap = QPixmap::fromImage(image.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));

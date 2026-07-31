@@ -22,8 +22,8 @@
 #endif
 
 #include "utils/Dds.h"
-
 #include "utils/Bmp.h"
+#include "utils/ImageUtils.h"
 
 #include "libimagequant.h"
 
@@ -415,7 +415,7 @@ bool SpriteLoader::createSpriteV2(const std::string& outputPath,const std::vecto
     uint8_t bgB = bgColor.size() > 2 ? bgColor[2] : 0;
     
     for (const auto& framePath : framePaths) {
-        QImage img(QString::fromStdString(framePath));
+        QImage img = ImageUtils::loadImage(framePath);
         if (img.isNull())
             continue;
         
@@ -505,7 +505,7 @@ bool SpriteLoader::createSpriteV2(const std::string& outputPath,const std::vecto
         // For IndexAlpha (2) and AlphaTest (3), composite onto blue background
         if (textureFormat == 2 || textureFormat == 3) {
             if (i < framePaths.size()) {
-                QImage origImg(QString::fromStdString(framePaths[i]));
+                QImage origImg = ImageUtils::loadImage(framePaths[i]);
                 origImg = origImg.convertToFormat(QImage::Format_ARGB32);
                 if (origImg.hasAlphaChannel()) {
                     // Start with blue, paste RGB frame using original alpha

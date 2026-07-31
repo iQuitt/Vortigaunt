@@ -58,6 +58,53 @@ void decodeDXT1Block(const uint8_t* block, uint32_t* output, int x, int y, int w
     }
 }
 
+void decodeDXT3Block(const uint8_t* block, uint32_t* output, int x, int y, int width, int height)
+{
+    const uint8_t* colorBlock = block + 8;
+    uint16_t color0 = *reinterpret_cast<const uint16_t*>(colorBlock);
+    uint16_t color1 = *reinterpret_cast<const uint16_t*>(colorBlock + 2);
+    uint32_t indices = *reinterpret_cast<const uint32_t*>(colorBlock + 4);
+
+    uint8_t r0 = ((color0 >> 11) & 0x1F);
+    r0 = (r0 << 3) | (r0 >> 2);
+    uint8_t g0 = ((color0 >> 5) & 0x3F);
+    g0 = (g0 << 2) | (g0 >> 4);
+    uint8_t b0 = (color0 & 0x1F);
+    b0 = (b0 << 3) | (b0 >> 2);
+
+    uint8_t r1 = ((color1 >> 11) & 0x1F);
+    r1 = (r1 << 3) | (r1 >> 2);
+    uint8_t g1 = ((color1 >> 5) & 0x3F);
+    g1 = (g1 << 2) | (g1 >> 4);
+    uint8_t b1 = (color1 & 0x1F);
+    b1 = (b1 << 3) | (b1 >> 2);
+
+    uint32_t colors[4];
+    colors[0] = (r0 << 16) | (g0 << 8) | b0;
+    colors[1] = (r1 << 16) | (g1 << 8) | b1;
+    colors[2] = (((r0 * 2 + r1) / 3) << 16) | (((g0 * 2 + g1) / 3) << 8) | ((b0 * 2 + b1) / 3);
+    colors[3] = (((r0 + r1 * 2) / 3) << 16) | (((g0 + g1 * 2) / 3) << 8) | ((b0 + b1 * 2) / 3);
+
+    for (int j = 0; j < 4; j++) {
+        for (int i = 0; i < 4; i++) {
+            int idx = (j * 4 + i);
+
+            uint8_t byteVal = block[idx / 2];
+            uint8_t nibble = (idx & 1) ? (byteVal >> 4) : (byteVal & 0x0F);
+            uint8_t alpha = nibble * 17;
+
+            int colorBitOffset = idx * 2;
+            uint32_t colorIdx = (indices >> colorBitOffset) & 0x3;
+
+            int px = x + i;
+            int py = y + j;
+            if (px < width && py < height) {
+                output[py * width + px] = (static_cast<uint32_t>(alpha) << 24) | colors[colorIdx];
+            }
+        }
+    }
+}
+
 void decodeDXT5Block(const uint8_t* block, uint32_t* output, int x, int y, int width, int height)
 {
     uint8_t alpha0 = block[0];
@@ -143,6 +190,21 @@ void decodeDXT1(const uint8_t* src, uint32_t* output, int width, int height)
             int x = bx * 4;
             int y = by * 4;
             decodeDXT1Block(block, output, x, y, width, height);
+        }
+    }
+}
+
+void decodeDXT3(const uint8_t* src, uint32_t* output, int width, int height)
+{
+    int blockWidth = (width + 3) / 4;
+    int blockHeight = (height + 3) / 4;
+    for (int by = 0; by < blockHeight; ++by) {
+        for (int bx = 0; bx < blockWidth; ++bx) {
+            size_t blockOffset = (by * blockWidth + bx) * 16;
+            const uint8_t* block = src + blockOffset;
+            int x = bx * 4;
+            int y = by * 4;
+            decodeDXT3Block(block, output, x, y, width, height);
         }
     }
 }
@@ -249,10 +311,12 @@ std::vector<uint32_t> decodeDdsToPixels(const std::vector<uint8_t>& data, uint32
     
     if (isDXT1) {
         decodeDXT1(compressedData, pixels.data(), static_cast<int>(width), static_cast<int>(height));
+    } else if (isDXT3) {
+        decodeDXT3(compressedData, pixels.data(), static_cast<int>(width), static_cast<int>(height));
     } else {
         decodeDXT5(compressedData, pixels.data(), static_cast<int>(width), static_cast<int>(height));
     }
-    
+
     return pixels;
 }
 
@@ -354,6 +418,8 @@ QImage loadDdsToQImage(const QString& filePath)
         
         if (isDXT1) {
             decodeDXT1(compressedData.data(), pixels.data(), static_cast<int>(width), static_cast<int>(height));
+        } else if (isDXT2 || isDXT3) {
+            decodeDXT3(compressedData.data(), pixels.data(), static_cast<int>(width), static_cast<int>(height));
         } else {
             decodeDXT5(compressedData.data(), pixels.data(), static_cast<int>(width), static_cast<int>(height));
         }

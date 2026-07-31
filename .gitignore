@@ -9,6 +9,7 @@
 /testchamber
 /install
 /build
+/m2eff
 /Test
 
 .qtcreator/
@@ -22,5 +23,6 @@ src/ui/windows/MseViewerWindow.cpp
 src/ui/windows/MseViewerWindow.h
 src/ui/widgets/MseViewerWidget.cpp
 src/ui/widgets/MseViewerWidget.h
+src/ui/widgets/MseSmdExporter.cpp
 
 # AnimationClip not ready.

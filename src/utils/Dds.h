@@ -78,8 +78,10 @@ constexpr uint32_t DDPF_RGB = 0x40;
 // ============================================================================
 
 void decodeDXT1Block(const uint8_t* block, uint32_t* output, int x, int y, int width, int height);
+void decodeDXT3Block(const uint8_t* block, uint32_t* output, int x, int y, int width, int height);
 void decodeDXT5Block(const uint8_t* block, uint32_t* output, int x, int y, int width, int height);
 void decodeDXT1(const uint8_t* src, uint32_t* output, int width, int height);
+void decodeDXT3(const uint8_t* src, uint32_t* output, int width, int height);
 void decodeDXT5(const uint8_t* src, uint32_t* output, int width, int height);
 bool isDdsFile(const std::string& filePath);
 std::vector<uint32_t> decodeDdsToPixels(const std::vector<uint8_t>& data, uint32_t& width, uint32_t& height);

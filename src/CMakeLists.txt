@@ -28,6 +28,7 @@ set(VORTIGAUNT_CORE_HEADERS
     utils/Platform.h
     utils/Bmp.h
     utils/Png.h
+    utils/ImageUtils.h
     core/extractors/IExtractor.h
     core/extractors/ExtractArchive.h
     core/extractors/unity/UnityAssetParser.h
@@ -87,6 +88,7 @@ set(VORTIGAUNT_CORE
     utils/Platform.cpp
     utils/Dds.cpp
     utils/Png.cpp
+    utils/ImageUtils.cpp
     core/extractors/pak/SnowCipher.cpp
     core/extractors/pak/PakFile.cpp
     core/extractors/pak/PakExtractor.cpp
@@ -236,6 +238,7 @@ if(BUILD_GUI)
             core/MdeLoader.h core/MdeLoader.cpp
             ui/windows/MseViewerWindow.h ui/windows/MseViewerWindow.cpp
             ui/widgets/MseViewerWidget.h ui/widgets/MseViewerWidget.cpp
+            ui/widgets/MseSmdExporter.cpp
         )
         target_compile_definitions(VortigauntTool_gui PRIVATE METIN2_SCRIPT_EFFECT)
     endif()

@@ -2,6 +2,7 @@
 #include "core/VortigauntLog.h"
 #include "utils/Bmp.h"
 #include "utils/FileIO.h"
+#include "utils/ImageUtils.h"
 #include "libimagequant.h"
 
 
@@ -368,7 +369,7 @@ bool WadArchive::loadBmp(const std::string& path, WadTexture& texture)
 bool WadArchive::loadViaQImage(const std::string& path, WadTexture& texture)
 {
 #if HAS_QT_IMAGE_SUPPORT
-    QImage image(QString::fromStdString(path));
+    QImage image = ImageUtils::loadImage(path);
     if (image.isNull())
     {
         Vortigaunt_Printf("ERROR: Cannot load image file: " + path);
