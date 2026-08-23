@@ -35,6 +35,7 @@
 
 #include "utils/Bmp.h"
 #include "utils/ImageUtils.h"
+#include "ui/UiUtils.h"
 
 ZoomablePreviewWidget::ZoomablePreviewWidget(QWidget* parent)
     : QWidget(parent)
@@ -369,9 +370,7 @@ SpriteViewerWindow::SpriteViewerWindow(QWidget* parent)
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setupUI();
     
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    resize(screenSize.width() * 0.7, screenSize.height() * 0.7);
+    UiUtils::resizeToScreen(this, 0.7);
     
     m_animationTimer = new QTimer(this);
     connect(m_animationTimer, &QTimer::timeout, this, &SpriteViewerWindow::onAnimationTimer);

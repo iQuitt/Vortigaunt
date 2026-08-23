@@ -23,6 +23,8 @@
 
 #include "LanguageManager.h"
 #include "RezViewerWindow.h"
+#include "ui/dialogs/SettingsDialog.h"
+#include "ui/UiUtils.h"
 
 RezViewerWindow::RezViewerWindow(QWidget* parent)
     : QDialog(parent)
@@ -38,9 +40,7 @@ void RezViewerWindow::setupUI()
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setMinimumSize(400, 300);
     
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    resize(screenSize.width() * 0.7, screenSize.height() * 0.7);
+    UiUtils::resizeToScreen(this, 0.7);
 
     auto* mainLayout = new QVBoxLayout(this);
 
@@ -253,7 +253,7 @@ void RezViewerWindow::populateFileList()
         QString qPath = QString::fromStdString(entry.filename);
 
         auto* pathItem = new QTableWidgetItem(qPath);
-        auto* sizeItem = new QTableWidgetItem(formatSize(entry.size));
+        auto* sizeItem = new QTableWidgetItem(UiUtils::formatSize(entry.size));
         auto* typeItem = new QTableWidgetItem(getFileTypeInfo(qPath));
 
         sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -554,7 +554,7 @@ void RezViewerWindow::onExtractSelected()
     QString outputDir = QFileDialog::getExistingDirectory(
         this,
         tr("Select Output Folder"),
-        QDir::homePath()
+        SettingsDialog::getExtractStartDir()
     );
 
     if (outputDir.isEmpty())
@@ -575,7 +575,7 @@ void RezViewerWindow::onExtractAll()
     QString outputDir = QFileDialog::getExistingDirectory(
         this,
         tr("Select Output Folder"),
-        QDir::homePath()
+        SettingsDialog::getExtractStartDir()
     );
 
     if (outputDir.isEmpty())
@@ -674,14 +674,26 @@ QString RezViewerWindow::getFileTypeInfo(const QString& path) const
     return ext.toUpper();
 }
 
-QString RezViewerWindow::formatSize(uint32_t size) const
+
+void RezViewerWindow::onSelectAllMatches()
 {
-    if (size < 1024)
-        return QString::number(size) + " B";
-    else if (size < 1024 * 1024)
-        return QString::number(size / 1024.0, 'f', 1) + " KB";
-    else
-        return QString::number(size / (1024.0 * 1024.0), 'f', 2) + " MB";
+    if (!m_rezExtractor)
+        return;
+
+    UiUtils::selectVisibleRows(m_fileTable);
+    onSelectionChanged(); // Update button states
+}
+
+void RezViewerWindow::filterTable(const QString& searchText)
+{
+    if (!m_rezExtractor)
+        return;
+
+    const int totalRows = m_fileTable->rowCount();
+    const int visibleCount = UiUtils::filterTableRows(m_fileTable, searchText);
+
+    m_statusLabel->setText(tr("%1 files (%2 visible)").arg(totalRows).arg(visibleCount));
+    m_selectAllMatchesButton->setEnabled(!searchText.isEmpty() && visibleCount > 0);
 }
 
 void RezViewerWindow::onSearchTextChanged(const QString& text)
@@ -689,60 +701,5 @@ void RezViewerWindow::onSearchTextChanged(const QString& text)
     filterTable(text);
 }
 
-void RezViewerWindow::onSelectAllMatches()
-{
-    if (!m_rezExtractor)
-        return;
-    
-    QString searchText = m_searchEdit->text().trimmed();
-    if (searchText.isEmpty())
-    {
-        m_fileTable->selectAll();
-        return;
-    }
-    
-    m_fileTable->setSelectionMode(QAbstractItemView::MultiSelection);
-    m_fileTable->clearSelection();
-    
-    for (int row = 0; row < m_fileTable->rowCount(); ++row)
-    {
-        if (!m_fileTable->isRowHidden(row))
-        {
-            m_fileTable->selectRow(row);
-        }
-    }
-    
-    m_fileTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    onSelectionChanged(); 
-}
 
-void RezViewerWindow::filterTable(const QString& searchText)
-{
-    if (!m_rezExtractor)
-        return;
-    
-    QString searchLower = searchText.toLower();
-    int visibleCount = 0;
-    int totalRows = m_fileTable->rowCount();
-    
-    for (int row = 0; row < totalRows; ++row)
-    {
-        auto* pathItem = m_fileTable->item(row, 0);
-        if (!pathItem)
-        {
-            m_fileTable->setRowHidden(row, true);
-            continue;
-        }
-        
-        QString path = pathItem->text().toLower();
-        bool matches = searchText.isEmpty() || path.contains(searchLower);
-        
-        m_fileTable->setRowHidden(row, !matches);
-        if (matches)
-            ++visibleCount;
-    }
-    
-    m_statusLabel->setText(tr("%1 files (%2 visible)").arg(totalRows).arg(visibleCount));
-    m_selectAllMatchesButton->setEnabled(!searchText.isEmpty() && visibleCount > 0);
-}
 

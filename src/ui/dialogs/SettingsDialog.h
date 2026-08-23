@@ -33,6 +33,10 @@ public:
     static QString getDefaultOutputDir();
     static QString getExtractedOutputDir();
     static QString getLoLOutputDir(bool isDownloadFolder);
+    // Always "<writable base>/VortigauntOutput", whatever the install type
+    static QString getOutputRootDir();
+    // Start directory for "Select Output Directory" dialogs (falls back to home if it does not exist yet)
+    static QString getExtractStartDir();
 
 
 private slots:

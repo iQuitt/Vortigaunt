@@ -32,6 +32,7 @@
 #include "core/smd/SmdWriter.h" 
 #include "LanguageManager.h"
 #include "core/VortigauntLog.h"
+#include "ui/UiUtils.h"
 
 
 
@@ -41,9 +42,7 @@ AutoRigDialog::AutoRigDialog(QWidget* parent) : QDialog(parent)
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setMinimumSize(400, 300);
     
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    resize(screenSize.width() * 0.7, screenSize.height() * 0.7);
+    UiUtils::resizeToScreen(this, 0.7);
 
     // left (form) + right (tip image)
     QHBoxLayout* topLayout = new QHBoxLayout(this);

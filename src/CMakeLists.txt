@@ -50,6 +50,8 @@ set(VORTIGAUNT_GUI_HEADERS
     ui/dialogs/SpriteFixDialog.h
     ui/dialogs/SettingsDialog.h
     ui/dialogs/LoLModelDownloadDialog.h
+    ui/dialogs/SteamWorkshopDownloaderDialog.h
+    core/SteamWorkshopDownloader.h
     ui/dialogs/AutoRigDialog.h
     ui/dialogs/WadMakerDialog.h
     ui/dialogs/AboutDialog.h
@@ -68,6 +70,7 @@ set(VORTIGAUNT_GUI_HEADERS
 
 
     ui/ThemeManager.h
+    ui/UiUtils.h
 
     core/LanguageManager.h
     core/VortigauntUpdateCheck.h
@@ -136,6 +139,7 @@ set(VORTIGAUNT_GUI
     ui/main.cpp
     ui/MainWindow.cpp
     ui/ThemeManager.cpp
+    ui/UiUtils.cpp
 
     ui/dialogs/DtxViewerDialog.cpp
     ui/dialogs/VtfViewerDialog.cpp
@@ -143,6 +147,8 @@ set(VORTIGAUNT_GUI
     ui/dialogs/SpriteFixDialog.cpp
     ui/dialogs/SettingsDialog.cpp
     ui/dialogs/LoLModelDownloadDialog.cpp
+    ui/dialogs/SteamWorkshopDownloaderDialog.cpp
+    core/SteamWorkshopDownloader.cpp
     ui/dialogs/AutoRigDialog.cpp
     ui/dialogs/WadMakerDialog.cpp
     ui/dialogs/AboutDialog.cpp
@@ -241,6 +247,7 @@ if(BUILD_GUI)
             ui/windows/MseViewerWindow.h ui/windows/MseViewerWindow.cpp
             ui/widgets/MseViewerWidget.h ui/widgets/MseViewerWidget.cpp
             ui/widgets/MseSmdExporter.cpp
+            ui/widgets/MseSprExporter.cpp
         )
         target_compile_definitions(VortigauntTool_gui PRIVATE METIN2_SCRIPT_EFFECT)
     endif()

@@ -1,5 +1,7 @@
 #include "AudioConvertDialog.h"
 #include "AudioConvert.h"
+#include "SettingsDialog.h"
+#include "ui/UiUtils.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -12,7 +14,6 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QComboBox>
-#include <QStandardPaths>
 #include <QScreen>
 #include <QApplication>
 
@@ -23,9 +24,7 @@ AudioConvertDialog::AudioConvertDialog(QWidget* parent)
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setMinimumSize(400, 300);
     
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    resize(screenSize.width() * 0.5, screenSize.height() * 0.5);
+    UiUtils::resizeToScreen(this, 0.5);
 
     auto* mainLayout = new QVBoxLayout(this);
     
@@ -140,8 +139,7 @@ QString AudioConvertDialog::getOutputDirectory()
     }
     else
     {
-        QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-        outputDir = QDir(documentsPath).filePath("VortigauntOutput/AudioConvert");
+        outputDir = QDir(SettingsDialog::getOutputRootDir()).filePath("AudioConvert");
     }
     
     // Create directory if it doesn't exist
@@ -165,8 +163,7 @@ void AudioConvertDialog::updateOutputInfoLabel()
     }
     else
     {
-        QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-        outputDir = QDir(documentsPath).filePath("VortigauntOutput/AudioConvert");
+        outputDir = QDir(SettingsDialog::getOutputRootDir()).filePath("AudioConvert");
     }
     
 }

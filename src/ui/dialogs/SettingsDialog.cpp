@@ -346,6 +346,28 @@ QString SettingsDialog::getLoLOutputDir(bool isDownloadFolder)
     return QDir(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).filePath("VortigauntExtracted/VortigauntLoL");
 }
 
+QString SettingsDialog::getOutputRootDir()
+{
+
+    if (isAppDirTrulyWritable()) {
+        return QDir(QCoreApplication::applicationDirPath()).filePath("VortigauntOutput");
+    }
+
+    QString customPath = getDefaultExtractPath();
+    if (!customPath.isEmpty()) {
+        return QDir(customPath).filePath("VortigauntOutput");
+    }
+
+    // for Microsoft Installer
+    return QDir(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).filePath("VortigauntOutput");
+}
+
+QString SettingsDialog::getExtractStartDir()
+{
+    QString dir = getExtractedOutputDir();
+    return QDir(dir).exists() ? dir : QDir::homePath();
+}
+
 #ifdef Q_OS_WIN
 void SettingsDialog::updateThumbnailerStatus()
 {

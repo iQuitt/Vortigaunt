@@ -73,6 +73,7 @@
 #include "VpkViewerWindow.h"
 #include "SpriteViewerWindow.h"
 #include "LoLModelDownloadDialog.h"
+#include "SteamWorkshopDownloaderDialog.h"
 #ifdef METIN2_SCRIPT_EFFECT
 #include "MseViewerWindow.h"
 #endif
@@ -211,6 +212,9 @@ MainWindow::MainWindow(QWidget* parent)
 
     m_lolModelAction = otherMenu->addAction(tr("League of Legends Models..."));
     connect(m_lolModelAction, &QAction::triggered, this, &MainWindow::onOpenLoLModelDownloader);
+
+    m_steamWorkshopAction = otherMenu->addAction(tr("Steam Workshop Downloader..."));
+    connect(m_steamWorkshopAction, &QAction::triggered, this, &MainWindow::onOpenSteamWorkshopDownloader);
 
     m_xfsViewAction = otherMenu->addAction(tr("XFS Viewer (Xenesis File System)..."));
     connect(m_xfsViewAction, &QAction::triggered, this, &MainWindow::onOpenXfsViewer);
@@ -1189,6 +1193,16 @@ void MainWindow::onOpenLoLModelDownloader()
     LoLModelDownloadDialog* qtDialog = new LoLModelDownloadDialog(nullptr);
     qtDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     qtDialog->setModal(false); // other windows stay open cuz non-modal
+    qtDialog->show();
+    qtDialog->raise();
+    qtDialog->activateWindow();
+}
+
+void MainWindow::onOpenSteamWorkshopDownloader()
+{
+    auto* qtDialog = new SteamWorkshopDownloaderDialog(nullptr);
+    qtDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    qtDialog->setModal(false);
     qtDialog->show();
     qtDialog->raise();
     qtDialog->activateWindow();

@@ -88,4 +88,40 @@ inline bool isRegularFile(const std::string& utf8Path)
     return std::filesystem::is_regular_file(toPath(utf8Path), ec);
 }
 
+// Replace characters that are illegal in a Windows path component with '_'.
+// Used by the archive extractors so a hostile archive cannot escape the output folder.
+inline std::string sanitizePathComponent(const std::string& name)
+{
+    std::string out;
+    out.reserve(name.size());
+
+    for (unsigned char ch : name)
+    {
+        if (ch < 0x20) // control chars
+        {
+            out.push_back('_');
+            continue;
+        }
+        switch (ch)
+        {
+        case '<': case '>': case ':': case '\"':
+        case '/': case '\\': case '|': case '?': case '*':
+            out.push_back('_');
+            break;
+        default:
+            out.push_back(static_cast<char>(ch));
+            break;
+        }
+    }
+
+    // Remove trailing spaces and dots which are not allowed in Windows filenames.
+    while (!out.empty() && (out.back() == ' ' || out.back() == '.'))
+        out.pop_back();
+
+    if (out.empty())
+        out = "_";
+
+    return out;
+}
+
 } // namespace FileIO

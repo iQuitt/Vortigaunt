@@ -41,7 +41,6 @@ private:
     void viewSprEntry(size_t index);
     void filterTable(const QString& searchText);
     QString getFileTypeInfo(const QString& path) const;
-    QString formatSize(uint64_t size) const;
     bool canViewAsSpr(const QString& path) const;
 
     // UI Elements

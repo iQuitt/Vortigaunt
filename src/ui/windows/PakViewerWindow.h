@@ -40,7 +40,6 @@ private:
     void openEntryInViewer(size_t index);
     void filterTable(const QString& searchText);
     QString getFileTypeInfo(const QString& path) const;
-    QString formatSize(uint32_t size) const;
     bool canOpenInViewer(const QString& path) const;
 
     // UI Elements

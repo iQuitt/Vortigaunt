@@ -7,6 +7,7 @@
 #include "utils/Bmp.h"
 #include "utils/Platform.h"
 #include "QCFile.h"
+#include "ui/UiUtils.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -212,9 +213,7 @@ void LoLModelDownloadDialog::setupUI()
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setMinimumSize(640, 480);
     
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    resize(screenSize.width() * 0.8, screenSize.height() * 0.8);
+    UiUtils::resizeToScreen(this, 0.8);
     
     auto* mainLayout = new QVBoxLayout(this);
     mainLayout->setSpacing(5);

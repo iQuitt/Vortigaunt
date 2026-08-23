@@ -1,5 +1,6 @@
 #include "WadMakerDialog.h"
 #include "WadMaker.h"
+#include "ui/UiUtils.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -28,9 +29,7 @@ WadMakerDialog::WadMakerDialog(QWidget* parent)
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setMinimumSize(600, 400);
     
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    resize(screenSize.width() * 0.7, screenSize.height() * 0.7);
+    UiUtils::resizeToScreen(this, 0.7);
     
     setupUi();
     updateTextureCount();

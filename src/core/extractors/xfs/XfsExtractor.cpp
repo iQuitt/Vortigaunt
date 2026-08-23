@@ -56,41 +56,6 @@ void XfsExtractor::ReportProgress(int percent)
 
 
 
-// ------------------------------------------------------------------------
-//  Helper: sanitize a single path component for Windows filesystem
-// ------------------------------------------------------------------------
-static std::string SanitizePathComponent(const std::string& name)
-{
-    std::string out;
-    out.reserve(name.size());
-
-    for (unsigned char ch : name)
-    {
-        if (ch < 0x20)
-        {
-            out.push_back('_');
-            continue;
-        }
-        switch (ch)
-        {
-        case '<': case '>': case ':': case '\"':
-        case '/': case '\\': case '|': case '?': case '*':
-            out.push_back('_');
-            break;
-        default:
-            out.push_back(static_cast<char>(ch));
-            break;
-        }
-    }
-
-    while (!out.empty() && (out.back() == ' ' || out.back() == '.'))
-        out.pop_back();
-
-    if (out.empty())
-        out = "_";
-
-    return out;
-}
 
 
 // FileInfoBlock structure (0x80 = 128 bytes per entry)

@@ -57,6 +57,8 @@ private slots:
 
     void onOpenLoLModelDownloader();
 
+    void onOpenSteamWorkshopDownloader();
+
 #ifdef METIN2_SCRIPT_EFFECT
     void onOpenMseViewer();
 #endif
@@ -150,6 +152,7 @@ private:
 	QAction*       m_autoRigAction; // Auto-Rig (Beta)
     QAction*       m_wadMakerAction;
     QAction*       m_audioConvertAction;
+    QAction*       m_steamWorkshopAction;
     QAction*       m_settingsAction;
     QMenu*         m_toolsMenu;
     QMenu*         m_settingsMenu;

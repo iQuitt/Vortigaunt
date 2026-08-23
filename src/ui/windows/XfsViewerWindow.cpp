@@ -17,6 +17,8 @@
 #include <filesystem>
 
 #include "LanguageManager.h"
+#include "ui/dialogs/SettingsDialog.h"
+#include "ui/UiUtils.h"
 
 XfsViewerWindow::XfsViewerWindow(QWidget* parent)
     : QDialog(parent)
@@ -32,9 +34,7 @@ void XfsViewerWindow::setupUI()
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setMinimumSize(400, 300);
     
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    resize(screenSize.width() * 0.7, screenSize.height() * 0.7);
+    UiUtils::resizeToScreen(this, 0.7);
 
     auto* mainLayout = new QVBoxLayout(this);
 
@@ -195,8 +195,8 @@ bool XfsViewerWindow::loadXfs(const QString& filePath)
     uint64_t totalUnpacked = m_xfsExtractor->GetTotalUnpackedSize();
     m_archiveInfoLabel->setText(tr("Archive: %1 | Total packed: %2 | Total unpacked: %3")
         .arg(QFileInfo(filePath).fileName())
-        .arg(formatSize(totalPacked))
-        .arg(formatSize(totalUnpacked)));
+        .arg(UiUtils::formatSize(totalPacked))
+        .arg(UiUtils::formatSize(totalUnpacked)));
 
     populateFileList();
     return true;
@@ -234,8 +234,8 @@ void XfsViewerWindow::populateFileList()
         QString qPath = QString::fromStdString(entry.filename);
 
         auto* pathItem = new QTableWidgetItem(qPath);
-        auto* packedSizeItem = new QTableWidgetItem(formatSize(entry.packedSize));
-        auto* unpackedSizeItem = new QTableWidgetItem(formatSize(entry.unpackedSize));
+        auto* packedSizeItem = new QTableWidgetItem(UiUtils::formatSize(entry.packedSize));
+        auto* unpackedSizeItem = new QTableWidgetItem(UiUtils::formatSize(entry.unpackedSize));
         auto* typeItem = new QTableWidgetItem(getFileTypeInfo(qPath));
 
         packedSizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -398,7 +398,7 @@ void XfsViewerWindow::onExtractSelected()
     QString outputDir = QFileDialog::getExistingDirectory(
         this,
         tr("Select Output Directory"),
-        QDir::homePath()
+        SettingsDialog::getExtractStartDir()
     );
 
     if (outputDir.isEmpty())
@@ -419,7 +419,7 @@ void XfsViewerWindow::onExtractAll()
     QString outputDir = QFileDialog::getExistingDirectory(
         this,
         tr("Select Output Directory"),
-        QDir::homePath()
+        SettingsDialog::getExtractStartDir()
     );
 
     if (outputDir.isEmpty())
@@ -498,36 +498,13 @@ void XfsViewerWindow::extractEntries(const std::vector<size_t>& indices, const Q
     }
 }
 
-void XfsViewerWindow::onSearchTextChanged(const QString& text)
-{
-    filterTable(text);
-}
-
 void XfsViewerWindow::onSelectAllMatches()
 {
     if (!m_xfsExtractor)
         return;
 
-    QString searchText = m_searchEdit->text().trimmed();
-    if (searchText.isEmpty())
-    {
-        m_fileTable->selectAll();
-        return;
-    }
-
-    m_fileTable->setSelectionMode(QAbstractItemView::MultiSelection);
-    m_fileTable->clearSelection();
-
-    for (int row = 0; row < m_fileTable->rowCount(); ++row)
-    {
-        if (!m_fileTable->isRowHidden(row))
-        {
-            m_fileTable->selectRow(row);
-        }
-    }
-
-    m_fileTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    onSelectionChanged();
+    UiUtils::selectVisibleRows(m_fileTable);
+    onSelectionChanged(); // Update button states
 }
 
 void XfsViewerWindow::filterTable(const QString& searchText)
@@ -535,30 +512,19 @@ void XfsViewerWindow::filterTable(const QString& searchText)
     if (!m_xfsExtractor)
         return;
 
-    QString searchLower = searchText.toLower();
-    int visibleCount = 0;
-    int totalRows = m_fileTable->rowCount();
-
-    for (int row = 0; row < totalRows; ++row)
-    {
-        auto* pathItem = m_fileTable->item(row, 0);
-        if (!pathItem)
-        {
-            m_fileTable->setRowHidden(row, true);
-            continue;
-        }
-
-        QString path = pathItem->text().toLower();
-        bool matches = searchText.isEmpty() || path.contains(searchLower);
-
-        m_fileTable->setRowHidden(row, !matches);
-        if (matches)
-            ++visibleCount;
-    }
+    const int totalRows = m_fileTable->rowCount();
+    const int visibleCount = UiUtils::filterTableRows(m_fileTable, searchText);
 
     m_statusLabel->setText(tr("%1 files (%2 visible)").arg(totalRows).arg(visibleCount));
     m_selectAllMatchesButton->setEnabled(!searchText.isEmpty() && visibleCount > 0);
 }
+
+void XfsViewerWindow::onSearchTextChanged(const QString& text)
+{
+    filterTable(text);
+}
+
+
 
 QString XfsViewerWindow::getFileTypeInfo(const QString& path) const
 {
@@ -589,14 +555,3 @@ QString XfsViewerWindow::getFileTypeInfo(const QString& path) const
     return ext.toUpper();
 }
 
-QString XfsViewerWindow::formatSize(uint64_t size) const
-{
-    if (size < 1024)
-        return QString::number(size) + " B";
-    else if (size < 1024 * 1024)
-        return QString::number(size / 1024.0, 'f', 1) + " KB";
-    else if (size < 1024 * 1024 * 1024)
-        return QString::number(size / (1024.0 * 1024.0), 'f', 2) + " MB";
-    else
-        return QString::number(size / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
-}

@@ -45,7 +45,6 @@ private:
     void viewImageEntry(size_t index);
     void filterTable(const QString& searchText);
     QString getFileTypeInfo(const QString& path) const;
-    QString formatSize(uint32_t size) const;
     bool canViewAsDtx(const QString& path) const;
     bool canViewAsSpr(const QString& path) const;
     bool canViewAsImage(const QString& path) const;

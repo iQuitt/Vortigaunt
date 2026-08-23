@@ -23,6 +23,7 @@
 
 #include "util.hpp"
 #include "LanguageManager.h"
+#include "ui/UiUtils.h"
 
 PakViewerWindow::PakViewerWindow(QWidget* parent)
     : QDialog(parent)
@@ -38,9 +39,7 @@ void PakViewerWindow::setupUI()
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setMinimumSize(400, 300);
     
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    resize(screenSize.width() * 0.7, screenSize.height() * 0.7);
+    UiUtils::resizeToScreen(this, 0.7);
 
     auto* mainLayout = new QVBoxLayout(this);
 
@@ -225,7 +224,7 @@ void PakViewerWindow::populateFileList()
         QString qPath = QString::fromStdString(utf8Path);
 
         auto* pathItem = new QTableWidgetItem(qPath);
-        auto* sizeItem = new QTableWidgetItem(formatSize(entry.RealSize));
+        auto* sizeItem = new QTableWidgetItem(UiUtils::formatSize(entry.RealSize));
         auto* typeItem = new QTableWidgetItem(getFileTypeInfo(qPath));
 
         sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -425,7 +424,7 @@ void PakViewerWindow::onExtractSelected()
     QString outputDir = QFileDialog::getExistingDirectory(
         this,
         tr("Select Output Directory"),
-        QDir::homePath()
+        SettingsDialog::getExtractStartDir()
     );
 
     if (outputDir.isEmpty())
@@ -446,7 +445,7 @@ void PakViewerWindow::onExtractAll()
     QString outputDir = QFileDialog::getExistingDirectory(
         this,
         tr("Select Output Directory"),
-        QDir::homePath()
+        SettingsDialog::getExtractStartDir()
     );
 
     if (outputDir.isEmpty())
@@ -571,46 +570,13 @@ QString PakViewerWindow::getFileTypeInfo(const QString& path) const
     return ext.toUpper();
 }
 
-QString PakViewerWindow::formatSize(uint32_t size) const
-{
-    if (size < 1024)
-        return QString::number(size) + " B";
-    else if (size < 1024 * 1024)
-        return QString::number(size / 1024.0, 'f', 1) + " KB";
-    else
-        return QString::number(size / (1024.0 * 1024.0), 'f', 2) + " MB";
-}
-
-void PakViewerWindow::onSearchTextChanged(const QString& text)
-{
-    filterTable(text);
-}
 
 void PakViewerWindow::onSelectAllMatches()
 {
     if (!m_pakFile)
         return;
-    
-    QString searchText = m_searchEdit->text().trimmed();
-    if (searchText.isEmpty())
-    {
-        m_fileTable->selectAll();
-        return;
-    }
-    
-    // Select all visible (filtered) rows
-    m_fileTable->setSelectionMode(QAbstractItemView::MultiSelection);
-    m_fileTable->clearSelection();
-    
-    for (int row = 0; row < m_fileTable->rowCount(); ++row)
-    {
-        if (!m_fileTable->isRowHidden(row))
-        {
-            m_fileTable->selectRow(row);
-        }
-    }
-    
-    m_fileTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+    UiUtils::selectVisibleRows(m_fileTable);
     onSelectionChanged(); // Update button states
 }
 
@@ -618,29 +584,17 @@ void PakViewerWindow::filterTable(const QString& searchText)
 {
     if (!m_pakFile)
         return;
-    
-    QString searchLower = searchText.toLower();
-    int visibleCount = 0;
-    int totalRows = m_fileTable->rowCount();
-    
-    for (int row = 0; row < totalRows; ++row)
-    {
-        auto* pathItem = m_fileTable->item(row, 0);
-        if (!pathItem)
-        {
-            m_fileTable->setRowHidden(row, true);
-            continue;
-        }
-        
-        QString path = pathItem->text().toLower();
-        bool matches = searchText.isEmpty() || path.contains(searchLower);
-        
-        m_fileTable->setRowHidden(row, !matches);
-        if (matches)
-            ++visibleCount;
-    }
-    
-    // Update status and button
+
+    const int totalRows = m_fileTable->rowCount();
+    const int visibleCount = UiUtils::filterTableRows(m_fileTable, searchText);
+
     m_statusLabel->setText(tr("%1 files (%2 visible)").arg(totalRows).arg(visibleCount));
     m_selectAllMatchesButton->setEnabled(!searchText.isEmpty() && visibleCount > 0);
 }
+
+void PakViewerWindow::onSearchTextChanged(const QString& text)
+{
+    filterTable(text);
+}
+
+

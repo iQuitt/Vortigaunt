@@ -180,40 +180,6 @@ static const unsigned char CF_REZ_KEY[] = {
 
 
 
-static std::string SanitizePathComponent(const std::string& name)
-{
-
-    std::string out;
-    out.reserve(name.size());
-
-    for (unsigned char ch : name)
-    {
-        if (ch < 0x20) // control chars
-        {
-            out.push_back('_');
-            continue;
-        }
-        switch (ch)
-        {
-        case '<': case '>': case ':': case '\"':
-        case '/': case '\\': case '|': case '?': case '*':
-            out.push_back('_');
-            break;
-        default:
-            out.push_back(static_cast<char>(ch));
-            break;
-        }
-    }
-
-    // Remove trailing spaces and dots which are not allowed in Windows filenames.
-    while (!out.empty() && (out.back() == ' ' || out.back() == '.'))
-        out.pop_back();
-
-    if (out.empty())
-        out = "_";
-
-    return out;
-}
 
 
 static void REZ_DecryptBuffer(std::vector<unsigned char>& data, uint32_t keyPos)
@@ -369,11 +335,11 @@ bool RezExtractor::ExtractAll(const std::string& outputDir) const
             std::string s = part.string();
             if (s == "." || s == ".." || s.empty())
                 continue;
-            safeRelPath /= SanitizePathComponent(s);
+            safeRelPath /= FileIO::sanitizePathComponent(s);
         }
         if (safeRelPath.empty())
         {
-            safeRelPath = SanitizePathComponent(e.filename);
+            safeRelPath = FileIO::sanitizePathComponent(e.filename);
         }
 
         std::filesystem::path outPath = FileIO::toPath(outputDir) / safeRelPath;
@@ -543,11 +509,11 @@ bool RezExtractor::ExtractSelectedEntries(const std::vector<size_t>& indices, co
             std::string s = part.string();
             if (s == "." || s == ".." || s.empty())
                 continue;
-            safeRelPath /= SanitizePathComponent(s);
+            safeRelPath /= FileIO::sanitizePathComponent(s);
         }
         if (safeRelPath.empty())
         {
-            safeRelPath = SanitizePathComponent(e.filename);
+            safeRelPath = FileIO::sanitizePathComponent(e.filename);
         }
 
         std::filesystem::path outPath = FileIO::toPath(outputDir) / safeRelPath;

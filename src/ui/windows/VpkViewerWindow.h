@@ -41,7 +41,6 @@ private:
     void filterTable(const QString& searchText);
     bool hasArchive() const;
     QString getFileTypeInfo(const QString& path) const;
-    QString formatSize(quint64 size) const;
 
     QLineEdit*      m_vpkPathEdit;
     QPushButton*    m_openButton;

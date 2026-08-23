@@ -18,6 +18,8 @@
 #include <fstream>
 
 #include "LanguageManager.h"
+#include "ui/dialogs/SettingsDialog.h"
+#include "ui/UiUtils.h"
 
 VpkViewerWindow::VpkViewerWindow(QWidget* parent)
     : QDialog(parent)
@@ -33,9 +35,7 @@ void VpkViewerWindow::setupUI()
     setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint);
     setMinimumSize(400, 300);
 
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    resize(screenSize.width() * 0.7, screenSize.height() * 0.7);
+    UiUtils::resizeToScreen(this, 0.7);
 
     auto* mainLayout = new QVBoxLayout(this);
 
@@ -240,7 +240,7 @@ void VpkViewerWindow::populateFileList()
     for (size_t i = 0; i < rows.size(); ++i)
     {
         auto* pathItem = new QTableWidgetItem(rows[i].path);
-        auto* sizeItem = new QTableWidgetItem(formatSize(rows[i].size));
+        auto* sizeItem = new QTableWidgetItem(UiUtils::formatSize(rows[i].size));
         auto* typeItem = new QTableWidgetItem(getFileTypeInfo(rows[i].path));
 
         sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -294,7 +294,7 @@ void VpkViewerWindow::onExtractSelected()
         indices.push_back(static_cast<size_t>(row));
 
     QString outputDir = QFileDialog::getExistingDirectory(
-        this, tr("Select Output Directory"), QDir::homePath());
+        this, tr("Select Output Directory"), SettingsDialog::getExtractStartDir());
 
     if (outputDir.isEmpty())
         return;
@@ -312,7 +312,7 @@ void VpkViewerWindow::onExtractAll()
         return;
 
     QString outputDir = QFileDialog::getExistingDirectory(
-        this, tr("Select Output Directory"), QDir::homePath());
+        this, tr("Select Output Directory"), SettingsDialog::getExtractStartDir());
 
     if (outputDir.isEmpty())
         return;
@@ -455,46 +455,14 @@ QString VpkViewerWindow::getFileTypeInfo(const QString& path) const
     return ext.toUpper();
 }
 
-QString VpkViewerWindow::formatSize(quint64 size) const
-{
-    if (size < 1024)
-        return QString::number(size) + " B";
-    else if (size < 1024ull * 1024)
-        return QString::number(size / 1024.0, 'f', 1) + " KB";
-    else if (size < 1024ull * 1024 * 1024)
-        return QString::number(size / (1024.0 * 1024.0), 'f', 2) + " MB";
-    else
-        return QString::number(size / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
-}
-
-void VpkViewerWindow::onSearchTextChanged(const QString& text)
-{
-    filterTable(text);
-}
 
 void VpkViewerWindow::onSelectAllMatches()
 {
     if (!hasArchive())
         return;
 
-    QString searchText = m_searchEdit->text().trimmed();
-    if (searchText.isEmpty())
-    {
-        m_fileTable->selectAll();
-        return;
-    }
-
-    m_fileTable->setSelectionMode(QAbstractItemView::MultiSelection);
-    m_fileTable->clearSelection();
-
-    for (int row = 0; row < m_fileTable->rowCount(); ++row)
-    {
-        if (!m_fileTable->isRowHidden(row))
-            m_fileTable->selectRow(row);
-    }
-
-    m_fileTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    onSelectionChanged();
+    UiUtils::selectVisibleRows(m_fileTable);
+    onSelectionChanged(); // Update button states
 }
 
 void VpkViewerWindow::filterTable(const QString& searchText)
@@ -502,27 +470,16 @@ void VpkViewerWindow::filterTable(const QString& searchText)
     if (!hasArchive())
         return;
 
-    QString searchLower = searchText.toLower();
-    int visibleCount = 0;
-    int totalRows = m_fileTable->rowCount();
-
-    for (int row = 0; row < totalRows; ++row)
-    {
-        auto* pathItem = m_fileTable->item(row, 0);
-        if (!pathItem)
-        {
-            m_fileTable->setRowHidden(row, true);
-            continue;
-        }
-
-        QString path = pathItem->text().toLower();
-        bool matches = searchText.isEmpty() || path.contains(searchLower);
-
-        m_fileTable->setRowHidden(row, !matches);
-        if (matches)
-            ++visibleCount;
-    }
+    const int totalRows = m_fileTable->rowCount();
+    const int visibleCount = UiUtils::filterTableRows(m_fileTable, searchText);
 
     m_statusLabel->setText(tr("%1 files (%2 visible)").arg(totalRows).arg(visibleCount));
     m_selectAllMatchesButton->setEnabled(!searchText.isEmpty() && visibleCount > 0);
 }
+
+void VpkViewerWindow::onSearchTextChanged(const QString& text)
+{
+    filterTable(text);
+}
+
+
