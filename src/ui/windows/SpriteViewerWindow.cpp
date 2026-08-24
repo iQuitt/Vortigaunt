@@ -37,6 +37,25 @@
 #include "utils/ImageUtils.h"
 #include "ui/UiUtils.h"
 
+namespace {
+
+
+const QStringList kFrameImageExtensions = {
+    "bmp", "png", "jpg", "jpeg", "gif", "tga", "tiff", "tif"
+};
+
+bool isFrameImageFile(const QString& path)
+{
+    return kFrameImageExtensions.contains(QFileInfo(path).suffix().toLower());
+}
+
+bool isSpriteFile(const QString& path)
+{
+    return QFileInfo(path).suffix().compare(QStringLiteral("spr"), Qt::CaseInsensitive) == 0;
+}
+
+} // namespace
+
 ZoomablePreviewWidget::ZoomablePreviewWidget(QWidget* parent)
     : QWidget(parent)
     , m_zoomFactor(1.0)
@@ -398,15 +417,15 @@ void SpriteViewerWindow::setupUI()
     auto* fileBrowserWidget = createFileBrowserWidget();
     
     // Right side: Tab widget
-    auto* tabWidget = new QTabWidget(this);
-    tabWidget->addTab(createFileTabWidget(), tr("File"));
-    tabWidget->addTab(createCreateTabWidget(), tr("Create"));
-    tabWidget->addTab(createFixTabWidget(), tr("Fix"));
+    m_tabWidget = new QTabWidget(this);
+    m_tabWidget->addTab(createFileTabWidget(), tr("File"));
+    m_createTabIndex = m_tabWidget->addTab(createCreateTabWidget(), tr("Create"));
+    m_fixTabIndex = m_tabWidget->addTab(createFixTabWidget(), tr("Fix"));
     
     // Splitter to make file browser resizable
     auto* splitter = new QSplitter(Qt::Horizontal, this);
     splitter->addWidget(fileBrowserWidget);
-    splitter->addWidget(tabWidget);
+    splitter->addWidget(m_tabWidget);
     splitter->setSizes({250, 1150}); // File browser 250px, rest for tabs
     
     mainLayout->addWidget(splitter);
@@ -835,7 +854,7 @@ QWidget* SpriteViewerWindow::createCreateTabWidget()
     auto* layout = new QVBoxLayout(widget);
     
     // Frame selection
-    auto* frameGroup = new QGroupBox(tr("Frames"));
+    auto* frameGroup = new QGroupBox(tr("Frames (Drag & Drop supported)"));
     auto* frameLayout = new QVBoxLayout();
     
     m_createFrameList = new QListWidget();
@@ -1152,16 +1171,11 @@ QWidget* SpriteViewerWindow::createFixTabWidget()
 
 void SpriteViewerWindow::dragEnterEvent(QDragEnterEvent* event)
 {
-    if (event->mimeData()->hasUrls()) {
-        bool hasSpr = false;
-        for (const QUrl& url : event->mimeData()->urls()) {
-            if (url.toLocalFile().toLower().endsWith(".spr")) {
-                hasSpr = true;
-                break;
-            }
-        }
-        if (hasSpr) {
+    const QStringList files = collectDroppedFiles(event->mimeData());
+    for (const QString& file : files) {
+        if (isSpriteFile(file) || isFrameImageFile(file)) {
             event->acceptProposedAction();
+            return;
         }
     }
 }
@@ -1169,17 +1183,34 @@ void SpriteViewerWindow::dragEnterEvent(QDragEnterEvent* event)
 void SpriteViewerWindow::dropEvent(QDropEvent* event)
 {
     QStringList sprFiles;
-    for (const QUrl& url : event->mimeData()->urls()) {
-        QString filePath = url.toLocalFile();
-        if (filePath.toLower().endsWith(".spr")) {
-            sprFiles.append(filePath);
-        }
+    QStringList frameImages;
+    
+    for (const QString& file : collectDroppedFiles(event->mimeData())) {
+        if (isSpriteFile(file))
+            sprFiles.append(file);
+        else if (isFrameImageFile(file))
+            frameImages.append(file);
+    }
+    
+    if (sprFiles.isEmpty() && frameImages.isEmpty())
+        return;
+    
+    // Images become sprite frames, .spr files go to the fix list. The two file
+    // sets never overlap, so the drop does not depend on which tab is open -
+    // we just switch to the list that received something.
+    if (!frameImages.isEmpty()) {
+        addFramesToCreateList(frameImages, false);
+        if (m_tabWidget && m_createTabIndex >= 0)
+            m_tabWidget->setCurrentIndex(m_createTabIndex);
     }
     
     if (!sprFiles.isEmpty()) {
         addSpritesToFixList(sprFiles);
-        event->acceptProposedAction();
+        if (frameImages.isEmpty() && m_tabWidget && m_fixTabIndex >= 0)
+            m_tabWidget->setCurrentIndex(m_fixTabIndex);
     }
+    
+    event->acceptProposedAction();
 }
 
 void SpriteViewerWindow::closeEvent(QCloseEvent* event)
@@ -1915,25 +1946,29 @@ void SpriteViewerWindow::onBrowseFrames()
         }
     }
     
-    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Frame Images"), startDir, 
-        tr("Image files (*.bmp *.png *.jpg *.jpeg *.gif *.tga *.tiff *.tif);;All files (*.*)"));
+    const QString filter = tr("Image files (%1);;All files (*.*)")
+                               .arg("*." + kFrameImageExtensions.join(" *."));
+    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Frame Images"), startDir, filter);
     
+    addFramesToCreateList(files, true);
+}
+
+void SpriteViewerWindow::addFramesToCreateList(const QStringList& files, bool replaceExisting)
+{
     if (files.isEmpty())
         return;
     
-    // Clear existing list
-    m_createFrameList->clear();
+    if (replaceExisting)
+        m_createFrameList->clear();
     
-    // Sort files by name to ensure correct order (natural sort)
+    QStringList sortedFiles = files;
     QCollator collator;
     collator.setNumericMode(true);
-    std::sort(files.begin(), files.end(), [&collator](const QString& a, const QString& b) {
-        QFileInfo infoA(a);
-        QFileInfo infoB(b);
-        return collator.compare(infoA.fileName(), infoB.fileName()) < 0;
+    std::sort(sortedFiles.begin(), sortedFiles.end(), [&collator](const QString& a, const QString& b) {
+        return collator.compare(QFileInfo(a).fileName(), QFileInfo(b).fileName()) < 0;
     });
     
-    for (const QString& file : files) {
+    for (const QString& file : sortedFiles) {
         QFileInfo fileInfo(file);
         
         // Load image and create thumbnail
@@ -1950,7 +1985,41 @@ void SpriteViewerWindow::onBrowseFrames()
         m_createFrameList->addItem(item);
     }
     
-    m_createSpriteButton->setEnabled(m_createFrameList->count() > 0);
+    m_createSpriteButton->setEnabled(m_createFrameList->count() > 0 && !m_createOutputPathEdit->text().isEmpty());
+}
+
+QStringList SpriteViewerWindow::collectDroppedFiles(const QMimeData* mimeData)
+{
+    QStringList files;
+    if (!mimeData)
+        return files;
+    
+
+    if (mimeData->hasUrls()) {
+        for (const QUrl& url : mimeData->urls()) {
+            const QString localPath = url.toLocalFile();
+            if (!localPath.isEmpty())
+                files.append(localPath);
+        }
+    }
+    
+
+    if (files.isEmpty() && mimeData->hasText()) {
+        const QStringList lines = mimeData->text().split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+        for (const QString& line : lines) {
+            const QString trimmed = line.trimmed(); // also strips the CR of CRLF endings
+            if (trimmed.isEmpty())
+                continue;
+            
+            const QString localPath = trimmed.startsWith(QStringLiteral("file:"))
+                                          ? QUrl(trimmed).toLocalFile()
+                                          : trimmed;
+            if (!localPath.isEmpty() && QFileInfo::exists(localPath))
+                files.append(localPath);
+        }
+    }
+    
+    return files;
 }
 
 void SpriteViewerWindow::onCreateSprite()

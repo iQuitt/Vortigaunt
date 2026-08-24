@@ -22,6 +22,8 @@
 
 #include "SpriteLoader.h"
 
+class QMimeData;
+
 // Custom widget for zoomable preview with background toggle
 class ZoomablePreviewWidget : public QWidget
 {
@@ -189,6 +191,10 @@ private:
     void updateFileInfo();
     void updatePaletteDisplay();
     void addSpritesToFixList(const QStringList& files);
+    // Fill the Create tab's frame list from image paths (Browse Frames replaces, a drop appends)
+    void addFramesToCreateList(const QStringList& files, bool replaceExisting);
+    // Local file paths carried by a drag, from Windows Explorer as well as Linux file managers
+    static QStringList collectDroppedFiles(const QMimeData* mimeData);
     void navigateToPath(const QString& path);
     void applyHueSaturation();
     void loadNextPrevSprite(bool next);
@@ -264,6 +270,10 @@ private:
     bool isOriginalState() const;
     
     // UI Elements - Create Tab
+    QTabWidget* m_tabWidget = nullptr;
+    int m_createTabIndex = -1;
+    int m_fixTabIndex = -1;
+
     QListWidget* m_createFrameList;
     QPushButton* m_browseFramesButton;
     QPushButton* m_createSpriteButton;
