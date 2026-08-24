@@ -21,14 +21,14 @@ QString formatSize(quint64 size)
         return QString::number(size / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
 }
 
-void resizeToScreen(QWidget* widget, double widthFactor, double heightFactor)
+void resizeToScreen(QWidget* widget, double width, double height)
 {
     if (!widget)
         return;
 
     QScreen* screen = QGuiApplication::primaryScreen();
     QSize screenSize = screen ? screen->availableGeometry().size() : QSize(1920, 1080);
-    widget->resize(screenSize.width() * widthFactor, screenSize.height() * heightFactor);
+    widget->resize(screenSize.width() * width, screenSize.height() * height);
 }
 
 int filterTableRows(QTableWidget* table, const QString& searchText)

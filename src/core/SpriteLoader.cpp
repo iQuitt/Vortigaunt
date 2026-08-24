@@ -349,6 +349,41 @@ bool SpriteLoader::extractFramesToBmp(const std::string& filePath, const std::st
 #endif
 }
 
+bool SpriteLoader::padIndexedFrameToEven(int32_t& width, int32_t& height, std::vector<uint8_t>& pixelData)
+{
+    if (width <= 0 || height <= 0)
+        return false;
+
+    const int32_t newWidth = width + (width & 1);
+    const int32_t newHeight = height + (height & 1);
+    if (newWidth == width && newHeight == height)
+        return false;
+
+    if (pixelData.size() < static_cast<size_t>(width) * static_cast<size_t>(height))
+        return false;
+
+    std::vector<uint8_t> padded(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight), 0);
+
+    for (int32_t y = 0; y < newHeight; ++y)
+    {
+		const int32_t srcY = std::min(y, height - 1); // duplicate the last row if needed
+        const uint8_t* srcRow = pixelData.data() + static_cast<size_t>(srcY) * static_cast<size_t>(width);
+        uint8_t* dstRow = padded.data() + static_cast<size_t>(y) * static_cast<size_t>(newWidth);
+
+        std::memcpy(dstRow, srcRow, static_cast<size_t>(width));
+        if (newWidth != width)
+            dstRow[width] = srcRow[width - 1]; // duplicate the last column
+    }
+
+    VortigauntLog::LogF("Sprite frame padded aka resized from %dx%d to %dx%d (GoldSrc requires even frame sizes)",
+                        width, height, newWidth, newHeight);
+
+    pixelData.swap(padded);
+    width = newWidth;
+    height = newHeight;
+    return true;
+}
+
 bool SpriteLoader::saveFile(const std::string& outputPath)
 {
     if (m_header.version != SpriteVersion::GOLDSRC) {
@@ -360,14 +395,27 @@ bool SpriteLoader::saveFile(const std::string& outputPath)
     if (!outFile.is_open())
         return false;
     
+    // GoldSrc rejects frames with an odd width or height, so grow them before writing.
+    // (https://github.com/SanyaSho/BarsTech_goldsrc_compatible_public/blob/6f0585d4d6c6d84bbfad30c3a52c527177e99d2b/engine/gl_draw.cpp#L1600)
+   
+    // The padding is done on copies: the sprite the user is still editing stays as it is.
+    std::vector<SpriteFrame> outFrames = m_frames;
+    int32_t maxWidth = m_header.max_width;
+    int32_t maxHeight = m_header.max_height;
+    for (auto& frame : outFrames) {
+        padIndexedFrameToEven(frame.width, frame.height, frame.pixel_data);
+        maxWidth = std::max(maxWidth, frame.width);
+        maxHeight = std::max(maxHeight, frame.height);
+    }
+    
     // Write header
     outFile.write(reinterpret_cast<const char*>(&m_header.id), 4);
     outFile.write(reinterpret_cast<const char*>(&m_header.version), 4);
     outFile.write(reinterpret_cast<const char*>(&m_header.type), 4);
     outFile.write(reinterpret_cast<const char*>(&m_header.texture_format), 4);
     outFile.write(reinterpret_cast<const char*>(&m_header.bounding_radius), 4);
-    outFile.write(reinterpret_cast<const char*>(&m_header.max_width), 4);
-    outFile.write(reinterpret_cast<const char*>(&m_header.max_height), 4);
+    outFile.write(reinterpret_cast<const char*>(&maxWidth), 4);
+    outFile.write(reinterpret_cast<const char*>(&maxHeight), 4);
     outFile.write(reinterpret_cast<const char*>(&m_header.num_frames), 4);
     outFile.write(reinterpret_cast<const char*>(&m_header.beam_len), 4);
     outFile.write(reinterpret_cast<const char*>(&m_header.synch_type), 4);
@@ -378,7 +426,7 @@ bool SpriteLoader::saveFile(const std::string& outputPath)
     outFile.write(reinterpret_cast<const char*>(m_palette.data()), m_palette.size());
     
     // Write frames
-    for (const auto& frame : m_frames) {
+    for (const auto& frame : outFrames) {
         int32_t group = frame.group;
         int32_t originX = frame.origin_x;
         int32_t originY = frame.origin_y;
@@ -434,6 +482,8 @@ bool SpriteLoader::createSpriteV2(const std::string& outputPath,const std::vecto
             }
         }
         
+        rgbImg = padToEvenSize(rgbImg);
+
         maxWidth = std::max(maxWidth, static_cast<int32_t>(rgbImg.width()));
         maxHeight = std::max(maxHeight, static_cast<int32_t>(rgbImg.height()));
         frameImages.push_back(rgbImg);
@@ -506,8 +556,8 @@ bool SpriteLoader::createSpriteV2(const std::string& outputPath,const std::vecto
         if (textureFormat == 2 || textureFormat == 3) {
             if (i < framePaths.size()) {
                 QImage origImg = ImageUtils::loadImage(framePaths[i]);
-                origImg = origImg.convertToFormat(QImage::Format_ARGB32);
-                if (origImg.hasAlphaChannel()) {
+                origImg = padToEvenSize(origImg.convertToFormat(QImage::Format_ARGB32));
+                if (origImg.hasAlphaChannel() && origImg.size() == frameImg.size()) {
                     // Start with blue, paste RGB frame using original alpha
                     QImage result(frameImg.size(), QImage::Format_RGB32);
                     result.fill(QColor(0, 0, 255));
@@ -612,7 +662,7 @@ bool SpriteLoader::convertV3ToV2(const std::string& inputPath, const std::string
             }
         }
         
-        rgbFrames.push_back(rgbImg);
+        rgbFrames.push_back(padToEvenSize(rgbImg));
         frameOrigins.push_back({frame.origin_x, frame.origin_y});
     }
     
@@ -693,8 +743,8 @@ bool SpriteLoader::convertV3ToV2(const std::string& inputPath, const std::string
         // Matches Python: blue_bg.paste(processed_img, mask=alpha_mask)
         if (textureFormat == 2 || textureFormat == 3) {
             if (i < frames.size() && !frames[i].image.isNull()) {
-                QImage alphaFrame = frames[i].image.convertToFormat(QImage::Format_ARGB32);
-                if (alphaFrame.hasAlphaChannel()) {
+                QImage alphaFrame = padToEvenSize(frames[i].image.convertToFormat(QImage::Format_ARGB32));
+                if (alphaFrame.hasAlphaChannel() && alphaFrame.size() == rgbFrame.size()) {
                     // Start with blue, paste RGB frame using original alpha
                     QImage result(rgbFrame.size(), QImage::Format_RGB32);
                     result.fill(QColor(0, 0, 255));
@@ -749,6 +799,47 @@ bool SpriteLoader::convertV3ToV2(const std::string& inputPath, const std::string
 }
 
 #ifdef QT_WIDGETS_LIB
+
+QImage SpriteLoader::padToEvenSize(const QImage& src)
+{
+    if (src.isNull())
+        return src;
+
+    const int width = src.width();
+    const int height = src.height();
+    const int newWidth = width + (width & 1);
+    const int newHeight = height + (height & 1);
+    if (newWidth == width && newHeight == height)
+        return src;
+
+    // QPainter cannot draw onto indexed/mono images, so widen those first.
+    QImage source = src;
+    if (source.format() == QImage::Format_Indexed8 ||
+        source.format() == QImage::Format_Mono ||
+        source.format() == QImage::Format_MonoLSB)
+    {
+        source = source.convertToFormat(QImage::Format_ARGB32);
+    }
+
+    QImage padded(newWidth, newHeight, source.format());
+    padded.fill(Qt::transparent);
+
+    QPainter painter(&padded);
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.drawImage(0, 0, source);
+    if (newWidth != width) // duplicate the last column
+        painter.drawImage(QRect(width, 0, 1, height), source, QRect(width - 1, 0, 1, height));
+    if (newHeight != height) // duplicate the last row
+        painter.drawImage(QRect(0, height, width, 1), source, QRect(0, height - 1, width, 1));
+    if (newWidth != width && newHeight != height) // and the corner pixel
+        painter.drawImage(QRect(width, height, 1, 1), source, QRect(width - 1, height - 1, 1, 1));
+    painter.end();
+
+    VortigauntLog::LogF("Sprite frame padded aka resized from %dx%d to %dx%d (GoldSrc requires even frame sizes)",
+                        width, height, newWidth, newHeight);
+
+    return padded;
+}
 
 QImage SpriteLoader::alphaCompositeOnto(const QImage& src, uint8_t bgR, uint8_t bgG, uint8_t bgB)
 {

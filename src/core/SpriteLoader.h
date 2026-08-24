@@ -118,7 +118,17 @@ private:
     
     void createSharedPalette(const std::vector<SpriteFrame>& frames, std::vector<uint8_t>& palette);
 
+    // GoldSrc refuses to load (and crashes on) frames with an odd width or height,
+    // so every frame we write is grown to the next even size. Both helpers replicate
+    // the last row/column instead of inventing a colour: on AlphaTest sprites the
+    // border already holds the transparency key, elsewhere the copy is seamless.
+    // Returns true when the frame was actually padded.
+    static bool padIndexedFrameToEven(int32_t& width, int32_t& height, std::vector<uint8_t>& pixelData);
+
 #ifdef QT_WIDGETS_LIB
+    // Helper: grow src to the next even width/height (see padIndexedFrameToEven)
+    static QImage padToEvenSize(const QImage& src);
+
     // Helper: alpha-composite src onto a solid background colour
     static QImage alphaCompositeOnto(const QImage& src, uint8_t bgR, uint8_t bgG, uint8_t bgB);
 
