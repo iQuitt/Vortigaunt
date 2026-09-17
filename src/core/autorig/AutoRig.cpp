@@ -63,6 +63,53 @@ void AutoRig::SetSkeleton(const std::vector<SmdBone>& bones) {
     }
 }
 
+std::vector<AutoRig::NonDeformerBone> AutoRig::DetectNonDeformerBones() const {
+    std::vector<NonDeformerBone> found;
+    if (m_bones.size() < 2) {
+        return found;
+    }
+
+    // Tolerance for "parked on top of": a thousandth of the skeleton extent, so
+    // it scales with the model and still never merges neighbouring finger bones.
+    aiVector3D mn = m_boneWorldPositions[0];
+    aiVector3D mx = m_boneWorldPositions[0];
+    for (const aiVector3D& p : m_boneWorldPositions) {
+        mn.x = std::min(mn.x, p.x); mn.y = std::min(mn.y, p.y); mn.z = std::min(mn.z, p.z);
+        mx.x = std::max(mx.x, p.x); mx.y = std::max(mx.y, p.y); mx.z = std::max(mx.z, p.z);
+    }
+    aiVector3D extent = mx - mn;
+    float epsilon = std::max(0.01f, std::sqrt(extent.SquareLength()) * 0.001f);
+
+    for (size_t i = 0; i < m_bones.size(); i++) {
+        int parentIdx = m_bones[i].parentIndex;
+        bool hasParent = (parentIdx >= 0 && parentIdx < static_cast<int>(m_bones.size()) &&
+                          parentIdx != static_cast<int>(i));
+        bool hasChildren = !m_boneChildren[i].empty();
+
+        if (!hasParent && !hasChildren) {
+            found.push_back({static_cast<int>(i), "detached from the skeleton, no animation moves it with the mesh"});
+            continue;
+        }
+
+        if (hasChildren) {
+            continue;  // it spans a real segment, it can deform
+        }
+
+        for (size_t j = 0; j < m_bones.size(); j++) {
+            if (j == i) {
+                continue;
+            }
+            aiVector3D d = m_boneWorldPositions[i] - m_boneWorldPositions[j];
+            if (std::sqrt(d.SquareLength()) <= epsilon) {
+                found.push_back({static_cast<int>(i), "sits on top of \"" + m_bones[j].name + "\", no length to deform along"});
+                break;
+            }
+        }
+    }
+
+    return found;
+}
+
 void AutoRig::SetIgnoredBones(const std::unordered_set<int>& ignoredBones) {
     m_ignoredBones = ignoredBones;
 }
@@ -529,6 +576,79 @@ std::vector<int> AutoRig::RigTriangles(const std::vector<float>& vertexPositions
     }
     
     return boneIndices;
+}
+
+std::vector<heatrig::BoneSegment> AutoRig::BuildDeformerSegments() const {
+    std::vector<heatrig::BoneSegment> segments;
+    segments.reserve(m_bones.size());
+
+    for (size_t i = 0; i < m_bones.size(); i++) {
+        if (m_ignoredBones.find(static_cast<int>(i)) != m_ignoredBones.end()) {
+            continue;  // excluded in the dialog, must not attract any vertex
+        }
+
+        const aiVector3D& head = m_boneWorldPositions[i];
+        const std::vector<int>& children = m_boneChildren[i];
+
+        // A root parked on the origin is a carrier, not a deformer.
+        if (m_bones[i].parentIndex < 0 && !children.empty()) {
+            if (head.SquareLength() < 1.0f) {
+                continue;
+            }
+        }
+
+        if (!children.empty()) {
+            for (int c : children) {
+                const aiVector3D& tip = m_boneWorldPositions[c];
+                segments.push_back({head, tip, static_cast<int>(i)});
+            }
+            continue;
+        }
+
+        aiVector3D dir(0.0f, 0.0f, 1.0f);
+        int parentIdx = m_bones[i].parentIndex;
+        if (parentIdx >= 0 && parentIdx < static_cast<int>(m_boneWorldPositions.size())) {
+            aiVector3D d = head - m_boneWorldPositions[parentIdx];
+            if (d.SquareLength() > 1e-8f) {
+                dir = d;
+                dir.Normalize();
+            }
+        }
+
+        float len = (i < m_boneLengths.size()) ? m_boneLengths[i] : 0.0f;
+        if (len < 1e-3f) {
+            len = 5.0f;
+        }
+
+        aiVector3D tip = head + dir * len;
+        segments.push_back({head, tip, static_cast<int>(i)});
+    }
+
+    return segments;
+}
+
+heatrig::Result AutoRig::RigTrianglesHeat(const std::vector<float>& vertexPositions,
+                                          const heatrig::Options& options) {
+    heatrig::Result result;
+
+    if (m_bones.empty()) {
+        result.error = "No skeleton loaded.";
+        m_error = result.error;
+        return result;
+    }
+
+    std::vector<heatrig::BoneSegment> segments = BuildDeformerSegments();
+    if (segments.empty()) {
+        result.error = "Every bone was excluded, nothing left to rig to.";
+        m_error = result.error;
+        return result;
+    }
+
+    result = heatrig::Solve(vertexPositions, segments, options);
+    if (!result.ok) {
+        m_error = result.error;
+    }
+    return result;
 }
 
 std::vector<int> AutoRig::RigMesh(const aiMesh* mesh) {

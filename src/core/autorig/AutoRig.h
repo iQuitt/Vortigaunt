@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/smd/SmdParser.h"
+#include "HeatRig.h"
 #include <assimp/scene.h>
 #include <vector>
 #include <cmath>
@@ -39,6 +40,15 @@ public:
     // useDepthPenalty: see RigVertices
     std::vector<int> RigTriangles(const std::vector<float>& vertexPositions, const std::vector<float>& vertexNormals, int smoothingPasses = 3, bool useDepthPenalty = true);
     
+    // Rig with bone heat diffusion - the algorithm behind Blender's
+    // "Parent With Automatic Weights", collapsed to one bone per vertex.
+    // Unlike RigTriangles this is occlusion aware, so weights do not leak
+    // between limbs that merely happen to be close together, and every copy of
+    // a shared vertex is guaranteed the same bone so the model cannot tear.
+    // vertexPositions: flat array (x,y,z per vertex) in triangle order.
+    heatrig::Result RigTrianglesHeat(const std::vector<float>& vertexPositions,
+                                     const heatrig::Options& options = heatrig::Options());
+
     // Rig an Assimp mesh
     std::vector<int> RigMesh(const aiMesh* mesh);
     
@@ -58,6 +68,21 @@ public:
     // Get error message
     const std::string& GetError() const { return m_error; }
 
+    // A bone that cannot sensibly deform geometry.
+    struct NonDeformerBone {
+        int index;
+        std::string reason;
+    };
+
+    // Spot helper and marker bones from the shape of the skeleton alone, with no
+    // name matching, so the same check works for Half-Life, Counter-Strike and
+    // CSO skeletons alike. Two things disqualify a bone:
+    //   - it hangs off nothing and carries nothing, so no animation moves it
+    //     with the limb it sits in (CSO knee and elbow markers are like this)
+    //   - it is a childless bone parked on top of another bone, so it has no
+    //     length to deform along and its direction is arbitrary
+    std::vector<NonDeformerBone> DetectNonDeformerBones() const;
+
     // Set bones to ignore during rigging
     void SetIgnoredBones(const std::unordered_set<int>& ignoredBones);
 
@@ -73,6 +98,11 @@ private:
     std::string m_error;
     std::unordered_set<int> m_ignoredBones;
     
+    // Describe the skeleton as deformer segments for the heat solver.
+    // A GoldSrc bone is a single point, so its influence is carried by the
+    // segments running to each of its children; leaf bones get a virtual tip.
+    std::vector<heatrig::BoneSegment> BuildDeformerSegments() const;
+
     // Calculate world-space positions for all bones
     void CalculateBoneWorldPositions();
     

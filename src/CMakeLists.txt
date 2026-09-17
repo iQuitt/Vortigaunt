@@ -16,6 +16,7 @@ set(VORTIGAUNT_CORE_HEADERS
 
     core/smd/SmdParser.h
     core/autorig/AutoRig.h
+    core/autorig/HeatRig.h
     
     core/extractors/rez/RezExtractor.h
     core/extractors/pak/SnowCipher.h
@@ -87,6 +88,7 @@ set(VORTIGAUNT_CORE
 
     core/smd/SmdParser.cpp
     core/autorig/AutoRig.cpp
+    core/autorig/HeatRig.cpp
     core/extractors/rez/RezExtractor.cpp
     utils/fsutils.cpp
     utils/Platform.cpp

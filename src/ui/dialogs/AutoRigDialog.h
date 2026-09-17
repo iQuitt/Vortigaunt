@@ -20,7 +20,7 @@ class QEvent;
 
 // Dialog for GoldSrc Auto-Rig (Beta) feature
 // Uses hardcoded Counter-Strike 1.6 skeleton reference
-// Supports A-pose to T-pose conversion and auto-scaling
+// The mesh has to be fitted onto the skeleton by hand before rigging
 class AutoRigDialog : public QDialog {
     Q_OBJECT
 
@@ -51,8 +51,9 @@ private:
     
     QDoubleSpinBox* m_scaleSpinBox;
     QCheckBox* m_flipYZCheck;
+    QCheckBox* m_heatDiffusionCheck;
+    QCheckBox* m_pivotSnapCheck;
     QCheckBox* m_depthPenaltyCheck;
-    QCheckBox* m_autoScaleCheck;
     
     QPushButton* m_rigButton;
     QProgressBar* m_progressBar;

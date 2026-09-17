@@ -21,6 +21,9 @@
 #include <QScrollArea>
 #include <limits>
 #include <algorithm>
+#include <unordered_map>
+#include <QBrush>
+#include <QStringList>
 #include <functional>
 
 #include <assimp/Importer.hpp>
@@ -93,6 +96,21 @@ AutoRigDialog::AutoRigDialog(QWidget* parent) : QDialog(parent)
     m_flipYZCheck->setToolTip(tr("Enable if mesh is oriented differently (e.g., from Blender)"));
     optionsLayout->addWidget(m_flipYZCheck);
     
+    m_heatDiffusionCheck = new QCheckBox(tr("Bone Heat Diffusion (recommended)"));
+    m_heatDiffusionCheck->setToolTip(tr("Solves smooth weights across the mesh surface and collapses them to one bone "
+                                        "per vertex, which is what Blender does with Automatic Weights followed by "
+                                        "Limit Total 1. It knows which bones a vertex can actually see, so weights "
+                                        "cannot leak between limbs. Uncheck to use the older nearest-bone matching."));
+    m_heatDiffusionCheck->setChecked(true);
+    optionsLayout->addWidget(m_heatDiffusionCheck);
+
+    m_pivotSnapCheck = new QCheckBox(tr("Snap seams to joints"));
+    m_pivotSnapCheck->setToolTip(tr("Cuts the boundary between two bones on the plane through the joint they share. "
+                                    "GoldSrc binds every vertex to a single bone, so a crease at the joint is "
+                                    "unavoidable; it is smallest when the cut sits on the pivot."));
+    m_pivotSnapCheck->setChecked(true);
+    optionsLayout->addWidget(m_pivotSnapCheck);
+
     m_depthPenaltyCheck = new QCheckBox(tr("Use Hierarchy Depth Penalty (Enable for Player Models)"));
     m_depthPenaltyCheck->setToolTip(tr("Prevents helper bones from stealing vertices. Uncheck this for Hand/Viewmodel meshes."));
     m_depthPenaltyCheck->setChecked(true);
@@ -218,6 +236,16 @@ AutoRigDialog::AutoRigDialog(QWidget* parent) : QDialog(parent)
     connect(m_selectAllBonesButton, &QPushButton::clicked, this, &AutoRigDialog::onSelectAllBones);
     connect(m_deselectAllBonesButton, &QPushButton::clicked, this, &AutoRigDialog::onDeselectAllBones);
     connect(m_boneTreeWidget, &QTreeWidget::itemChanged, this, &AutoRigDialog::updateBoneCountLabel);
+
+    // The depth penalty only steers the legacy nearest-bone search; the heat
+    // solver decides the same thing from the mesh itself.
+    auto syncRigMethod = [this]() {
+        const bool heat = m_heatDiffusionCheck->isChecked();
+        m_pivotSnapCheck->setEnabled(heat);
+        m_depthPenaltyCheck->setEnabled(!heat);
+    };
+    connect(m_heatDiffusionCheck, &QCheckBox::toggled, this, syncRigMethod);
+    syncRigMethod();
     VortigauntLog::addLogWidget(m_logEdit);
 
     VortigauntLog::Vortigaunt_Printf("^2Auto-Rig ready.");
@@ -356,9 +384,58 @@ void AutoRigDialog::onRig() {
         }
     }
     
-    // Use topology smoothing (RigTriangles) with 10 passes to fix joint boundaries
-    std::vector<int> boneIndices = gsrcAutorig.RigTriangles(vertexPositions, vertexNormals, 10, useDepthPenalty);
-    VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2Rigged ^5%1 ^2vertices with topology smoothing.").arg(boneIndices.size()));
+    std::vector<int> boneIndices;
+    if (m_heatDiffusionCheck->isChecked()) {
+        heatrig::Options heatOptions;
+        heatOptions.pivotSnap = m_pivotSnapCheck->isChecked() ? 1.0f : 0.0f;
+        // Vertices were scaled above, so the welding tolerance has to follow.
+        heatOptions.weldEpsilon = std::max(1e-6f, 0.001f * scale);
+
+        heatrig::Result heatResult = gsrcAutorig.RigTrianglesHeat(vertexPositions, heatOptions);
+        if (!heatResult.ok) {
+            VortigauntLog::Vortigaunt_Printf(QStringLiteral("^7ERROR: ^9%1").arg(QString::fromStdString(heatResult.error)));
+            m_rigButton->setEnabled(true);
+            m_progressBar->setVisible(false);
+            return;
+        }
+
+        boneIndices = std::move(heatResult.boneIndices);
+        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2Heat diffusion: ^5%1 ^2welded vertices, ^5%2 ^2triangles, ^5%3 ^2bones solved.")
+            .arg(heatResult.weldedVertexCount)
+            .arg(heatResult.triangleCount)
+            .arg(heatResult.solvedBoneCount));
+        if (heatResult.unreachedVertexCount > 0) {
+            VortigauntLog::Vortigaunt_Printf(QStringLiteral("^3%1 ^2vertices could not see any bone and were filled in by diffusion.")
+                .arg(heatResult.unreachedVertexCount));
+        }
+        if (heatResult.absorbedRegionCount > 0) {
+            VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2Absorbed ^5%1 ^2stray patch(es) into the surrounding bone.")
+                .arg(heatResult.absorbedRegionCount));
+        }
+
+        // Point at bones that ended up with almost nothing. They are usually
+        // helper bones a purely geometric check cannot tell from a real one,
+        // and a handful of vertices on one is exactly what shows up in game as
+        // a small broken spot.
+        std::unordered_map<int, int> perBone;
+        for (int boneIdx : boneIndices) {
+            perBone[boneIdx]++;
+        }
+        QStringList thin;
+        for (const auto& [boneIdx, count] : perBone) {
+            if (count <= 3 && boneIdx >= 0 && boneIdx < static_cast<int>(inputBones.size())) {
+                thin << QStringLiteral("%1 (%2)").arg(QString::fromStdString(inputBones[boneIdx].name)).arg(count);
+            }
+        }
+        if (!thin.isEmpty()) {
+            VortigauntLog::Vortigaunt_Printf(QStringLiteral("^3These bones took almost no geometry, consider unchecking them: ^9%1")
+                .arg(thin.join(QStringLiteral(", "))));
+        }
+    } else {
+        // Legacy path: nearest bone plus topology smoothing over 10 passes.
+        boneIndices = gsrcAutorig.RigTriangles(vertexPositions, vertexNormals, 10, useDepthPenalty);
+    }
+    VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2Rigged ^5%1 ^2vertices.").arg(boneIndices.size()));
     setProgress(80);
     
     VortigauntLog::Vortigaunt_Printf("^2Writing output SMD...");
@@ -479,6 +556,28 @@ void AutoRigDialog::populateBoneTree(const std::vector<SmdBone>& bones) {
         return;
     }
 
+    // Helper and marker bones cannot deform anything, so start them excluded.
+    // Detection is purely geometric, which is why it works the same on a
+    // Half-Life, a Counter-Strike and a CSO skeleton.
+    AutoRig probe;
+    probe.SetSkeleton(bones);
+    std::vector<AutoRig::NonDeformerBone> helpers = probe.DetectNonDeformerBones();
+
+    std::unordered_map<int, QString> helperReasons;
+    for (const auto& helper : helpers) {
+        helperReasons[helper.index] = QString::fromStdString(helper.reason);
+    }
+
+    if (!helpers.empty()) {
+        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^3Excluded ^5%1 ^3bone(s) that cannot deform the mesh:").arg(helpers.size()));
+        for (const auto& helper : helpers) {
+            VortigauntLog::Vortigaunt_Printf(QStringLiteral("^3  %1 ^9- %2")
+                .arg(QString::fromStdString(bones[helper.index].name))
+                .arg(QString::fromStdString(helper.reason)));
+        }
+        VortigauntLog::Vortigaunt_Printf("^3Re-check them in the bone list if you want them to take vertices.");
+    }
+
     std::vector<int> roots;
     std::vector<std::vector<int>> children(bones.size());
     for (size_t i = 0; i < bones.size(); i++) {
@@ -496,7 +595,16 @@ void AutoRigDialog::populateBoneTree(const std::vector<SmdBone>& bones) {
         item->setText(0, QString::fromStdString(bone.name));
         item->setData(0, Qt::UserRole, boneIdx);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
-        item->setCheckState(0, Qt::Checked);
+
+        auto helper = helperReasons.find(boneIdx);
+        if (helper != helperReasons.end()) {
+            // Unchecked, not hidden: the user can always put it back.
+            item->setCheckState(0, Qt::Unchecked);
+            item->setToolTip(0, tr("Excluded automatically: %1").arg(helper->second));
+            item->setForeground(0, QBrush(Qt::gray));
+        } else {
+            item->setCheckState(0, Qt::Checked);
+        }
 
         if (parentItem) {
             parentItem->addChild(item);
