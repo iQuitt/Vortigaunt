@@ -222,9 +222,28 @@ bool PakFile::ParseEntries()
     return true;
 }
 
+bool PakFile::IsEntryComplete(const PakEntry_t& entry) const
+{
+    const size_t startOffset =
+        this->m_DataStartOffset + (static_cast<size_t>(entry.FileOffset) << 10);
+
+    // Encrypted data is decrypted in whole 4 byte blocks, so the padding after
+    // the real bytes has to be present as well.
+    const size_t needed = (entry.Type & PAK_TYPE_ENCRYPTED_AGAIN)
+                              ? GetAlignedLength<4>(entry.RealSize)
+                              : entry.RealSize;
+
+    return startOffset <= this->m_BackupBuffer.size() &&
+           needed <= this->m_BackupBuffer.size() - startOffset;
+}
+
 [[nodiscard]] std::pair<bool, std::vector<uint8_t>> PakFile::UnpackEntry(
     const PakEntry_t& entry) const
 {
+    if (!this->IsEntryComplete(entry))
+    {
+        return { false, {} };
+    }
 
     std::vector<uint8_t> res(entry.RealSize);
 

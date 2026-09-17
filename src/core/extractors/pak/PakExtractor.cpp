@@ -10,6 +10,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <algorithm>
+#include <exception>
 
 // Static members
 PakExtractor::ProgressFunc PakExtractor::s_progressFunc;
@@ -115,15 +116,23 @@ bool PakExtractor::ExtractSingle(const std::string& pakPath, const std::string& 
     std::u16string u16Name = pakFsPath.filename().generic_u16string();
 
     PakFile pak(std::move(buffer), std::move(u16Name));
-    if (!pak.ParseHeader())
+    try
     {
-        VortigauntLog::LogF("^2Error:^7 invalid PAK header.");
-        return false;
-    }
+        if (!pak.ParseHeader())
+        {
+            VortigauntLog::LogF("^2Error:^7 invalid PAK header.");
+            return false;
+        }
 
-    if (!pak.ParseEntries())
+        if (!pak.ParseEntries())
+        {
+            VortigauntLog::LogF("^2Error:^7 failed to parse PAK entries.");
+            return false;
+        }
+    }
+    catch (const std::exception& ex)
     {
-        VortigauntLog::LogF("^2Error:^7 failed to parse PAK entries.");
+        VortigauntLog::LogF("^2Error:^7 failed to read the PAK entry table: %s", ex.what());
         return false;
     }
 
@@ -132,6 +141,22 @@ bool PakExtractor::ExtractSingle(const std::string& pakPath, const std::string& 
     {
         VortigauntLog::LogF("^3Warning:^7 PAK has no entries.");
         return true;  // Not an error, just empty
+    }
+
+    size_t incompleteCount = 0;
+    for (const auto& entry : entries)
+    {
+        if (!pak.IsEntryComplete(entry))
+        {
+            ++incompleteCount;
+        }
+    }
+    if (incompleteCount > 0)
+    {
+        VortigauntLog::LogF("^3Warning:^7 this PAK file is incomplete - %zu of %zu entries point past the end of the file (%lld bytes).",
+                            incompleteCount, entries.size(), static_cast<long long>(size));
+        VortigauntLog::LogF("^3Warning:^7 the game update most likely did not finish writing it. Repair the game files in the launcher and extract again.");
+        VortigauntLog::LogF("^3Warning:^7 the entries that are fully present will still be extracted.");
     }
 
     fs::path baseOutPath = FileIO::toPath(baseOut);
@@ -149,7 +174,23 @@ bool PakExtractor::ExtractSingle(const std::string& pakPath, const std::string& 
 
         VortigauntLog::LogF("  ^7[%zu/%zu] %s ^3(%s)^7\n", i + 1, entries.size(), utf8Path.c_str(), FormatSize(entry.RealSize).c_str());
 
-        auto result = pak.UnpackEntry(entry);
+        if (!pak.IsEntryComplete(entry))
+        {
+            VortigauntLog::LogF("    ^1-> SKIPPED ^7(data missing, the PAK file is cut short)");
+            continue;
+        }
+
+        std::pair<bool, std::vector<uint8_t>> result;
+        try
+        {
+            result = pak.UnpackEntry(entry);
+        }
+        catch (const std::exception& ex)
+        {
+            VortigauntLog::LogF("    ^1-> FAILED ^7(%s)", ex.what());
+            continue;
+        }
+
         const bool ok = result.first;
         const auto& data = result.second;
 
@@ -180,6 +221,10 @@ bool PakExtractor::ExtractSingle(const std::string& pakPath, const std::string& 
     }
 
     VortigauntLog::LogF("^2PAK extraction finished. ^3%zu/%zu ^2files written to %s.", okCount, entries.size(), outputDir.c_str());
+    if (incompleteCount > 0)
+    {
+        VortigauntLog::LogF("^3%zu ^7entries were skipped because the PAK file is incomplete.", incompleteCount);
+    }
 
     return okCount > 0;
 }

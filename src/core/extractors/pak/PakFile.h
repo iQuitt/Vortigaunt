@@ -54,6 +54,11 @@ public:
     [[nodiscard]] std::pair<bool, std::vector<uint8_t>> UnpackEntry(
         const PakEntry_t& entry) const;
 
+    // False when the entry's data runs past the end of the pak file, which is
+    // what a partially downloaded or partially patched pak looks like: the
+    // header and entry table are intact, the tail of the data is missing.
+    [[nodiscard]] bool IsEntryComplete(const PakEntry_t& entry) const;
+
     [[nodiscard]] inline const auto& GetHeader() const
     {
         return this->m_Header;
