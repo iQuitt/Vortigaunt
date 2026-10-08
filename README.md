@@ -35,7 +35,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 - **XFS File** - Extract and browse XFS files from Wolfteam (it May work other Softynx games etc: Rakion) [Watch Video](https://youtu.be/lNnPhTMf2fs)
 - **GMA File** - Extract and browse Garry's Mod GMA files
 - **VPK File** - Extract and browse Valve VPK files
-
+- **UnityFS** - Extract UnityFS and Unity Assets
 ### Sprite Management
 - **Sprite Viewer** - View, edit, and create GoldSrc sprites [Watch Video](https://youtu.be/q3DvdgdLPls)
 - **CSO/CSN/CSOL Sprite Fix** - Extract DDS-based sprites (v3) to GoldSrc format (v2)
