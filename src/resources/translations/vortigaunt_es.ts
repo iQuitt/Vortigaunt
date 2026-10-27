@@ -713,6 +713,14 @@ No tiene efecto sin un modelo de referencia.</translation>
         <translation>Modelo:</translation>
     </message>
     <message>
+        <source>Hide the hands</source>
+        <translation>Ocultar las manos</translation>
+    </message>
+    <message>
+        <source>Leaves a v_ model&apos;s hands out of the icon</source>
+        <translation>Deja las manos del modelo v_ fuera del icono</translation>
+    </message>
+    <message>
         <source>Turn</source>
         <translation>Giro</translation>
     </message>

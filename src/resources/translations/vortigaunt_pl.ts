@@ -716,6 +716,14 @@ Bez modelu referencyjnego nie działa.</translation>
         <translation>Model:</translation>
     </message>
     <message>
+        <source>Hide the hands</source>
+        <translation>Ukryj dłonie</translation>
+    </message>
+    <message>
+        <source>Leaves a v_ model&apos;s hands out of the icon</source>
+        <translation>Pomija dłonie modelu v_ na ikonie</translation>
+    </message>
+    <message>
         <source>Turn</source>
         <translation>Obrót</translation>
     </message>

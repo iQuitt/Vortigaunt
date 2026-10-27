@@ -713,6 +713,14 @@ Has no effect without a reference model.</translation>
         <translation>Model:</translation>
     </message>
     <message>
+        <source>Hide the hands</source>
+        <translation>Hide the hands</translation>
+    </message>
+    <message>
+        <source>Leaves a v_ model&apos;s hands out of the icon</source>
+        <translation>Leaves a v_ model&apos;s hands out of the icon</translation>
+    </message>
+    <message>
         <source>Turn</source>
         <translation>Turn</translation>
     </message>

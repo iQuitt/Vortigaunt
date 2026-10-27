@@ -2,6 +2,7 @@
 #include "SettingsDialog.h"
 #include "core/SpriteLoader.h"
 #include "core/VortigauntLog.h"
+#include "core/converters/WeaponModelConverter.h"
 #include "core/mdl/StudioModel.h"
 #include "ui/widgets/StudioModelView.h"
 
@@ -113,6 +114,11 @@ HudSpriteDialog::HudSpriteDialog(QWidget* parent)
     m_modelEdit->setPlaceholderText(tr("The weapon's model: a w_ or a p_ model shows it whole"));
     auto* modelBrowse = new QPushButton(tr("Browse..."));
     modelForm->addRow(tr("Model:"), browseRow(m_modelEdit, modelBrowse));
+    m_handsCheck = new QCheckBox(tr("Hide the hands"));
+    m_handsCheck->setObjectName(QStringLiteral("hands"));
+    m_handsCheck->setToolTip(tr("Leaves a v_ model's hands out of the icon"));
+    m_handsCheck->setEnabled(false);
+    modelForm->addRow(m_handsCheck);
     layout->addWidget(modelGroup);
     layout->addStretch(1);
 
@@ -292,6 +298,11 @@ HudSpriteDialog::HudSpriteDialog(QWidget* parent)
     connect(m_brightnessSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, &HudSpriteDialog::scheduleRender);
     for (QCheckBox* check : { m_mirrorCheck, m_rightCheck, m_levelCheck, m_overCheck }) connect(check, &QCheckBox::toggled, this, &HudSpriteDialog::scheduleRender);
     connect(m_viewCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &HudSpriteDialog::scheduleRender);
+    connect(m_handsCheck, &QCheckBox::toggled, this, [this]() {
+        updateDrawn();
+        m_view->clearModels();
+        scheduleRender();
+    });
     connect(m_labelCombo, &QComboBox::currentTextChanged, this, &HudSpriteDialog::scheduleRender);
 }
 
@@ -324,6 +335,18 @@ void HudSpriteDialog::openModel(const QString& path)
     }
     m_model = model;
     m_modelEdit->setText(QDir::toNativeSeparators(path));
+    // hands found: the box can hide them, off at first
+    m_hands = WeaponModelConverter::FindHandMeshes(*m_model);
+    bool anyHands = false;
+    for (const auto& part : m_hands)
+        for (const auto& sub : part)
+            for (const bool hand : sub) anyHands = anyHands || hand;
+    {
+        const QSignalBlocker blockHands(m_handsCheck);
+        m_handsCheck->setChecked(false);
+        m_handsCheck->setEnabled(anyHands);
+    }
+    updateDrawn();
     // w_m4a1 -> 640hud_m4a1, weapon_m4a1
     QString stem = QFileInfo(path).completeBaseName();
     for (const char* prefix : { "w_", "p_", "v_" })
@@ -332,7 +355,7 @@ void HudSpriteDialog::openModel(const QString& path)
     if (m_weaponEdit->text().isEmpty()) m_weaponEdit->setText(QStringLiteral("weapon_") + stem);
 
     m_view->clearModels();
-    m_view->addModel(m_model);
+    m_view->addModel(m_drawn);
     m_view->fitView();
     m_shownLook = -1;
     // pick the view showing the most, then lay it level
@@ -366,6 +389,19 @@ void HudSpriteDialog::openModel(const QString& path)
         m_mirrorCheck->setChecked(!hudicon::MuzzleLeft(m_levelCheck->isChecked() ? hudicon::Level(seen) : seen));
     }
     render();
+}
+
+void HudSpriteDialog::updateDrawn()
+{
+    m_drawn = m_model;
+    if (!m_model || !m_handsCheck->isChecked()) return;
+    // a copy with the hands' triangles taken out
+    auto drawn = std::make_shared<StudioModel>(*m_model);
+    for (size_t part = 0; part < m_hands.size() && part < drawn->bodyParts.size(); ++part)
+        for (size_t sub = 0; sub < m_hands[part].size() && sub < drawn->bodyParts[part].models.size(); ++sub)
+            for (size_t mesh = 0; mesh < m_hands[part][sub].size() && mesh < drawn->bodyParts[part].models[sub].meshes.size(); ++mesh)
+                if (m_hands[part][sub][mesh]) drawn->bodyParts[part].models[sub].meshes[mesh].triangles.clear();
+    m_drawn = drawn;
 }
 
 void HudSpriteDialog::scheduleRender()
@@ -422,7 +458,7 @@ QImage HudSpriteDialog::drawWeapon(float yaw, float pitch)
         m_render->show();
     }
     m_render->clearModels();
-    m_render->addModel(m_model);
+    m_render->addModel(m_drawn);
     m_render->setSequence(0, 0);
     m_render->setPlacement(0, turning());
     m_render->setTime(0.5f / fps);
@@ -442,7 +478,7 @@ void HudSpriteDialog::render()
     if (!m_model) return;
     const Look& seen = kLooks[std::max(0, m_viewCombo->currentIndex())];
     const float fps = m_model->sequences.empty() ? 30.0f : std::max(1.0f, m_model->sequences[0].fps);
-    if (m_view->modelCount() == 0) m_view->addModel(m_model);
+    if (m_view->modelCount() == 0) m_view->addModel(m_drawn);
     m_view->setSequence(0, 0);
     m_view->setPlacement(0, turning());
     m_view->setTime(0.5f / fps);
@@ -463,7 +499,7 @@ void HudSpriteDialog::render()
         return;
     }
     if (m_levelCheck->isChecked()) m_weapon = hudicon::Level(m_weapon);
-    if (m_mirrorCheck->isChecked()) m_weapon = m_weapon.flipped(Qt::Horizontal);
+    if (m_mirrorCheck->isChecked()) m_weapon = m_weapon.mirrored(true, false);
     m_normalPreview->setPixmap(shown(hudicon::MakeCell(m_weapon, look(), false)));
     m_selectedPreview->setPixmap(shown(hudicon::MakeCell(m_weapon, look(), true)));
     if (!m_sheet.isNull()) m_sheetPreview->setPixmap(QPixmap::fromImage(sheetToWrite()));

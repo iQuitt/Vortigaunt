@@ -41,6 +41,7 @@ private:
     // the sheet to write
     QImage sheetToWrite() const;
     int sheetRow() const;
+    void updateDrawn();
     void save();
     HudIconLook look() const;
     QString outputFolder() const;
@@ -57,6 +58,7 @@ private:
     QDoubleSpinBox* m_contrastSpin = nullptr;
     QCheckBox* m_rightCheck = nullptr;
     QCheckBox* m_overCheck = nullptr;
+    QCheckBox* m_handsCheck = nullptr;
     QLineEdit* m_sheetEdit = nullptr;
     QComboBox* m_cellsCombo = nullptr;
     QLabel* m_sheetPreview = nullptr;
@@ -72,6 +74,8 @@ private:
     std::unique_ptr<StudioModelView> m_render;
     QTimer* m_renderTimer = nullptr;
     std::shared_ptr<StudioModel> m_model;
+    std::shared_ptr<StudioModel> m_drawn;  // m_model, or a copy without the hands
+    std::vector<std::vector<std::vector<bool>>> m_hands;
     QImage m_weapon;
     QImage m_sheet;          // an existing sheet the weapon goes into
     int m_shownLook = -1;    // last view the camera was set to

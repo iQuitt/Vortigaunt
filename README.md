@@ -51,7 +51,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 	- View DTX files as thumbnails in Windows Explorer
 	- View VTF Files as thumbnails in Windows Explorer
 
-### Support Languages
+### Supported Languages
 - English
 - Turkish
 - Spanish (Thanks to [Maikolartzx](https://hizliresim.com/tcbinbd) for Spanish Support)

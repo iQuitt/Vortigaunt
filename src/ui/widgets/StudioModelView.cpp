@@ -480,17 +480,22 @@ bool StudioModelView::bounds(QVector3D& low, QVector3D& high, int onlyModel) con
             if (part.models.empty())
                 continue;
             const StudioSubModel& sub = part.models.front();
-            for (size_t v = 0; v < sub.vertices.size(); ++v)
-            {
-                const QVector3D p = toQt(model.bones[sub.vertexBones[v]] * sub.vertices[v]);
-                if (!any)
+            // only vertices that are drawn
+            for (const StudioMesh& mesh : sub.meshes)
+                for (const StudioTriVertex& corner : mesh.triangles)
                 {
-                    low = high = p;
-                    any = true;
+                    const size_t v = static_cast<size_t>(corner.vertex);
+                    if (v >= sub.vertices.size())
+                        continue;
+                    const QVector3D p = toQt(model.bones[sub.vertexBones[v]] * sub.vertices[v]);
+                    if (!any)
+                    {
+                        low = high = p;
+                        any = true;
+                    }
+                    low = QVector3D(std::min(low.x(), p.x()), std::min(low.y(), p.y()), std::min(low.z(), p.z()));
+                    high = QVector3D(std::max(high.x(), p.x()), std::max(high.y(), p.y()), std::max(high.z(), p.z()));
                 }
-                low = QVector3D(std::min(low.x(), p.x()), std::min(low.y(), p.y()), std::min(low.z(), p.z()));
-                high = QVector3D(std::max(high.x(), p.x()), std::max(high.y(), p.y()), std::max(high.z(), p.z()));
-            }
         }
     }
     return any;

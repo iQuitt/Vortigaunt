@@ -710,6 +710,14 @@ Referans model olmadan etkisi yoktur.</translation>
         <translation>Model:</translation>
     </message>
     <message>
+        <source>Hide the hands</source>
+        <translation>Elleri gizle</translation>
+    </message>
+    <message>
+        <source>Leaves a v_ model&apos;s hands out of the icon</source>
+        <translation>v_ modelin ellerini ikona katmaz</translation>
+    </message>
+    <message>
         <source>Turn</source>
         <translation>Döndür</translation>
     </message>
