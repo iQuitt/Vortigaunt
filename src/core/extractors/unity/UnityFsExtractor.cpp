@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuit (https://github.com/iQuitt) 
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #include "UnityFsExtractor.h"
 #include "core/VortigauntLog.h"
 #include "utils/FileIO.h"

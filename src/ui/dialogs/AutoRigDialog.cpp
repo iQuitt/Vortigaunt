@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuitt and the Vortigaunt contributors
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #include "AutoRigDialog.h"
 
 #include <QVBoxLayout>

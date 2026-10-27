@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuit (https://github.com/iQuitt) 
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #define DISCORDPP_IMPLEMENTATION
 #include "discordpp.h"
 
@@ -193,7 +196,7 @@ void Discord_Integration::UpdatePresence()
 
     discordpp::ActivityButton btn1;
     btn1.SetLabel("GitHub");
-    btn1.SetUrl("https://github.com/iQuitt/Vortigaunt");
+    btn1.SetUrl("https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt");
     activity.AddButton(std::move(btn1));
 
     discordpp::ActivityButton btn2;

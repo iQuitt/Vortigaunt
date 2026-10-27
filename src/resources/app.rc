@@ -24,7 +24,7 @@ BEGIN
             VALUE "FileDescription",  "Vortigaunt - A Porting Tool for Goldsrc Engine"
             VALUE "FileVersion",      VORTIGAUNT_VERSION_STRING
             VALUE "InternalName",     "VortigauntTool_gui"
-            VALUE "LegalCopyright",   "Copyright (C) iQuitt - https://github.com/iQuitt/Vortigaunt"
+            VALUE "LegalCopyright",   "Copyright (C) iQuit (https://github.com/iQuitt) - https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt"
             VALUE "OriginalFilename", "VortigauntTool_gui.exe"
             VALUE "ProductName",      "Vortigaunt Tool"
             VALUE "ProductVersion",   VORTIGAUNT_VERSION_STRING

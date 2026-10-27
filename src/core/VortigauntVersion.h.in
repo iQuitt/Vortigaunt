@@ -16,5 +16,5 @@
 #define VORTIGAUNT_LINES_OF_CODE @VORTIGAUNT_LINES_OF_CODE@
 
 // GitHub repository for update checks
-#define VORTIGAUNT_GITHUB_OWNER "iQuitt"
+#define VORTIGAUNT_GITHUB_OWNER "iQuit (https://github.com/iQuitt)"
 #define VORTIGAUNT_GITHUB_REPO "Vortigaunt"

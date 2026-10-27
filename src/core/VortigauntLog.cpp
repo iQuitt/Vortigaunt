@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuit (https://github.com/iQuitt) 
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #include "core/VortigauntLog.h"
 #include "VortigauntVersion.h"
 #include "utils/Platform.h"

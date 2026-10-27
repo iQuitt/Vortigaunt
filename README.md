@@ -1,10 +1,10 @@
 
 # Vortigaunt
 
-[![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/iQuitt/Vortigaunt?style=social)](https://github.com/iQuitt/Vortigaunt)
-[![GitHub Issues](https://img.shields.io/github/issues/iQuitt/Vortigaunt)](https://github.com/iQuitt/Vortigaunt/issues)
-[![Version](https://img.shields.io/badge/version-1.2.0b-green.svg)](https://github.com/iQuitt/Vortigaunt/releases)
+[![License](https://img.shields.io/badge/license-GPLv3%20%2B%20terms-blue.svg)](ADDITIONAL-TERMS.md)
+[![GitHub Stars](https://img.shields.io/github/stars/iQuit (https://github.com/iQuitt)/Vortigaunt?style=social)](https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt)
+[![GitHub Issues](https://img.shields.io/github/issues/iQuit (https://github.com/iQuitt)/Vortigaunt)](https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt/issues)
+[![Version](https://img.shields.io/badge/version-1.2.0b-green.svg)](https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt/releases)
 ![Qt Version](https://img.shields.io/badge/Qt-6.8+-41CD52?style=flat&logo=qt&logoColor=white)
 [![Discord](https://img.shields.io/discord/1463565216485867622?style=flat&logo=discord&logoColor=white&label=discord&color=5865F2)](https://discord.gg/PZ9JzgHHKa)
 
@@ -61,7 +61,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 
 If you find Vortigaunt useful and want to support its development:
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-yellow.svg?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/iQuitt)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-yellow.svg?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/iQuit (https://github.com/iQuitt))
 
 ## Requires for building
 ### Windows
@@ -82,7 +82,7 @@ sudo apt install -y \
 
 
 ## Building
-Clone The Source Code: ````git clone https://github.com/iQuitt/Vortigaunt````
+Clone The Source Code: ````git clone https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt````
 ### Windows 
 ```bash
 
@@ -108,8 +108,10 @@ Special Thanks To:
 - Luigi Auriemma for XFS logic (https://aluigi.altervista.org/bms/xenesis.bms)
 - YoungFine0825 for LTB2FBX and DTX to TGA (https://github.com/YoungFine0825/LTB2FBX)
 - nolith for Lithtech REZ (https://github.com/no-lith/RezExtract)
-	
 
+## License
 
-
-
+Vortigaunt is free software under the [GNU General Public License v3](LICENSE) (GPL-3.0-only),
+with the additional terms in [ADDITIONAL-TERMS.md](ADDITIONAL-TERMS.md): keep the attribution,
+mark modified versions, and do not use the Vortigaunt name or logo for a work based on it.
+Third-party libraries keep their own licenses.

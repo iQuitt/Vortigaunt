@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuit (https://github.com/iQuitt) 
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #include "MainWindow.h"
 
 #include <QWidget>
@@ -602,7 +605,7 @@ void MainWindow::setupRibbon()
     QToolButton* githubBtn = cornerButton(tr("GitHub"), QIcon(":/github.png"));
     githubBtn->setToolTip(tr("GitHub Repository of Vortigaunt"));
     connect(githubBtn, &QToolButton::clicked, this, []() {
-        QDesktopServices::openUrl(QUrl("https://github.com/iQuitt/Vortigaunt"));
+        QDesktopServices::openUrl(QUrl("https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt"));
     });
     QToolButton* settingsBtn = cornerButton(tr("Settings"), UiUtils::lineIcon(QString::fromLatin1(kIconSettings), 18));
     settingsBtn->setMenu(m_settingsMenu);

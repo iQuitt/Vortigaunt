@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuit (https://github.com/iQuitt) 
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #include "GmaExtractor.h"
 #include "GmaFile.h"
 #include "core/VortigauntLog.h"

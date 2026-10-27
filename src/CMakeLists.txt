@@ -522,7 +522,7 @@ set(CPACK_MONOLITHIC_INSTALL ON)
 set(CPACK_WIX_UPGRADE_GUID "F5759CCD-F2B7-46E7-AEA1-EBFB05763A46")
 set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}/resources/app2.ico")
 set(CPACK_WIX_PROGRAM_MENU_FOLDER "Vortigaunt")
-set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT "https://github.com/iQuitt/Vortigaunt")
+set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT "https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt")
 
 # File associations for WiX
 set(WIX_FILE_ASSOCIATIONS_CONTENT "<?xml version='1.0' encoding='UTF-8'?>

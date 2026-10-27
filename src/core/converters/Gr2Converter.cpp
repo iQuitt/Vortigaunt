@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuit (https://github.com/iQuitt) 
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #include "core/converters/Gr2Converter.h"
 #include "core/smd/SmdWriter.h"
 #include "core/VortigauntLog.h"

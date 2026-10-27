@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuit (https://github.com/iQuitt) 
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #include "SteamWorkshopDownloaderDialog.h"
 #include "ui/UiUtils.h"
 #include "ui/dialogs/SettingsDialog.h"

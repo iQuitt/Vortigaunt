@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuit (https://github.com/iQuitt) 
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #pragma once
 
 // Skeleton arithmetic shared by the rigging code, and the one piece of naming

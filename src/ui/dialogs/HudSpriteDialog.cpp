@@ -1,3 +1,6 @@
+// Copyright (C) 2026 iQuit (https://github.com/iQuitt) 
+// Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
+
 #include "HudSpriteDialog.h"
 #include "SettingsDialog.h"
 #include "core/SpriteLoader.h"
