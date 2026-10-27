@@ -2,9 +2,9 @@
 # Vortigaunt
 
 [![License](https://img.shields.io/badge/license-GPLv3%20%2B%20terms-blue.svg)](ADDITIONAL-TERMS.md)
-[![GitHub Stars](https://img.shields.io/github/stars/iQuit (https://github.com/iQuitt)/Vortigaunt?style=social)](https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt)
-[![GitHub Issues](https://img.shields.io/github/issues/iQuit (https://github.com/iQuitt)/Vortigaunt)](https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt/issues)
-[![Version](https://img.shields.io/badge/version-1.2.0b-green.svg)](https://github.com/iQuit (https://github.com/iQuitt)/Vortigaunt/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/iQuitt/Vortigaunt?style=social)](https://github.com/iQuitt/Vortigaunt)
+[![GitHub Issues](https://img.shields.io/github/issues/iQuitt/Vortigaunt)](https://github.com/iQuitt/Vortigaunt/issues)
+[![Version](https://img.shields.io/badge/version-1.2.0b-green.svg)](https://github.com/iQuitt/Vortigaunt/releases)
 ![Qt Version](https://img.shields.io/badge/Qt-6.8+-41CD52?style=flat&logo=qt&logoColor=white)
 [![Discord](https://img.shields.io/discord/1463565216485867622?style=flat&logo=discord&logoColor=white&label=discord&color=5865F2)](https://discord.gg/PZ9JzgHHKa)
 
