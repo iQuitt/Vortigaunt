@@ -15,6 +15,8 @@ set(VORTIGAUNT_CORE_HEADERS
     core/converters/WeaponModelConverter.h
     core/mdl/StudioModel.h
     core/mdl/StudioDecompiler.h
+    core/autorig/SkeletonMath.h
+    core/autorig/Retarget.h
     core/WadMaker.h
     
     core/QCFile.h
@@ -61,6 +63,10 @@ set(VORTIGAUNT_GUI_HEADERS
     ui/dialogs/AboutDialog.h
     
     ui/dialogs/AudioConvertDialog.h
+    ui/dialogs/HudSpriteDialog.h
+    ui/dialogs/RetargetDialog.h
+    ui/widgets/QcPreview.h
+    ui/HudIcon.h
 
     ui/workspaces/ArchiveSource.h
     ui/workspaces/ArchiveWorkspace.h
@@ -94,6 +100,8 @@ set(VORTIGAUNT_CORE
     core/converters/WeaponModelConverter.cpp
     core/mdl/StudioModel.cpp
     core/mdl/StudioDecompiler.cpp
+    core/autorig/SkeletonMath.cpp
+    core/autorig/Retarget.cpp
     core/converters/AudioConvert.cpp
     core/SpriteLoader.cpp
     core/extractors/xfs/XfsExtractor.cpp
@@ -163,6 +171,10 @@ set(VORTIGAUNT_GUI
     ui/dialogs/AboutDialog.cpp
     
     ui/dialogs/AudioConvertDialog.cpp
+    ui/dialogs/HudSpriteDialog.cpp
+    ui/dialogs/RetargetDialog.cpp
+    ui/widgets/QcPreview.cpp
+    ui/HudIcon.cpp
 
     ui/workspaces/ArchiveSource.cpp
     ui/workspaces/ArchiveWorkspace.cpp
@@ -221,7 +233,6 @@ if(VORTIGAUNT_AUTORIG)
         core/autorig/HeatRig.h core/autorig/HeatRig.cpp
         core/autorig/MeshBvh.h core/autorig/MeshBvh.cpp
         core/autorig/WeightTransfer.h core/autorig/WeightTransfer.cpp
-        core/autorig/SkeletonMath.h core/autorig/SkeletonMath.cpp
         core/mdl/HandSwap.h core/mdl/HandSwap.cpp
     )
     target_compile_definitions(VortigauntTool PRIVATE ENABLE_AUTORIG)
@@ -289,8 +300,11 @@ if(BUILD_GUI)
         core/autorig/HeatRig.h core/autorig/HeatRig.cpp
         core/autorig/MeshBvh.h core/autorig/MeshBvh.cpp
         core/autorig/WeightTransfer.h core/autorig/WeightTransfer.cpp
-        core/autorig/SkeletonMath.h core/autorig/SkeletonMath.cpp
         ui/dialogs/AutoRigDialog.h ui/dialogs/AutoRigDialog.cpp
+        ui/dialogs/PhysicsLabDialog.h ui/dialogs/PhysicsLabDialog.cpp
+        core/map/MapPorter.h core/map/MapPorter.cpp
+        core/map/Metin2Map.h core/map/Metin2Map.cpp
+        ui/dialogs/MapPortDialog.h ui/dialogs/MapPortDialog.cpp
         core/mdl/HandSwap.h core/mdl/HandSwap.cpp
         ui/workspaces/HandsWorkspace.h ui/workspaces/HandsWorkspace.cpp
         )

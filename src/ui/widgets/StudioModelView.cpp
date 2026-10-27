@@ -6,6 +6,7 @@
 #include <QOpenGLShaderProgram>
 #include <QPainter>
 #include <QTimer>
+#include <QVector4D>
 #include <QWheelEvent>
 
 #include <algorithm>
@@ -39,9 +40,16 @@ in vec2 vTexCoord;
 uniform sampler2D tex;
 uniform int mode;
 uniform vec3 lightDirection;
+uniform vec4 tint;
 out vec4 color;
 void main()
 {
+    float light = 0.55 + 0.6 * max(dot(normalize(vNormal), -lightDirection), 0.0);
+    if (mode == 3)
+    {
+        color = vec4(tint.rgb * min(light, 1.2), tint.a);
+        return;
+    }
     vec4 texel = texture(tex, vTexCoord);
     if (mode == 1 && texel.a < 0.5)
         discard;
@@ -50,10 +58,14 @@ void main()
         color = vec4(texel.rgb, 1.0);
         return;
     }
-    float light = 0.55 + 0.6 * max(dot(normalize(vNormal), -lightDirection), 0.0);
     color = vec4(texel.rgb * min(light, 1.2), 1.0);
 }
 )";
+
+constexpr float kPi = 3.14159265358979f;
+constexpr int kRingPoints = 96;
+constexpr float kHandleReach = 7.0f;  // pixels from a ring that take it
+const QColor kAxisColours[3] = { QColor(232, 62, 62), QColor(110, 205, 60), QColor(62, 120, 240) };
 
 QVector3D toQt(const aiVector3D& v)
 {
@@ -163,6 +175,26 @@ void StudioModelView::setPlaying(bool playing)
     update();
 }
 
+void StudioModelView::setTime(float seconds)
+{
+    m_time = std::max(0.0f, seconds);
+    update();
+}
+
+void StudioModelView::setHoldUnlooped(bool hold)
+{
+    m_holdUnlooped = hold;
+    update();
+}
+
+void StudioModelView::setPlacement(int model, const aiMatrix4x4& placement)
+{
+    if (model < 0 || model >= modelCount())
+        return;
+    m_models[model].placement = placement;
+    update();
+}
+
 void StudioModelView::setBoneOffset(int model, int bone, const aiMatrix4x4& offset)
 {
     if (model < 0 || model >= modelCount())
@@ -203,7 +235,8 @@ void StudioModelView::updateBones()
         if (index < 0 || index >= static_cast<int>(data.sequences.size()))
             return;
         const StudioSequence& sequence = data.sequences[index];
-        frame = static_cast<int>(m_time * std::max(1.0f, sequence.fps)) % std::max(1, sequence.frames);
+        const int at = static_cast<int>(m_time * std::max(1.0f, sequence.fps));
+        frame = m_holdUnlooped && !(sequence.flags & 1) ? std::min(at, std::max(1, sequence.frames) - 1) : at % std::max(1, sequence.frames);
         if (sequence.blends > 1 && sequence.blendEnd != sequence.blendStart)
             blend = std::clamp((pitch - sequence.blendStart) / (sequence.blendEnd - sequence.blendStart), 0.0f, 1.0f);
     };
@@ -243,7 +276,7 @@ void StudioModelView::updateBones()
                 if (match >= 0 && match < static_cast<int>(parent->bones.size()))
                     model.bones[bone] = parent->bones[match];
                 else
-                    model.bones[bone] = up >= 0 ? model.bones[up] * local[bone] : local[bone];
+                    model.bones[bone] = up >= 0 ? model.bones[up] * local[bone] : model.placement * local[bone];
                 done[bone] = true;
             }
         }
@@ -353,6 +386,70 @@ void StudioModelView::releaseAll()
         return;
     for (Model& model : m_models)
         release(model);
+    if (m_guideVbo)
+        glDeleteBuffers(1, &m_guideVbo);
+    if (m_guideVao)
+        glDeleteVertexArrays(1, &m_guideVao);
+    m_guideVbo = m_guideVao = 0;
+}
+
+void StudioModelView::setGuides(const std::vector<Guide>& guides)
+{
+    m_guides = guides;
+    update();
+}
+
+void StudioModelView::drawGuides()
+{
+    std::vector<float> vertices;
+    const int corners[6][4] = { { 0, 2, 3, 1 }, { 4, 5, 7, 6 }, { 0, 1, 5, 4 }, { 2, 6, 7, 3 }, { 0, 4, 6, 2 }, { 1, 3, 7, 5 } };
+    const QVector3D normals[6] = { { 0, 0, -1 }, { 0, 0, 1 }, { 0, -1, 0 }, { 0, 1, 0 }, { -1, 0, 0 }, { 1, 0, 0 } };
+    for (const Guide& guide : m_guides)
+    {
+        const float c = std::cos(guide.yaw), s = std::sin(guide.yaw);
+        auto turned = [&](const QVector3D& v) { return QVector3D(v.x() * c - v.y() * s, v.x() * s + v.y() * c, v.z()); };
+        QVector3D at[8];
+        for (int i = 0; i < 8; ++i)
+            at[i] = guide.middle + turned(QVector3D((i & 4) ? guide.half.x() : -guide.half.x(), (i & 2) ? guide.half.y() : -guide.half.y(),
+                                                    (i & 1) ? guide.half.z() : -guide.half.z()));
+        for (int face = 0; face < 6; ++face)
+        {
+            const QVector3D normal = turned(normals[face]);
+            for (int k : { 0, 1, 2, 0, 2, 3 })
+            {
+                const QVector3D& p = at[corners[face][k]];
+                vertices.insert(vertices.end(), { p.x(), p.y(), p.z(), normal.x(), normal.y(), normal.z(), 0.0f, 0.0f });
+            }
+        }
+    }
+    if (!m_guideVao)
+    {
+        glGenVertexArrays(1, &m_guideVao);
+        glGenBuffers(1, &m_guideVbo);
+        glBindVertexArray(m_guideVao);
+        glBindBuffer(GL_ARRAY_BUFFER, m_guideVbo);
+        const GLsizei stride = kFloatsPerVertex * sizeof(float);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(0));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(6 * sizeof(float)));
+    }
+    glBindVertexArray(m_guideVao);
+    glBindBuffer(GL_ARRAY_BUFFER, m_guideVbo);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_STREAM_DRAW);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+    m_program->setUniformValue("mode", 3);
+    m_program->setUniformValue("tint", QVector4D(0.45f, 0.65f, 1.0f, 0.28f));
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size() / kFloatsPerVertex));
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+    glEnable(GL_CULL_FACE);
+    glBindVertexArray(0);
 }
 
 void StudioModelView::initializeGL()
@@ -417,6 +514,147 @@ void StudioModelView::setCameraAngles(float yaw, float pitch)
     update();
 }
 
+void StudioModelView::setTurnHandles(bool shown)
+{
+    m_turnHandles = shown;
+    setMouseTracking(shown);
+    update();
+}
+
+void StudioModelView::recenter()
+{
+    updateBones();
+    QVector3D low, high;
+    if (!bounds(low, high))
+        return;
+    m_target = (low + high) * 0.5f;
+    update();
+}
+
+QPointF StudioModelView::onScreen(const QVector3D& p) const
+{
+    const QVector4D clip = m_viewProjection * QVector4D(p, 1.0f);
+    const float w = std::abs(clip.w()) < 1e-6f ? 1e-6f : clip.w();
+    return QPointF((clip.x() / w + 1.0f) * 0.5f * width(), (1.0f - clip.y() / w) * 0.5f * height());
+}
+
+QVector3D StudioModelView::ringPoint(int axis, float turn) const
+{
+    // right-handed axes in the ring's plane
+    static const QVector3D across[3][2] = { { { 0, 1, 0 }, { 0, 0, 1 } }, { { 0, 0, 1 }, { 1, 0, 0 } }, { { 1, 0, 0 }, { 0, 1, 0 } } };
+    return m_handleMiddle + m_handleRadius * (across[axis][0] * std::cos(turn) + across[axis][1] * std::sin(turn));
+}
+
+int StudioModelView::handleAt(const QPointF& at, float* turn) const
+{
+    if (!m_turnHandles || m_handleRadius <= 0.0f)
+        return -1;
+    const QVector3D toEye = (m_eye - m_handleMiddle).normalized();
+    int best = -1;
+    float nearest = kHandleReach;
+    for (int axis = 0; axis < 3; ++axis)
+        for (int i = 0; i < kRingPoints; ++i)
+        {
+            const float t = 2.0f * kPi * i / kRingPoints;
+            const QVector3D p = ringPoint(axis, t);
+            const QPointF d = onScreen(p) - at;
+            // prefer the front half
+            const float behind = QVector3D::dotProduct(p - m_handleMiddle, toEye) < -m_handleRadius * 0.1f ? 3.0f : 0.0f;
+            const float distance = static_cast<float>(std::sqrt(d.x() * d.x() + d.y() * d.y())) + behind;
+            if (distance < nearest)
+            {
+                nearest = distance;
+                best = axis;
+                if (turn)
+                    *turn = t;
+            }
+        }
+    return best;
+}
+
+float StudioModelView::handleTurn(const QPointF& from, const QPointF& to) const
+{
+    static const QVector3D axes[3] = { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
+    const QVector3D toEye = (m_eye - m_handleMiddle).normalized();
+    const float facing = QVector3D::dotProduct(axes[m_handleAxis], toEye);
+    const QPointF middle = onScreen(m_handleMiddle);
+    if (std::abs(facing) > 0.3f)
+    {
+        // ring facing the eye: mouse angle about its centre
+        const float a = static_cast<float>(std::atan2(-(from.y() - middle.y()), from.x() - middle.x()));
+        const float b = static_cast<float>(std::atan2(-(to.y() - middle.y()), to.x() - middle.x()));
+        float turn = b - a;
+        while (turn > kPi)
+            turn -= 2.0f * kPi;
+        while (turn < -kPi)
+            turn += 2.0f * kPi;
+        return qRadiansToDegrees(turn) * (facing > 0.0f ? 1.0f : -1.0f);
+    }
+    // ring edge on: mouse movement along it
+    const QPointF ahead = onScreen(ringPoint(m_handleAxis, m_handleAt + 0.05f)) - onScreen(ringPoint(m_handleAxis, m_handleAt - 0.05f));
+    const float length = static_cast<float>(std::sqrt(ahead.x() * ahead.x() + ahead.y() * ahead.y()));
+    const QPointF side = onScreen(m_handleMiddle + m_handleRadius * QVector3D::crossProduct(toEye, QVector3D(0, 0, 1)).normalized()) - middle;
+    const float radius = std::max(10.0f, static_cast<float>(std::sqrt(side.x() * side.x() + side.y() * side.y())));
+    if (length < 1e-4f)
+        return 0.0f;
+    const QPointF move = to - from;
+    const float along = static_cast<float>((move.x() * ahead.x() + move.y() * ahead.y()) / length);
+    return qRadiansToDegrees(along / radius);
+}
+
+void StudioModelView::drawHandles()
+{
+    const QVector3D toEye = (m_eye - m_handleMiddle).normalized();
+    const QPointF middle = onScreen(m_handleMiddle);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    for (int axis = 0; axis < 3; ++axis)
+    {
+        const bool lit = axis == m_handleAxis || (m_handleAxis < 0 && axis == m_hoverAxis);
+        QColor colour = kAxisColours[axis];
+        if (lit)
+            colour = colour.lighter(135);
+        // back half faint
+        QPointF previous = onScreen(ringPoint(axis, 0.0f)), dot = previous;
+        float farthest = -1.0f;
+        for (int i = 1; i <= kRingPoints; ++i)
+        {
+            const float t = 2.0f * kPi * i / kRingPoints;
+            const QVector3D p = ringPoint(axis, t - kPi / kRingPoints);
+            const QPointF next = onScreen(ringPoint(axis, t));
+            const bool front = QVector3D::dotProduct(p - m_handleMiddle, toEye) >= -m_handleRadius * 0.1f;
+            QColor c = colour;
+            c.setAlpha(front ? 255 : 70);
+            painter.setPen(QPen(c, front ? (lit ? 4.0 : 2.5) : 1.5, Qt::SolidLine, Qt::RoundCap));
+            painter.drawLine(previous, next);
+            // handle dot
+            const QPointF d = next - middle;
+            const float reach = static_cast<float>(d.x() * d.x() + d.y() * d.y());
+            if (front && reach > farthest + 0.5f)
+            {
+                farthest = reach;
+                dot = next;
+            }
+            previous = next;
+        }
+        painter.setPen(QPen(QColor(0, 0, 0, 160), 1.0));
+        painter.setBrush(colour);
+        painter.drawEllipse(dot, lit ? 7.0 : 5.5, lit ? 7.0 : 5.5);
+    }
+}
+
+void StudioModelView::setOrthographic(bool orthographic)
+{
+    m_orthographic = orthographic;
+    update();
+}
+
+void StudioModelView::setBackground(const QColor& colour)
+{
+    m_background = colour;
+    update();
+}
+
 void StudioModelView::drawModel(Model& model, bool additivePass)
 {
     const StudioModel& data = *model.data;
@@ -437,7 +675,7 @@ void StudioModelView::drawModel(Model& model, bool additivePass)
 
 void StudioModelView::paintGL()
 {
-    const QColor background = palette().color(QPalette::Base);
+    const QColor background = m_background.isValid() ? m_background : palette().color(QPalette::Base);
     glClearColor(background.redF(), background.greenF(), background.blueF(), 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     if (!m_glReady || m_models.empty())
@@ -466,7 +704,14 @@ void StudioModelView::paintGL()
     QMatrix4x4 view;
     view.lookAt(eye, m_target, QVector3D(0, 0, 1));
     QMatrix4x4 projection;
-    projection.perspective(45.0f, width() / static_cast<float>(std::max(1, height())), m_distance * 0.01f, m_distance * 50.0f);
+    const float aspect = width() / static_cast<float>(std::max(1, height()));
+    if (m_orthographic)
+    {
+        const float half = m_distance * std::tan(qDegreesToRadians(22.5f));
+        projection.ortho(-half * aspect, half * aspect, -half, half, m_distance * 0.01f, m_distance * 50.0f);
+    }
+    else
+        projection.perspective(45.0f, aspect, m_distance * 0.01f, m_distance * 50.0f);
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -474,7 +719,9 @@ void StudioModelView::paintGL()
     glCullFace(GL_BACK);
     glFrontFace(GL_CW);
     m_program->bind();
-    m_program->setUniformValue("viewProjection", projection * view);
+    m_viewProjection = projection * view;
+    m_eye = eye;
+    m_program->setUniformValue("viewProjection", m_viewProjection);
     m_program->setUniformValue("tex", 0);
     m_program->setUniformValue("lightDirection", QVector3D(-0.4f, 0.3f, -1.0f).normalized());
     glActiveTexture(GL_TEXTURE0);
@@ -500,19 +747,59 @@ void StudioModelView::paintGL()
         drawModel(model, true);
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
+    if (!m_guides.empty())
+        drawGuides();
     m_program->release();
+    if (m_turnHandles)
+    {
+        QVector3D low, high;
+        if (bounds(low, high))
+        {
+            // QPainter needs no culling or depth test
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_DEPTH_TEST);
+            m_handleMiddle = (low + high) * 0.5f;
+            m_handleRadius = 0.8f * m_distance * std::tan(qDegreesToRadians(22.5f)) * std::min(aspect, 1.0f);
+            drawHandles();
+        }
+    }
 }
 
 void StudioModelView::mousePressEvent(QMouseEvent* event)
 {
     m_lastMouse = event->pos();
     m_dragButton = event->button();
+    if (event->button() == Qt::LeftButton)
+    {
+        m_handleAxis = handleAt(event->position(), &m_handleAt);
+        if (m_handleAxis >= 0)
+            update();
+    }
 }
 
 void StudioModelView::mouseMoveEvent(QMouseEvent* event)
 {
+    const QPoint previous = m_lastMouse;
     const QPoint delta = event->pos() - m_lastMouse;
     m_lastMouse = event->pos();
+    if (m_handleAxis >= 0)
+    {
+        const float degrees = handleTurn(previous, event->pos());
+        if (degrees != 0.0f)
+            emit turnedByHandle(m_handleAxis, degrees);
+        return;
+    }
+    if (m_dragButton == Qt::NoButton)
+    {
+        // hover highlight
+        const int hover = handleAt(event->position(), nullptr);
+        if (hover != m_hoverAxis)
+        {
+            m_hoverAxis = hover;
+            update();
+        }
+        return;
+    }
     if (m_dragButton == Qt::LeftButton)
     {
         m_yaw -= delta.x() * 0.5f;
@@ -534,6 +821,11 @@ void StudioModelView::mouseMoveEvent(QMouseEvent* event)
 void StudioModelView::mouseReleaseEvent(QMouseEvent*)
 {
     m_dragButton = Qt::NoButton;
+    if (m_handleAxis >= 0)
+    {
+        m_handleAxis = -1;
+        update();
+    }
 }
 
 void StudioModelView::mouseDoubleClickEvent(QMouseEvent*)

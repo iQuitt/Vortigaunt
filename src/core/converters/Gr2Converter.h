@@ -9,6 +9,15 @@
 
 #include <map>
 
+// a lightmapped triangle of a Metin2 room
+struct Gr2LitTriangle
+{
+    float position[3][3];
+    float normal[3][3];
+    float uv[3][2];
+    int lightmap;  // index into ReadRoomLight's lightmaps
+};
+
 #ifdef ENABLE_GRANNY2
 
 // Forward declarations
@@ -70,7 +79,10 @@ public:
     // Direct GR2 to Assimp scene conversion (for MAP export without SMD intermediate)
     // Returns the scene pointer - caller must NOT delete it, Gr2Converter owns it
     struct aiScene* LoadAndGetScene(const std::string& inputFilePath, const std::string& textureOutputDir);
-    
+
+    // lightmapped triangles of a Metin2 dungeon room; false when it has none
+    bool ReadRoomLight(const std::string& inputFilePath, std::vector<Gr2LitTriangle>& triangles, std::vector<std::string>& lightmaps);
+
 public:
 
 
@@ -165,7 +177,8 @@ public:
     int GetPolygonCount(const std::string&) { return 0; }
     void SetConverterSettings(const Gr2ConverterSettings&) {}
     struct aiScene* LoadAndGetScene(const std::string&, const std::string&) { return nullptr; }
-    
+    bool ReadRoomLight(const std::string&, std::vector<Gr2LitTriangle>&, std::vector<std::string>&) { return false; }
+
 
 };
 

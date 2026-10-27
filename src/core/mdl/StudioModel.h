@@ -9,6 +9,7 @@
 #include <vector>
 
 // from studio.h
+constexpr int STUDIO_NF_FLATSHADE = 0x0001;
 constexpr int STUDIO_NF_CHROME = 0x0002;
 constexpr int STUDIO_NF_ADDITIVE = 0x0020;
 constexpr int STUDIO_NF_MASKED = 0x0040;
@@ -128,6 +129,8 @@ public:
     // bone's space; textures kept in a separate nameT.mdl go along when the name changes
     static bool TransformBoneVertices(const std::string& inputPath, const std::string& outputPath, int bone,
                                       const aiMatrix4x4& transform, std::string& error);
+    // adds flags to every texture of the file
+    static bool AddTextureFlags(const std::string& path, int flags, std::string& error);
 
     std::string name;
     std::vector<StudioBone> bones;

@@ -562,6 +562,37 @@ bool StudioModel::TransformBoneVertices(const std::string& inputPath, const std:
     return true;
 }
 
+bool StudioModel::AddTextureFlags(const std::string& path, int flags, std::string& error)
+{
+    std::vector<uint8_t> file;
+    if (!readFile(FileIO::toPath(path), file) || file.size() < 244 || std::memcmp(file.data(), "IDST", 4) != 0 || intAt(file, 4) != 10)
+    {
+        error = "Not a GoldSrc studio model: " + path;
+        return false;
+    }
+    const int numTextures = intAt(file, 180);
+    const size_t textureIndex = static_cast<size_t>(intAt(file, 184));
+    if (numTextures < 0 || !inside(file, textureIndex, static_cast<size_t>(numTextures), kTextureSize))
+    {
+        error = "The texture table lies outside the file";
+        return false;
+    }
+    for (int i = 0; i < numTextures; i++)
+    {
+        const size_t at = textureIndex + static_cast<size_t>(i) * kTextureSize + 64;
+        const int32_t value = intAt(file, at) | flags;
+        std::memcpy(file.data() + at, &value, 4);
+    }
+    std::ofstream out(FileIO::toPath(path), std::ios::binary | std::ios::trunc);
+    out.write(reinterpret_cast<const char*>(file.data()), static_cast<std::streamsize>(file.size()));
+    if (!out.good())
+    {
+        error = "Could not write " + path;
+        return false;
+    }
+    return true;
+}
+
 bool StudioModel::ReadTextures(const std::vector<uint8_t>& file)
 {
     const int numTextures = intAt(file, 180);

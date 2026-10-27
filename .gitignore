@@ -35,16 +35,24 @@ src/core/autorig/MeshBvh.h
 src/core/autorig/MeshBvh.cpp
 src/core/autorig/WeightTransfer.h
 src/core/autorig/WeightTransfer.cpp
-src/core/autorig/SkeletonMath.h
-src/core/autorig/SkeletonMath.cpp
 src/core/autorig/PoseTransfer.h
 src/core/autorig/PoseTransfer.cpp
 src/ui/dialogs/AutoRigDialog.h
 src/ui/dialogs/AutoRigDialog.cpp
+src/ui/dialogs/PhysicsLabDialog.h
+src/ui/dialogs/PhysicsLabDialog.cpp
 src/core/mdl/HandSwap.h
 src/core/mdl/HandSwap.cpp
 src/ui/workspaces/HandsWorkspace.h
 src/ui/workspaces/HandsWorkspace.cpp
+src/core/map/
+src/ui/dialogs/MapPortDialog.h
+src/ui/dialogs/MapPortDialog.cpp
+
+# SpeedTree
+/tools/spt2smd
+
+/tools/animsim
 
 # just doin tests in local
 /tests

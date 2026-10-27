@@ -107,11 +107,16 @@ private slots:
 
 #ifdef ENABLE_AUTORIG
     void onOpenAutoRigDialog();
+    void onOpenPhysicsLabDialog();
+    void onOpenMapPorter();
 #endif
 
     void onOpenSettings();
 
     void onOpenAudioConverter();
+
+    void onOpenHudSprite();
+    void onOpenRetargetDialog();
 
     void onLogFilterChanged(int index);
 
@@ -320,8 +325,12 @@ private:
     QAction*       m_mseViewAction = nullptr; // Metin2 Script Effect
 #ifdef ENABLE_AUTORIG
     QAction*       m_autoRigAction = nullptr; // Auto-Rig (Beta)
+    QAction*       m_physicsLabAction = nullptr;
+    QAction*       m_mapPortAction = nullptr;
 #endif
     QAction*       m_audioConvertAction = nullptr;
+    QAction*       m_hudSpriteAction = nullptr;
+    QAction*       m_retargetAction = nullptr;
     QAction*       m_steamWorkshopAction = nullptr;
     QAction*       m_settingsAction = nullptr;
     QMenu*         m_settingsMenu = nullptr;

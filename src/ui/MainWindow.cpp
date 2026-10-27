@@ -102,6 +102,7 @@
 #include "MseViewerWindow.h"
 #endif
 #ifdef ENABLE_AUTORIG
+#include "PhysicsLabDialog.h"
 #include "AutoRigDialog.h"
 #endif
 #include "WadMakerDialog.h"
@@ -111,6 +112,11 @@
 
 #include "WadMaker.h"
 #include "AudioConvertDialog.h"
+#include "dialogs/HudSpriteDialog.h"
+#include "dialogs/RetargetDialog.h"
+#ifdef ENABLE_AUTORIG
+#include "dialogs/MapPortDialog.h"
+#endif
 #include "QCFile.h"
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -178,6 +184,9 @@ constexpr const char* kIconHands = "M6 21l-2-8 M6 21h9l3-8 M8 13V4 M11 12V3 M14 
 constexpr const char* kIconReset =  "M4 4v6h6 M4 10l4-4h8v12H8";
 constexpr const char* kIconSprite = "M3 5h7v14H3z M14 5h7v14h-7z";
 constexpr const char* kIconWad = "M4 4h16v16H4z M4 12h16 M12 4v16";
+#ifdef ENABLE_AUTORIG
+constexpr const char* kIconMap = "M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15";
+#endif
 constexpr const char* kIconAudio = "M4 10v4 M8 7v10 M12 4v16 M16 8v8 M20 11v2";
 constexpr const char* kIconDownload = "M12 4v11 M7 10l5 5 5-5 M4 20h16";
 constexpr const char* kIconRig = "M12 3v6 M12 9l-6 5 M12 9l6 5 M12 9v8 M9 21l3-4 3 4";
@@ -383,6 +392,17 @@ void MainWindow::setupRibbon()
     m_audioConvertAction = new QAction(tr("Convert WAV for Goldsrc..."), this);
     tool(m_audioConvertAction, tr("Convert\nWAV"), kIconAudio);
     connect(m_audioConvertAction, &QAction::triggered, this, &MainWindow::onOpenAudioConverter);
+#ifdef ENABLE_AUTORIG
+    m_mapPortAction = new QAction(QStringLiteral("Port a GR2 room to a GoldSrc map of brushes..."), this);
+    tool(m_mapPortAction, QStringLiteral("GR2 to\nmap"), kIconMap);
+    connect(m_mapPortAction, &QAction::triggered, this, &MainWindow::onOpenMapPorter);
+#endif
+    m_retargetAction = new QAction(tr("Retarget Metin2 motions onto a GoldSrc model's skeleton..."), this);
+    tool(m_retargetAction, tr("Retarget\nanimation"), kIconRig);
+    connect(m_retargetAction, &QAction::triggered, this, &MainWindow::onOpenRetargetDialog);
+    m_hudSpriteAction = new QAction(tr("Make a weapon's 640hud sprite from its model..."), this);
+    tool(m_hudSpriteAction, tr("HUD\nsprite"), kIconSprite);
+    connect(m_hudSpriteAction, &QAction::triggered, this, &MainWindow::onOpenHudSprite);
     m_lolModelAction = new QAction(tr("League of Legends Models..."), this);
     tool(m_lolModelAction, tr("LoL\nmodels"), kIconDownload);
     connect(m_lolModelAction, &QAction::triggered, this, &MainWindow::onOpenLoLModelDownloader);
@@ -395,6 +415,10 @@ void MainWindow::setupRibbon()
     m_autoRigAction = new QAction(tr("Auto-Rig (Beta)"), this);
     tool(m_autoRigAction, tr("Auto-Rig\n(beta)"), kIconRig);
     connect(m_autoRigAction, &QAction::triggered, this, &MainWindow::onOpenAutoRigDialog);
+    // private, so not translated
+    m_physicsLabAction = new QAction(QStringLiteral("Physics Lab"), this);
+    tool(m_physicsLabAction, QStringLiteral("Physics\nlab"), kIconRig);
+    connect(m_physicsLabAction, &QAction::triggered, this, &MainWindow::onOpenPhysicsLabDialog);
 #endif
 #ifdef METIN2_SCRIPT_EFFECT
     m_mseViewAction = new QAction(tr("Metin2 Script Effect Viewer..."), this);
@@ -495,6 +519,14 @@ void MainWindow::setupRibbon()
     m_toolsRibbonTab = toolsTab;
     QWidget* soundGroup = m_ribbon->addGroup(toolsTab, tr("Sound"));
     m_ribbon->addButton(soundGroup, m_audioConvertAction);
+#ifdef ENABLE_AUTORIG
+    QWidget* mapGroup = m_ribbon->addGroup(toolsTab, QStringLiteral("Map"));
+    m_ribbon->addButton(mapGroup, m_mapPortAction);
+#endif
+    QWidget* animationGroup = m_ribbon->addGroup(toolsTab, tr("Animation"));
+    m_ribbon->addButton(animationGroup, m_retargetAction);
+    QWidget* weaponGroup = m_ribbon->addGroup(toolsTab, tr("Weapon"));
+    m_ribbon->addButton(weaponGroup, m_hudSpriteAction);
     QWidget* downloadGroup = m_ribbon->addGroup(toolsTab, tr("Download"));
     m_ribbon->addButton(downloadGroup, m_lolModelAction);
     m_ribbon->addButton(downloadGroup, m_steamWorkshopAction);
@@ -503,6 +535,7 @@ void MainWindow::setupRibbon()
 #endif
 #ifdef ENABLE_AUTORIG
     m_ribbon->addButton(experimentalGroup, m_autoRigAction);
+    m_ribbon->addButton(experimentalGroup, m_physicsLabAction);
 #endif
 #ifdef METIN2_SCRIPT_EFFECT
     m_ribbon->addButton(experimentalGroup, m_mseViewAction);
@@ -1008,7 +1041,8 @@ void MainWindow::closeToolTab(QWidget* tool)
     const int index = m_workspaces->indexOf(tool);
     if (index <= 0)
         return;
-    if ((tool == m_archiveWorkspace && m_archiveWorkspace->isBusy()) || (tool == m_textureWorkspace && m_textureWorkspace->isBusy()))
+    if ((tool == m_archiveWorkspace && m_archiveWorkspace->isBusy()) || (tool == m_textureWorkspace && m_textureWorkspace->isBusy()) ||
+        tool->property("vortigauntBusy").toBool())//lol
         return;
     m_workspaces->removeTab(index);
     // a workspace keeps what is open in it for the next time
@@ -1842,11 +1876,33 @@ void MainWindow::onOpenAutoRigDialog()
 {
     openToolOnce("autorig", tr("Auto-Rig"), []() { return new AutoRigDialog(); });
 }
+
+void MainWindow::onOpenPhysicsLabDialog()
+{
+    openToolOnce("physicslab", QStringLiteral("Physics Lab"), []() { return new PhysicsLabDialog(); });
+}
 #endif
 
 void MainWindow::onOpenAudioConverter()
 {
     openToolOnce("audio", tr("WAV Converter"), []() { return new AudioConvertDialog(); });
+}
+
+#ifdef ENABLE_AUTORIG
+void MainWindow::onOpenMapPorter()
+{
+    openToolOnce("map", QStringLiteral("GR2 to Map"), []() { return new MapPortDialog(); });
+}
+#endif
+
+void MainWindow::onOpenRetargetDialog()
+{
+    openToolOnce("retarget", tr("Animation Retargeting"), []() { return new RetargetDialog(); });
+}
+
+void MainWindow::onOpenHudSprite()
+{
+    openToolOnce("hudsprite", tr("HUD Sprite"), []() { return new HudSpriteDialog(); });
 }
 
 ConvertAssets MainWindow::runConverter(IConverter& converter, const QString& inputPath, const QString& outputDir,

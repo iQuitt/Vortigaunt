@@ -676,6 +676,245 @@ Referans model olmadan etkisi yoktur.</translation>
     </message>
 </context>
 <context>
+    <name>HudSpriteDialog</name>
+    <message>
+        <source>Side</source>
+        <translation>Yan</translation>
+    </message>
+    <message>
+        <source>Front</source>
+        <translation>Ön</translation>
+    </message>
+    <message>
+        <source>Top</source>
+        <translation>Üst</translation>
+    </message>
+    <message>
+        <source>HUD Sprite</source>
+        <translation>HUD Sprite</translation>
+    </message>
+    <message>
+        <source>Model</source>
+        <translation>Model</translation>
+    </message>
+    <message>
+        <source>The weapon&apos;s model: a w_ or a p_ model shows it whole</source>
+        <translation>Silahın modeli: w_ ya da p_ modeli silahı bütün gösterir</translation>
+    </message>
+    <message>
+        <source>Browse...</source>
+        <translation>Gözat...</translation>
+    </message>
+    <message>
+        <source>Model:</source>
+        <translation>Model:</translation>
+    </message>
+    <message>
+        <source>Turn</source>
+        <translation>Döndür</translation>
+    </message>
+    <message>
+        <source>Where the model is seen from; on opening, the one it shows the most of. A w_ model lies on its side, and is seen from the top</source>
+        <translation>Modelin nereden görüleceği; açılınca en çok göründüğü yön seçilir. w_ modeli yan yatar ve üstten görülür</translation>
+    </message>
+    <message>
+        <source>Seen from:</source>
+        <translation>Bakış:</translation>
+    </message>
+    <message>
+        <source>About the up axis: 0 and 180 show the two sides</source>
+        <translation>Dikey eksen etrafında: 0 ve 180 iki yanı gösterir</translation>
+    </message>
+    <message>
+        <source>Turn:</source>
+        <translation>Döndür:</translation>
+    </message>
+    <message>
+        <source>Tilt:</source>
+        <translation>Eğ:</translation>
+    </message>
+    <message>
+        <source>Roll:</source>
+        <translation>Yuvarla:</translation>
+    </message>
+    <message>
+        <source>Lay it level</source>
+        <translation>Düz yatır</translation>
+    </message>
+    <message>
+        <source>Turns the picture so the weapon&apos;s length lies along the cell, as a w_ model lying askew on the floor does not</source>
+        <translation>Görüntüyü, silahın boyu hücre boyunca uzanacak şekilde döndürür; yerde çapraz yatan bir w_ modeli böyle durmaz</translation>
+    </message>
+    <message>
+        <source>Mirror</source>
+        <translation>Aynala</translation>
+    </message>
+    <message>
+        <source>The game&apos;s icons have the muzzle on the left; on opening, a model is mirrored when its muzzle is on the right</source>
+        <translation>Oyunun ikonlarında namlu soldadır; açılırken namlusu sağda olan model aynalanır</translation>
+    </message>
+    <message>
+        <source>Look</source>
+        <translation>Görünüm</translation>
+    </message>
+    <message>
+        <source>The slot&apos;s name written under the weapon</source>
+        <translation>Silahın altına yazılan slot adı</translation>
+    </message>
+    <message>
+        <source>Name:</source>
+        <translation>Ad:</translation>
+    </message>
+    <message>
+        <source>Brightness:</source>
+        <translation>Parlaklık:</translation>
+    </message>
+    <message>
+        <source>Contrast:</source>
+        <translation>Kontrast:</translation>
+    </message>
+    <message>
+        <source>Against the right edge, as the game&apos;s are</source>
+        <translation>Sağ kenara yaslı, oyunun ikonları gibi</translation>
+    </message>
+    <message>
+        <source>Name over the weapon, as CSO&apos;s are</source>
+        <translation>Ad silahın üstünde, CSO&apos;daki gibi</translation>
+    </message>
+    <message>
+        <source>The weapon as large as the cell holds, the name written over it; else a weapon that would reach the name is kept above it</source>
+        <translation>Silah hücrenin alabildiği kadar büyük çizilir, ad üstüne yazılır; işaretli değilse ada değecek silah adın üstünde tutulur</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Çıktı</translation>
+    </message>
+    <message>
+        <source>A sheet of its own</source>
+        <translation>Kendine ait bir sheet</translation>
+    </message>
+    <message>
+        <source>An existing 640hud sheet to put the weapon in, in two of its cells; empty for a sheet of its own</source>
+        <translation>Silahın iki hücresine yerleştirileceği mevcut bir 640hud sheet&apos;i; boş bırakılırsa kendine ait bir sheet yazılır</translation>
+    </message>
+    <message>
+        <source>Into sheet:</source>
+        <translation>Sheet&apos;e ekle:</translation>
+    </message>
+    <message>
+        <source>The sheet&apos;s cells the weapon takes: as it looks, and as it looks selected under it</source>
+        <translation>Silahın kaplayacağı sheet hücreleri: normal hali ve altında seçili hali</translation>
+    </message>
+    <message>
+        <source>Cells:</source>
+        <translation>Hücreler:</translation>
+    </message>
+    <message>
+        <source>The sprite&apos;s name, in sprites/ of the game</source>
+        <translation>Sprite&apos;ın oyunun sprites/ klasöründeki adı</translation>
+    </message>
+    <message>
+        <source>Sprite:</source>
+        <translation>Sprite:</translation>
+    </message>
+    <message>
+        <source>The weapon&apos;s hud .txt: its classname, or the name a plugin gives it</source>
+        <translation>Silahın hud .txt dosyası: sınıf adı ya da bir eklentinin verdiği ad</translation>
+    </message>
+    <message>
+        <source>Hud .txt:</source>
+        <translation>Hud .txt:</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>Klasör:</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Klasörü aç</translation>
+    </message>
+    <message>
+        <source>Save sprite</source>
+        <translation>Sprite&apos;ı kaydet</translation>
+    </message>
+    <message>
+        <source>Open a weapon&apos;s model.</source>
+        <translation>Bir silah modeli aç.</translation>
+    </message>
+    <message>
+        <source>Drag the red, green and blue rings to turn the model about X, Y and Z; drag elsewhere to look about it</source>
+        <translation>Modeli X, Y ve Z etrafında döndürmek için kırmızı, yeşil ve mavi halkaları sürükle; başka yeri sürüklersen etrafına bakarsın</translation>
+    </message>
+    <message>
+        <source>In the list:</source>
+        <translation>Listede:</translation>
+    </message>
+    <message>
+        <source>Selected:</source>
+        <translation>Seçili:</translation>
+    </message>
+    <message>
+        <source>The sheet as it will be written</source>
+        <translation>Sheet&apos;in yazılacak hali</translation>
+    </message>
+    <message>
+        <source>Select the weapon&apos;s model</source>
+        <translation>Silahın modelini seç</translation>
+    </message>
+    <message>
+        <source>Studio models (*.mdl);;All files (*.*)</source>
+        <translation>Studio modelleri (*.mdl);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Select the output folder</source>
+        <translation>Çıktı klasörünü seç</translation>
+    </message>
+    <message>
+        <source>Select a 640hud sheet</source>
+        <translation>Bir 640hud sheet&apos;i seç</translation>
+    </message>
+    <message>
+        <source>Sprites (*.spr);;All files (*.*)</source>
+        <translation>Sprite&apos;lar (*.spr);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Could not open %1</source>
+        <translation>%1 açılamadı</translation>
+    </message>
+    <message>
+        <source>Nothing of the model is in sight; turn it.</source>
+        <translation>Modelden hiçbir şey görünmüyor; döndür.</translation>
+    </message>
+    <message>
+        <source>%1 has no room for two cells of the weapon list</source>
+        <translation>%1 içinde silah listesinin iki hücresine yer yok</translation>
+    </message>
+    <message>
+        <source>%1 and %2, free</source>
+        <translation>%1 ve %2, boş</translation>
+    </message>
+    <message>
+        <source>%1 and %2, over what is there</source>
+        <translation>%1 ve %2, içindekinin üstüne</translation>
+    </message>
+    <message>
+        <source>Open a weapon&apos;s model first.</source>
+        <translation>Önce bir silah modeli aç.</translation>
+    </message>
+    <message>
+        <source>Could not write %1</source>
+        <translation>%1 yazılamadı</translation>
+    </message>
+    <message>
+        <source>Written: %1 and %2.txt. Copy both into sprites/ of the game.</source>
+        <translation>Yazıldı: %1 ve %2.txt. İkisini de oyunun sprites/ klasörüne kopyala.</translation>
+    </message>
+    <message>
+        <source>Written: %1, the weapon in its cells %2 and %3, and %4.txt. Copy both into sprites/ of the game.</source>
+        <translation>Yazıldı: %1 (silah %2. ve %3. hücrelerinde) ve %4.txt. İkisini de oyunun sprites/ klasörüne kopyala.</translation>
+    </message>
+</context>
+<context>
     <name>LoLModelDownloadDialog</name>
     <message>
         <source>LoL Model Downloader</source>
@@ -1267,6 +1506,20 @@ WAV</source>
 dönüştür</translation>
     </message>
     <message>
+        <source>Animation Retargeting</source>
+        <translation>Animasyon Retargeting</translation>
+    </message>
+    <message>
+        <source>Make a weapon&apos;s 640hud sprite from its model...</source>
+        <translation>Modelinden silahın 640hud sprite&apos;ını yap...</translation>
+    </message>
+    <message>
+        <source>HUD
+sprite</source>
+        <translation>HUD
+sprite</translation>
+    </message>
+    <message>
         <source>LoL
 models</source>
         <translation>LoL
@@ -1357,6 +1610,10 @@ görüntüleyici</translation>
     <message>
         <source>Sound</source>
         <translation>Ses</translation>
+    </message>
+    <message>
+        <source>Animation</source>
+        <translation>Animasyon</translation>
     </message>
     <message>
         <source>Download</source>
@@ -1533,6 +1790,16 @@ görüntüleyici</translation>
     <message>
         <source>Weapon</source>
         <translation>Silah</translation>
+    </message>
+    <message>
+        <source>Retarget Metin2 motions onto a GoldSrc model&apos;s skeleton...</source>
+        <translation>Metin2 hareketlerini bir GoldSrc modelinin iskeletine retarget et...</translation>
+    </message>
+    <message>
+        <source>Retarget
+animation</source>
+        <translation>Animasyon
+retarget</translation>
     </message>
     <message>
         <source>Counter-Strike</source>
@@ -1897,6 +2164,10 @@ The operation is picked from the file type.</source>
 </source>
         <translation>  ... ve %1 dosya daha.
 </translation>
+    </message>
+    <message>
+        <source>HUD Sprite</source>
+        <translation>HUD Sprite</translation>
     </message>
     <message>
         <source>The p_ model needs its QC to be compiled. Turn on Write QC and convert the file again.</source>
@@ -2297,6 +2568,228 @@ boyutta kalır), böylece efekt genelde tek .mdl&apos;ye sığar.</translation>
     <message>
         <source>Renders off-screen from the CURRENT camera angle - orient the view before exporting. Additive blend only.</source>
         <translation>MEVCUT kamera açısından ekran dışında render alır - aktarmadan önce görünümü ayarlayın. Yalnızca additive karışım.</translation>
+    </message>
+</context>
+<context>
+    <name>QcPreview</name>
+    <message>
+        <source>A player model to wear a reference model&apos;s sequences; none for a model of its own</source>
+        <translation>Referans modelin sequence&apos;larını giyecek bir oyuncu modeli; boşsa model kendi başına gösterilir</translation>
+    </message>
+    <message>
+        <source>Player...</source>
+        <translation>Oyuncu...</translation>
+    </message>
+    <message>
+        <source>Beside its source</source>
+        <translation>Kaynağının yanında</translation>
+    </message>
+    <message>
+        <source>A take plays beside the sequence it came of</source>
+        <translation>Bir çekim, geldiği sequence&apos;ın yanında oynar</translation>
+    </message>
+    <message>
+        <source>Preview QC</source>
+        <translation>QC&apos;yi önizle</translation>
+    </message>
+    <message>
+        <source>Compiles the QC to a model of its own and plays it</source>
+        <translation>QC&apos;yi ayrı bir modele derler ve oynatır</translation>
+    </message>
+    <message>
+        <source>Preview the QC to see its sequences.</source>
+        <translation>Sequence&apos;larını görmek için QC&apos;yi önizle.</translation>
+    </message>
+    <message>
+        <source>Play</source>
+        <translation>Oynat</translation>
+    </message>
+    <message>
+        <source>Select a player model</source>
+        <translation>Bir oyuncu modeli seç</translation>
+    </message>
+    <message>
+        <source>Studio models (*.mdl);;All files (*.*)</source>
+        <translation>Studio modelleri (*.mdl);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Could not load the player model %1</source>
+        <translation>%1 oyuncu modeli yüklenemedi</translation>
+    </message>
+    <message>
+        <source>The preview needs the QC and studiomdl.</source>
+        <translation>Önizleme için QC ve studiomdl gerekli.</translation>
+    </message>
+    <message>
+        <source>Could not write %1</source>
+        <translation>%1 yazılamadı</translation>
+    </message>
+    <message>
+        <source>The preview did not compile: %1</source>
+        <translation>Önizleme derlenemedi: %1</translation>
+    </message>
+    <message>
+        <source>%1 / %2 s, frame %3</source>
+        <translation>%1 / %2 sn, kare %3</translation>
+    </message>
+</context>
+<context>
+    <name>RetargetDialog</name>
+    <message>
+        <source>Animation Retargeting</source>
+        <translation>Animasyon Retargeting</translation>
+    </message>
+    <message>
+        <source>Plays Metin2 motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. Every joint turns as in Metin2, the bones keep the model&apos;s lengths and the walk is sized by the legs.</source>
+        <translation>Metin2 hareketlerini bir referans modelin iskeletinde oynatır: her hareket, modelin QC&apos;sinin yanında bir SMD ve QC&apos;de bir sequence olur. Her eklem Metin2&apos;deki gibi döner, kemikler modelin uzunluklarını korur ve yürüyüş bacak boyuna göre ölçeklenir.</translation>
+    </message>
+    <message>
+        <source>Metin2</source>
+        <translation>Metin2</translation>
+    </message>
+    <message>
+        <source>The character the motions are of: a .gr2 with its skeleton (warrior_4-1.gr2)</source>
+        <translation>Hareketlerin ait olduğu karakter: iskeletini taşıyan bir .gr2 (warrior_4-1.gr2)</translation>
+    </message>
+    <message>
+        <source>Browse...</source>
+        <translation>Gözat...</translation>
+    </message>
+    <message>
+        <source>Character:</source>
+        <translation>Karakter:</translation>
+    </message>
+    <message>
+        <source>Add...</source>
+        <translation>Ekle...</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Kaldır</translation>
+    </message>
+    <message>
+        <source>Motions:</source>
+        <translation>Hareketler:</translation>
+    </message>
+    <message>
+        <source>Reference model</source>
+        <translation>Referans model</translation>
+    </message>
+    <message>
+        <source>The decompiled QC of the model; its first body is the skeleton</source>
+        <translation>Modelin decompile edilmiş QC&apos;si; ilk body iskelet olarak alınır</translation>
+    </message>
+    <message>
+        <source>QC:</source>
+        <translation>QC:</translation>
+    </message>
+    <message>
+        <source>&lt;QC name&gt;_anims</source>
+        <translation>&lt;QC adı&gt;_anims</translation>
+    </message>
+    <message>
+        <source>The folder beside the QC the SMDs of the motions go to</source>
+        <translation>Hareketlerin SMD&apos;lerinin yazılacağı, QC&apos;nin yanındaki klasör</translation>
+    </message>
+    <message>
+        <source>Animations folder:</source>
+        <translation>Animasyon klasörü:</translation>
+    </message>
+    <message>
+        <source>Sequences loop</source>
+        <translation>Sequence&apos;lar döngülü</translation>
+    </message>
+    <message>
+        <source>Compile the model</source>
+        <translation>Modeli derle</translation>
+    </message>
+    <message>
+        <source>studiomdl:</source>
+        <translation>studiomdl:</translation>
+    </message>
+    <message>
+        <source>What the retargeting made shows here</source>
+        <translation>Retarget sonucu burada görünür</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Klasörü aç</translation>
+    </message>
+    <message>
+        <source>Retarget</source>
+        <translation>Retarget et</translation>
+    </message>
+    <message>
+        <source>Select the character</source>
+        <translation>Karakteri seç</translation>
+    </message>
+    <message>
+        <source>Granny models (*.gr2);;All files (*.*)</source>
+        <translation>Granny modelleri (*.gr2);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Select the motions</source>
+        <translation>Hareketleri seç</translation>
+    </message>
+    <message>
+        <source>Granny motions (*.gr2);;All files (*.*)</source>
+        <translation>Granny hareketleri (*.gr2);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Select the QC</source>
+        <translation>QC&apos;yi seç</translation>
+    </message>
+    <message>
+        <source>QC files (*.qc);;All files (*.*)</source>
+        <translation>QC dosyaları (*.qc);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Select studiomdl</source>
+        <translation>studiomdl&apos;i seç</translation>
+    </message>
+    <message>
+        <source>Programs (*.exe);;All files (*.*)</source>
+        <translation>Programlar (*.exe);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Retargeting...</source>
+        <translation>Retarget ediliyor...</translation>
+    </message>
+    <message>
+        <source>Give the character, at least one motion and the QC of the reference model.</source>
+        <translation>Karakteri, en az bir hareketi ve referans modelin QC&apos;sini ver.</translation>
+    </message>
+    <message>
+        <source>The QC has no body SMD to take the skeleton from.</source>
+        <translation>QC&apos;de iskeletin alınacağı bir body SMD&apos;si yok.</translation>
+    </message>
+    <message>
+        <source>Retargeting %1 motions...</source>
+        <translation>%1 hareket retarget ediliyor...</translation>
+    </message>
+    <message>
+        <source>%1: %2 frames at %3 fps</source>
+        <translation>%1: %3 fps&apos;de %2 kare</translation>
+    </message>
+    <message>
+        <source>, kept at rest: %1</source>
+        <translation>, dinlenme pozunda kalanlar: %1</translation>
+    </message>
+    <message>
+        <source>Compiling %1...</source>
+        <translation>%1 derleniyor...</translation>
+    </message>
+    <message>
+        <source>Model written: %1</source>
+        <translation>Model yazıldı: %1</translation>
+    </message>
+    <message>
+        <source>studiomdl failed: %1</source>
+        <translation>studiomdl başarısız oldu: %1</translation>
+    </message>
+    <message>
+        <source>%1 sequences in the QC.</source>
+        <translation>QC&apos;de %1 sequence var.</translation>
     </message>
 </context>
 <context>

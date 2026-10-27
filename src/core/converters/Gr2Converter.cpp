@@ -27,6 +27,7 @@
 #ifdef QT_WIDGETS_LIB
 #include <QImage>
 #include <QString>
+#include "utils/ImageUtils.h"
 #endif
 
 #include "utils/Dds.h"
@@ -254,6 +255,93 @@ int Gr2Converter::GetPolygonCount(const std::string& inputFilePath)
     
     GrannyFreeFile(file);
     return totalPolygons;
+}
+
+bool Gr2Converter::ReadRoomLight(const std::string& inputFilePath, std::vector<Gr2LitTriangle>& triangles, std::vector<std::string>& lightmaps)
+{
+    triangles.clear();
+    lightmaps.clear();
+    if (!loadGr2File(inputFilePath))
+        return false;
+
+    struct LitVertex
+    {
+        float position[3];
+        float normal[3];
+        float uv[2];
+    };
+    granny_data_type_definition litVertexType[] = {
+        { GrannyReal32Member, GrannyVertexPositionName, nullptr, 3 },
+        { GrannyReal32Member, GrannyVertexNormalName, nullptr, 3 },
+        { GrannyReal32Member, GrannyVertexTextureCoordinatesName "1", nullptr, 2 },
+        { GrannyEndMember },
+    };
+    std::map<std::string, int> lightmapIndex;
+    for (int modelIdx = 0; modelIdx < m_grannyFileInfo->ModelCount; ++modelIdx)
+    {
+        granny_model* model = m_grannyFileInfo->Models[modelIdx];
+        for (int bindingIdx = 0; model && bindingIdx < model->MeshBindingCount; ++bindingIdx)
+        {
+            granny_mesh* mesh = model->MeshBindings[bindingIdx].Mesh;
+            if (!mesh || !mesh->PrimaryVertexData)
+                continue;
+            bool secondUv = false;
+            for (granny_data_type_definition* member = mesh->PrimaryVertexData->VertexType; member && member->Type != GrannyEndMember; ++member)
+                secondUv = secondUv || (member->Name && std::strcmp(member->Name, GrannyVertexTextureCoordinatesName "1") == 0);
+            if (!secondUv)
+                continue;
+
+            // lightmap: a Blend material's second map, else the opacity map
+            std::vector<int> materialLightmap(mesh->MaterialBindingCount, -1);
+            for (int m = 0; m < mesh->MaterialBindingCount; ++m)
+            {
+                granny_material* material = mesh->MaterialBindings[m].Material;
+                if (!material)
+                    continue;
+                granny_texture* texture = material->MapCount > 1 && material->Name && _strnicmp(material->Name, "Blend", 5) == 0
+                                              ? GrannyGetMaterialTextureByType(material->Maps[1].Material, GrannyDiffuseColorTexture)
+                                              : GrannyGetMaterialTextureByType(material, GrannyOpacityTexture);
+                if (!texture || !texture->FromFileName)
+                    continue;
+                const auto found = lightmapIndex.emplace(texture->FromFileName, static_cast<int>(lightmaps.size()));
+                if (found.second)
+                    lightmaps.push_back(texture->FromFileName);
+                materialLightmap[m] = found.first->second;
+            }
+
+            const int vertexCount = GrannyGetMeshVertexCount(mesh);
+            const int indexCount = GrannyGetMeshIndexCount(mesh);
+            if (vertexCount <= 0 || indexCount < 3)
+                continue;
+            std::vector<LitVertex> vertices(vertexCount);
+            GrannyCopyMeshVertices(mesh, litVertexType, vertices.data());
+            std::vector<unsigned int> indices(indexCount);
+            GrannyCopyMeshIndices(mesh, 4, indices.data());
+            const int groupCount = GrannyGetMeshTriangleGroupCount(mesh);
+            const granny_tri_material_group* groups = GrannyGetMeshTriangleGroups(mesh);
+            for (int g = 0; g < groupCount; ++g)
+            {
+                const int material = groups[g].MaterialIndex;
+                if (material < 0 || material >= mesh->MaterialBindingCount || materialLightmap[material] < 0)
+                    continue;
+                for (int t = groups[g].TriFirst; t < groups[g].TriFirst + groups[g].TriCount && 3 * t + 2 < indexCount; ++t)
+                {
+                    Gr2LitTriangle lit;
+                    lit.lightmap = materialLightmap[material];
+                    for (int k = 0; k < 3; ++k)
+                    {
+                        const LitVertex& v = vertices[indices[3 * t + k]];
+                        std::memcpy(lit.position[k], v.position, sizeof(v.position));
+                        std::memcpy(lit.normal[k], v.normal, sizeof(v.normal));
+                        std::memcpy(lit.uv[k], v.uv, sizeof(v.uv));
+                    }
+                    triangles.push_back(lit);
+                }
+            }
+        }
+    }
+    clearData();
+    return !triangles.empty();
 }
 
 aiScene* Gr2Converter::LoadAndGetScene(const std::string& inputFilePath, const std::string& textureOutputDir)
@@ -2153,10 +2241,10 @@ bool Gr2Converter::convertTextureto8IndexedBMP(const std::string& inputPath, con
     }
     else
     {
-        Vortigaunt_Printf("ERROR: Failed to load: The file isnt DDS");
-        return false;
+        // TGA (RLE too), PNG and the like
+        sourceImage = ImageUtils::loadImage(inputPath);
     }
-        
+
     if (sourceImage.isNull())
     {
         Vortigaunt_Printf("ERROR: Failed to load image : " + inputPath);

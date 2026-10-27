@@ -682,6 +682,245 @@ Bez modelu referencyjnego nie działa.</translation>
     </message>
 </context>
 <context>
+    <name>HudSpriteDialog</name>
+    <message>
+        <source>Side</source>
+        <translation>Bok</translation>
+    </message>
+    <message>
+        <source>Front</source>
+        <translation>Przód</translation>
+    </message>
+    <message>
+        <source>Top</source>
+        <translation>Góra</translation>
+    </message>
+    <message>
+        <source>HUD Sprite</source>
+        <translation>Sprite HUD</translation>
+    </message>
+    <message>
+        <source>Model</source>
+        <translation>Model</translation>
+    </message>
+    <message>
+        <source>The weapon&apos;s model: a w_ or a p_ model shows it whole</source>
+        <translation>Model broni: model w_ lub p_ pokazuje ją w całości</translation>
+    </message>
+    <message>
+        <source>Browse...</source>
+        <translation>Przeglądaj...</translation>
+    </message>
+    <message>
+        <source>Model:</source>
+        <translation>Model:</translation>
+    </message>
+    <message>
+        <source>Turn</source>
+        <translation>Obrót</translation>
+    </message>
+    <message>
+        <source>Where the model is seen from; on opening, the one it shows the most of. A w_ model lies on its side, and is seen from the top</source>
+        <translation>Skąd widać model; po otwarciu wybierany jest kierunek, z którego widać go najwięcej. Model w_ leży na boku i jest widziany z góry</translation>
+    </message>
+    <message>
+        <source>Seen from:</source>
+        <translation>Widok z:</translation>
+    </message>
+    <message>
+        <source>About the up axis: 0 and 180 show the two sides</source>
+        <translation>Wokół osi pionowej: 0 i 180 pokazują obie strony</translation>
+    </message>
+    <message>
+        <source>Turn:</source>
+        <translation>Obrót:</translation>
+    </message>
+    <message>
+        <source>Tilt:</source>
+        <translation>Pochylenie:</translation>
+    </message>
+    <message>
+        <source>Roll:</source>
+        <translation>Przechył:</translation>
+    </message>
+    <message>
+        <source>Lay it level</source>
+        <translation>Wypoziomuj</translation>
+    </message>
+    <message>
+        <source>Turns the picture so the weapon&apos;s length lies along the cell, as a w_ model lying askew on the floor does not</source>
+        <translation>Obraca obraz tak, by długość broni leżała wzdłuż komórki, czego model w_ leżący krzywo na ziemi nie robi</translation>
+    </message>
+    <message>
+        <source>Mirror</source>
+        <translation>Odbij</translation>
+    </message>
+    <message>
+        <source>The game&apos;s icons have the muzzle on the left; on opening, a model is mirrored when its muzzle is on the right</source>
+        <translation>Ikony gry mają lufę po lewej; po otwarciu model jest odbijany, gdy jego lufa jest po prawej</translation>
+    </message>
+    <message>
+        <source>Look</source>
+        <translation>Wygląd</translation>
+    </message>
+    <message>
+        <source>The slot&apos;s name written under the weapon</source>
+        <translation>Nazwa slotu wypisana pod bronią</translation>
+    </message>
+    <message>
+        <source>Name:</source>
+        <translation>Nazwa:</translation>
+    </message>
+    <message>
+        <source>Brightness:</source>
+        <translation>Jasność:</translation>
+    </message>
+    <message>
+        <source>Contrast:</source>
+        <translation>Kontrast:</translation>
+    </message>
+    <message>
+        <source>Against the right edge, as the game&apos;s are</source>
+        <translation>Przy prawej krawędzi, jak w grze</translation>
+    </message>
+    <message>
+        <source>Name over the weapon, as CSO&apos;s are</source>
+        <translation>Nazwa na broni, jak w CSO</translation>
+    </message>
+    <message>
+        <source>The weapon as large as the cell holds, the name written over it; else a weapon that would reach the name is kept above it</source>
+        <translation>Broń tak duża, jak mieści komórka, z nazwą napisaną na niej; w przeciwnym razie broń sięgająca nazwy jest trzymana nad nią</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>Wyjście</translation>
+    </message>
+    <message>
+        <source>A sheet of its own</source>
+        <translation>Własny arkusz</translation>
+    </message>
+    <message>
+        <source>An existing 640hud sheet to put the weapon in, in two of its cells; empty for a sheet of its own</source>
+        <translation>Istniejący arkusz 640hud, w którego dwóch komórkach umieścić broń; puste dla własnego arkusza</translation>
+    </message>
+    <message>
+        <source>Into sheet:</source>
+        <translation>Do arkusza:</translation>
+    </message>
+    <message>
+        <source>The sheet&apos;s cells the weapon takes: as it looks, and as it looks selected under it</source>
+        <translation>Komórki arkusza zajmowane przez broń: zwykły wygląd i pod nim wygląd po zaznaczeniu</translation>
+    </message>
+    <message>
+        <source>Cells:</source>
+        <translation>Komórki:</translation>
+    </message>
+    <message>
+        <source>The sprite&apos;s name, in sprites/ of the game</source>
+        <translation>Nazwa sprite&apos;a w sprites/ gry</translation>
+    </message>
+    <message>
+        <source>Sprite:</source>
+        <translation>Sprite:</translation>
+    </message>
+    <message>
+        <source>The weapon&apos;s hud .txt: its classname, or the name a plugin gives it</source>
+        <translation>Plik .txt HUD broni: jej classname lub nazwa nadana przez plugin</translation>
+    </message>
+    <message>
+        <source>Hud .txt:</source>
+        <translation>Hud .txt:</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>Folder:</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Otwórz folder</translation>
+    </message>
+    <message>
+        <source>Save sprite</source>
+        <translation>Zapisz sprite</translation>
+    </message>
+    <message>
+        <source>Open a weapon&apos;s model.</source>
+        <translation>Otwórz model broni.</translation>
+    </message>
+    <message>
+        <source>Drag the red, green and blue rings to turn the model about X, Y and Z; drag elsewhere to look about it</source>
+        <translation>Przeciągnij czerwony, zielony i niebieski pierścień, aby obrócić model wokół X, Y i Z; przeciągnij gdzie indziej, aby rozejrzeć się wokół</translation>
+    </message>
+    <message>
+        <source>In the list:</source>
+        <translation>Na liście:</translation>
+    </message>
+    <message>
+        <source>Selected:</source>
+        <translation>Zaznaczona:</translation>
+    </message>
+    <message>
+        <source>The sheet as it will be written</source>
+        <translation>Arkusz w postaci, w jakiej zostanie zapisany</translation>
+    </message>
+    <message>
+        <source>Select the weapon&apos;s model</source>
+        <translation>Wybierz model broni</translation>
+    </message>
+    <message>
+        <source>Studio models (*.mdl);;All files (*.*)</source>
+        <translation>Modele Studio (*.mdl);;Wszystkie pliki (*.*)</translation>
+    </message>
+    <message>
+        <source>Select the output folder</source>
+        <translation>Wybierz folder wyjściowy</translation>
+    </message>
+    <message>
+        <source>Select a 640hud sheet</source>
+        <translation>Wybierz arkusz 640hud</translation>
+    </message>
+    <message>
+        <source>Sprites (*.spr);;All files (*.*)</source>
+        <translation>Sprite&apos;y (*.spr);;Wszystkie pliki (*.*)</translation>
+    </message>
+    <message>
+        <source>Could not open %1</source>
+        <translation>Nie można otworzyć %1</translation>
+    </message>
+    <message>
+        <source>Nothing of the model is in sight; turn it.</source>
+        <translation>Nic z modelu nie widać; obróć go.</translation>
+    </message>
+    <message>
+        <source>%1 has no room for two cells of the weapon list</source>
+        <translation>%1 nie ma miejsca na dwie komórki listy broni</translation>
+    </message>
+    <message>
+        <source>%1 and %2, free</source>
+        <translation>%1 i %2, wolne</translation>
+    </message>
+    <message>
+        <source>%1 and %2, over what is there</source>
+        <translation>%1 i %2, na tym, co tam jest</translation>
+    </message>
+    <message>
+        <source>Open a weapon&apos;s model first.</source>
+        <translation>Najpierw otwórz model broni.</translation>
+    </message>
+    <message>
+        <source>Could not write %1</source>
+        <translation>Nie można zapisać %1</translation>
+    </message>
+    <message>
+        <source>Written: %1 and %2.txt. Copy both into sprites/ of the game.</source>
+        <translation>Zapisano: %1 i %2.txt. Skopiuj oba do sprites/ gry.</translation>
+    </message>
+    <message>
+        <source>Written: %1, the weapon in its cells %2 and %3, and %4.txt. Copy both into sprites/ of the game.</source>
+        <translation>Zapisano: %1, z bronią w komórkach %2 i %3, oraz %4.txt. Skopiuj oba do sprites/ gry.</translation>
+    </message>
+</context>
+<context>
     <name>LoLModelDownloadDialog</name>
     <message>
         <source>LoL Model Downloader</source>
@@ -1273,6 +1512,20 @@ WAV</source>
 WAV</translation>
     </message>
     <message>
+        <source>Animation Retargeting</source>
+        <translation>Retargeting animacji</translation>
+    </message>
+    <message>
+        <source>Make a weapon&apos;s 640hud sprite from its model...</source>
+        <translation>Utwórz sprite 640hud broni z jej modelu...</translation>
+    </message>
+    <message>
+        <source>HUD
+sprite</source>
+        <translation>Sprite
+HUD</translation>
+    </message>
+    <message>
         <source>LoL
 models</source>
         <translation>Modele
@@ -1363,6 +1616,10 @@ MSE</translation>
     <message>
         <source>Sound</source>
         <translation>Dźwięk</translation>
+    </message>
+    <message>
+        <source>Animation</source>
+        <translation>Animacja</translation>
     </message>
     <message>
         <source>Download</source>
@@ -1543,6 +1800,16 @@ MSE</translation>
     <message>
         <source>Weapon</source>
         <translation>Broń</translation>
+    </message>
+    <message>
+        <source>Retarget Metin2 motions onto a GoldSrc model&apos;s skeleton...</source>
+        <translation>Retargetuj ruchy z Metin2 na szkielet modelu GoldSrc...</translation>
+    </message>
+    <message>
+        <source>Retarget
+animation</source>
+        <translation>Retarget
+animacji</translation>
     </message>
     <message>
         <source>Counter-Strike</source>
@@ -1905,6 +2172,10 @@ Operacja jest wybierana według typu pliku.</translation>
 </source>
         <translation>  ... i %1 więcej.
 </translation>
+    </message>
+    <message>
+        <source>HUD Sprite</source>
+        <translation>Sprite HUD</translation>
     </message>
     <message>
         <source>The p_ model needs its QC to be compiled. Turn on Write QC and convert the file again.</source>
@@ -2305,6 +2576,228 @@ rozmiar), więc efekt zwykle mieści się w jednym .mdl.</translation>
     <message>
         <source>Renders off-screen from the CURRENT camera angle - orient the view before exporting. Additive blend only.</source>
         <translation>Renderuje poza ekranem z BIEŻĄCEGO kąta kamery - ustaw widok przed eksportem. Tylko mieszanie addytywne.</translation>
+    </message>
+</context>
+<context>
+    <name>QcPreview</name>
+    <message>
+        <source>A player model to wear a reference model&apos;s sequences; none for a model of its own</source>
+        <translation>Model gracza, który przejmie sekwencje modelu referencyjnego; puste dla osobnego modelu</translation>
+    </message>
+    <message>
+        <source>Player...</source>
+        <translation>Gracz...</translation>
+    </message>
+    <message>
+        <source>Beside its source</source>
+        <translation>Obok źródła</translation>
+    </message>
+    <message>
+        <source>A take plays beside the sequence it came of</source>
+        <translation>Ujęcie odtwarza się obok sekwencji, z której powstało</translation>
+    </message>
+    <message>
+        <source>Preview QC</source>
+        <translation>Podgląd QC</translation>
+    </message>
+    <message>
+        <source>Compiles the QC to a model of its own and plays it</source>
+        <translation>Kompiluje QC do osobnego modelu i go odtwarza</translation>
+    </message>
+    <message>
+        <source>Preview the QC to see its sequences.</source>
+        <translation>Zrób podgląd QC, aby zobaczyć jego sekwencje.</translation>
+    </message>
+    <message>
+        <source>Play</source>
+        <translation>Odtwarzaj</translation>
+    </message>
+    <message>
+        <source>Select a player model</source>
+        <translation>Wybierz model gracza</translation>
+    </message>
+    <message>
+        <source>Studio models (*.mdl);;All files (*.*)</source>
+        <translation>Modele Studio (*.mdl);;Wszystkie pliki (*.*)</translation>
+    </message>
+    <message>
+        <source>Could not load the player model %1</source>
+        <translation>Nie udało się wczytać modelu gracza %1</translation>
+    </message>
+    <message>
+        <source>The preview needs the QC and studiomdl.</source>
+        <translation>Podgląd wymaga QC i studiomdl.</translation>
+    </message>
+    <message>
+        <source>Could not write %1</source>
+        <translation>Nie można zapisać %1</translation>
+    </message>
+    <message>
+        <source>The preview did not compile: %1</source>
+        <translation>Podgląd się nie skompilował: %1</translation>
+    </message>
+    <message>
+        <source>%1 / %2 s, frame %3</source>
+        <translation>%1 / %2 s, klatka %3</translation>
+    </message>
+</context>
+<context>
+    <name>RetargetDialog</name>
+    <message>
+        <source>Animation Retargeting</source>
+        <translation>Retargeting animacji</translation>
+    </message>
+    <message>
+        <source>Plays Metin2 motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. Every joint turns as in Metin2, the bones keep the model&apos;s lengths and the walk is sized by the legs.</source>
+        <translation>Odtwarza ruchy z Metin2 na szkielecie modelu referencyjnego: każdy ruch staje się plikiem SMD obok QC modelu i sekwencją w nim. Każdy staw obraca się jak w Metin2, kości zachowują długości modelu, a chód jest skalowany według nóg.</translation>
+    </message>
+    <message>
+        <source>Metin2</source>
+        <translation>Metin2</translation>
+    </message>
+    <message>
+        <source>The character the motions are of: a .gr2 with its skeleton (warrior_4-1.gr2)</source>
+        <translation>Postać, do której należą ruchy: plik .gr2 z jej szkieletem (warrior_4-1.gr2)</translation>
+    </message>
+    <message>
+        <source>Browse...</source>
+        <translation>Przeglądaj...</translation>
+    </message>
+    <message>
+        <source>Character:</source>
+        <translation>Postać:</translation>
+    </message>
+    <message>
+        <source>Add...</source>
+        <translation>Dodaj...</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Usuń</translation>
+    </message>
+    <message>
+        <source>Motions:</source>
+        <translation>Ruchy:</translation>
+    </message>
+    <message>
+        <source>Reference model</source>
+        <translation>Model referencyjny</translation>
+    </message>
+    <message>
+        <source>The decompiled QC of the model; its first body is the skeleton</source>
+        <translation>Zdekompilowany QC modelu; jego pierwszy body to szkielet</translation>
+    </message>
+    <message>
+        <source>QC:</source>
+        <translation>QC:</translation>
+    </message>
+    <message>
+        <source>&lt;QC name&gt;_anims</source>
+        <translation>&lt;nazwa QC&gt;_anims</translation>
+    </message>
+    <message>
+        <source>The folder beside the QC the SMDs of the motions go to</source>
+        <translation>Folder obok QC, do którego trafiają pliki SMD ruchów</translation>
+    </message>
+    <message>
+        <source>Animations folder:</source>
+        <translation>Folder animacji:</translation>
+    </message>
+    <message>
+        <source>Sequences loop</source>
+        <translation>Sekwencje zapętlone</translation>
+    </message>
+    <message>
+        <source>Compile the model</source>
+        <translation>Skompiluj model</translation>
+    </message>
+    <message>
+        <source>studiomdl:</source>
+        <translation>studiomdl:</translation>
+    </message>
+    <message>
+        <source>What the retargeting made shows here</source>
+        <translation>Tutaj widać wynik retargetingu</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Otwórz folder</translation>
+    </message>
+    <message>
+        <source>Retarget</source>
+        <translation>Retargetuj</translation>
+    </message>
+    <message>
+        <source>Select the character</source>
+        <translation>Wybierz postać</translation>
+    </message>
+    <message>
+        <source>Granny models (*.gr2);;All files (*.*)</source>
+        <translation>Modele Granny (*.gr2);;Wszystkie pliki (*.*)</translation>
+    </message>
+    <message>
+        <source>Select the motions</source>
+        <translation>Wybierz ruchy</translation>
+    </message>
+    <message>
+        <source>Granny motions (*.gr2);;All files (*.*)</source>
+        <translation>Ruchy Granny (*.gr2);;Wszystkie pliki (*.*)</translation>
+    </message>
+    <message>
+        <source>Select the QC</source>
+        <translation>Wybierz QC</translation>
+    </message>
+    <message>
+        <source>QC files (*.qc);;All files (*.*)</source>
+        <translation>Pliki QC (*.qc);;Wszystkie pliki (*.*)</translation>
+    </message>
+    <message>
+        <source>Select studiomdl</source>
+        <translation>Wybierz studiomdl</translation>
+    </message>
+    <message>
+        <source>Programs (*.exe);;All files (*.*)</source>
+        <translation>Programy (*.exe);;Wszystkie pliki (*.*)</translation>
+    </message>
+    <message>
+        <source>Retargeting...</source>
+        <translation>Retargetowanie...</translation>
+    </message>
+    <message>
+        <source>Give the character, at least one motion and the QC of the reference model.</source>
+        <translation>Podaj postać, co najmniej jeden ruch i QC modelu referencyjnego.</translation>
+    </message>
+    <message>
+        <source>The QC has no body SMD to take the skeleton from.</source>
+        <translation>QC nie ma pliku SMD body, z którego można wziąć szkielet.</translation>
+    </message>
+    <message>
+        <source>Retargeting %1 motions...</source>
+        <translation>Retargetowanie ruchów: %1...</translation>
+    </message>
+    <message>
+        <source>%1: %2 frames at %3 fps</source>
+        <translation>%1: %2 klatek przy %3 fps</translation>
+    </message>
+    <message>
+        <source>, kept at rest: %1</source>
+        <translation>, w pozie spoczynkowej: %1</translation>
+    </message>
+    <message>
+        <source>Compiling %1...</source>
+        <translation>Kompilowanie %1...</translation>
+    </message>
+    <message>
+        <source>Model written: %1</source>
+        <translation>Zapisano model: %1</translation>
+    </message>
+    <message>
+        <source>studiomdl failed: %1</source>
+        <translation>studiomdl nie powiódł się: %1</translation>
+    </message>
+    <message>
+        <source>%1 sequences in the QC.</source>
+        <translation>Sekwencje w QC: %1.</translation>
     </message>
 </context>
 <context>

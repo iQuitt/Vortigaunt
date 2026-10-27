@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QColor>
 #include <QElapsedTimer>
 #include <QMatrix4x4>
 #include <QOpenGLFunctions_3_3_Core>
@@ -34,14 +35,39 @@ public:
     void setAimPitch(int model, float degrees);
     void setPlaying(bool playing);
     bool isPlaying() const { return m_playing; }
+    void setTime(float seconds);
+    float time() const { return m_time; }
+    // non-looping sequences hold their last frame
+    void setHoldUnlooped(bool hold);
+    // transform of a whole model
+    void setPlacement(int model, const aiMatrix4x4& placement);
 
     void setBoneOffset(int model, int bone, const aiMatrix4x4& offset);
     aiMatrix4x4 boneTransform(int model, int bone) const;
 
     void fitView(int onlyModel = -1);
     void setCameraAngles(float yaw, float pitch);
+    void setOrthographic(bool orthographic);
+    // invalid colour = palette's
+    void setBackground(const QColor& colour);
+
+    // see-through box drawn among the models
+    struct Guide
+    {
+        QVector3D middle, half;
+        float yaw = 0.0f;  // about Z, in radians
+    };
+    void setGuides(const std::vector<Guide>& guides);
+
+    // Blender-style X/Y/Z rotation rings, reported by turnedByHandle
+    void setTurnHandles(bool shown);
+    // re-centre on the models, keeping distance and angles
+    void recenter();
 
     QString placeholder;
+
+signals:
+    void turnedByHandle(int axis, float degrees);
 
 protected:
     void initializeGL() override;
@@ -71,6 +97,7 @@ private:
         float aimPitch = 0.0f;
         int offsetBone = -1;
         aiMatrix4x4 offset;
+        aiMatrix4x4 placement;
         std::vector<aiMatrix4x4> bones;  
         std::vector<Mesh> meshes;
         std::vector<unsigned int> textures; 
@@ -85,9 +112,19 @@ private:
     void release(Model& model);
     void releaseAll();
     void drawModel(Model& model, bool additivePass);
+    void drawGuides();
     bool bounds(QVector3D& low, QVector3D& high, int onlyModel = -1) const;
+    void drawHandles();
+    QPointF onScreen(const QVector3D& p) const;
+    QVector3D ringPoint(int axis, float turn) const;
+    // the ring under a point, or -1
+    int handleAt(const QPointF& at, float* turn) const;
+    float handleTurn(const QPointF& from, const QPointF& to) const;
 
     std::vector<Model> m_models;
+    std::vector<Guide> m_guides;
+    unsigned int m_guideVao = 0;
+    unsigned int m_guideVbo = 0;
     QOpenGLShaderProgram* m_program = nullptr;
     bool m_glReady = false;
     bool m_fitPending = false;
@@ -96,6 +133,9 @@ private:
     QElapsedTimer m_clock;
     bool m_playing = true;
     float m_time = 0.0f;
+    bool m_holdUnlooped = false;
+    bool m_orthographic = false;
+    QColor m_background;
 
     QVector3D m_target;
     float m_distance = 100.0f;
@@ -104,4 +144,12 @@ private:
     QPoint m_lastMouse;
     Qt::MouseButton m_dragButton = Qt::NoButton;
     QMatrix4x4 m_projection;
+    QMatrix4x4 m_viewProjection;
+    QVector3D m_eye;
+    bool m_turnHandles = false;
+    QVector3D m_handleMiddle;
+    float m_handleRadius = 0.0f;
+    int m_handleAxis = -1;   // the ring dragged
+    int m_hoverAxis = -1;
+    float m_handleAt = 0.0f; // where on it it was taken
 };
