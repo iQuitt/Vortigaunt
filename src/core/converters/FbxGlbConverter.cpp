@@ -1372,6 +1372,20 @@ FbxGlbConvertReport FbxGlbConverter::Convert(const std::string& inputPath, const
     }
     report.outputFolder = FileIO::fromPath(outFolder);
 
+    auto writeRest = [&](SmdFile& file) {
+        writeNodes(file, bones);
+        file.Text("skeleton\n");
+        std::vector<aiMatrix3x3> rotation(bones.size());
+        std::vector<aiVector3D> position(bones.size());
+        for (size_t i = 0; i < bones.size(); i++)
+        {
+            rotation[i] = bones[i].rotation;
+            position[i] = bones[i].position;
+        }
+        writeFrame(file, 0, bones, rotation, position, nullptr);
+        file.Text("end\n");
+    };
+
     // ref smd
     if (!report.animationOnly)
     {
@@ -1385,19 +1399,8 @@ FbxGlbConvertReport FbxGlbConverter::Convert(const std::string& inputPath, const
             return fail("Could not write " + FileIO::fromPath(referencePath));
         }
 
-        writeNodes(file, bones);
-        file.Text("skeleton\n");
-        {
-            std::vector<aiMatrix3x3> rotation(bones.size());
-            std::vector<aiVector3D> position(bones.size());
-            for (size_t i = 0; i < bones.size(); i++)
-            {
-                rotation[i] = bones[i].rotation;
-                position[i] = bones[i].position;
-            }
-            writeFrame(file, 0, bones, rotation, position, nullptr);
-        }
-        file.Text("end\ntriangles\n");
+        writeRest(file);
+        file.Text("triangles\n");
 
         for (const OutMesh& mesh : meshes)
         {
@@ -1477,6 +1480,16 @@ FbxGlbConvertReport FbxGlbConverter::Convert(const std::string& inputPath, const
         report.referenceSmd = FileIO::fromPath(referencePath);
         report.uniqueVertices = static_cast<int>(uniquePositions.size());
         for (int k = 0; k < 3; k++) report.size[k] = static_cast<float>(mx[k] - mn[k]);
+    }
+    else
+    {
+        const fs::path skeletonPath = outFolder / FileIO::toPath(modelName + "_skeleton.smd");
+        SmdFile file(skeletonPath);
+        if (file.IsOpen())
+        {
+            writeRest(file);
+            if (file.Close()) report.skeletonSmd = FileIO::fromPath(skeletonPath);
+        }
     }
 
     // anim

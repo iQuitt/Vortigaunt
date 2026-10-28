@@ -4,11 +4,14 @@
 #include "core/autorig/Retarget.h"
 
 #include "core/autorig/SkeletonMath.h"
+#include "core/converters/FbxGlbConverter.h"
 #include "core/converters/Gr2Converter.h"
+#include "core/mdl/StudioDecompiler.h"
 #include "utils/FileIO.h"
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -108,24 +111,122 @@ int bipedRoot(const Skeleton& skeleton)
     return -1;
 }
 
-// leg length in the rest pose
-float legLength(const Skeleton& skeleton)
+int boneNamed(const Skeleton& skeleton, const char* name)
+{
+    for (size_t i = 0; i < skeleton.names.size(); ++i)
+        if (autorig::CanonicalBoneName(skeleton.names[i]) == name) return static_cast<int>(i);
+    return -1;
+}
+
+int hipsOf(const Skeleton& skeleton)
+{
+    const int pelvis = boneNamed(skeleton, "bip01 pelvis");
+    return pelvis >= 0 ? pelvis : bipedRoot(skeleton);
+}
+
+std::vector<int> spineOf(const Skeleton& skeleton)
+{
+    std::vector<int> chain;
+    const int hips = hipsOf(skeleton);
+    int at = boneNamed(skeleton, "bip01 neck");
+    if (at < 0) at = boneNamed(skeleton, "bip01 head");
+    if (hips < 0 || at < 0) return chain;
+    std::vector<bool> belowHips(skeleton.names.size(), false);
+    for (int up = hips; up >= 0 && !belowHips[up]; up = skeleton.parents[up]) belowHips[up] = true;
+    for (at = skeleton.parents[at]; at >= 0 && !belowHips[at] && chain.size() < skeleton.names.size(); at = skeleton.parents[at])
+        chain.insert(chain.begin(), at);
+    if (at < 0) chain.clear();
+    return chain;
+}
+
+bool isBiped(const Skeleton& skeleton)
+{
+    for (const std::string& name : skeleton.names)
+        if (autorig::NormalizeBoneName(name) == "bip01") return true;
+    return false;
+}
+
+aiVector3D positionOf(const aiMatrix4x4& m)
+{
+    return aiVector3D(m.a4, m.b4, m.c4);
+}
+
+float legLength(const Skeleton& skeleton, int root, const aiVector3D& up)
 {
     const std::vector<aiMatrix4x4> world = autorig::ComputeWorldTransforms(bonesAt(skeleton, 0));
-    const int root = bipedRoot(skeleton);
-    float ankles = 0.0f;
+    aiVector3D ankles;
     int found = 0;
-    for (size_t i = 0; i < skeleton.names.size(); ++i)
+    for (const char* foot : { "bip01 l foot", "bip01 r foot" })
     {
-        const std::string name = autorig::CanonicalBoneName(skeleton.names[i]);
-        if (name == "bip01 l foot" || name == "bip01 r foot")
-        {
-            ankles += world[i].c4;
-            found++;
-        }
+        const int i = boneNamed(skeleton, foot);
+        if (i < 0) continue;
+        ankles += positionOf(world[i]);
+        found++;
     }
     if (root < 0 || !found) return 0.0f;
-    return world[root].c4 - ankles / found;
+    return (positionOf(world[root]) - ankles / static_cast<float>(found)) * up;
+}
+
+bool isMirrored(const Skeleton& skeleton, const std::vector<aiMatrix4x4>& world)
+{
+    const int left = boneNamed(skeleton, "bip01 l thigh"), right = boneNamed(skeleton, "bip01 r thigh");
+    int foot = boneNamed(skeleton, "bip01 l foot"), toe = boneNamed(skeleton, "bip01 l toe0");
+    if (foot < 0 || toe < 0)
+    {
+        foot = boneNamed(skeleton, "bip01 r foot");
+        toe = boneNamed(skeleton, "bip01 r toe0");
+    }
+    if (left < 0 || right < 0 || foot < 0 || toe < 0) return false;
+    const aiVector3D forward = positionOf(world[toe]) - positionOf(world[foot]), side = positionOf(world[left]) - positionOf(world[right]);
+    return -forward.y * side.x + forward.x * side.y < 0.0f;
+}
+
+aiMatrix4x4 reflected(aiMatrix4x4 m)
+{
+    m.a2 = -m.a2;
+    m.a3 = -m.a3;
+    m.a4 = -m.a4;
+    m.b1 = -m.b1;
+    m.c1 = -m.c1;
+    return m;
+}
+
+aiMatrix3x3 bodyFrame(const Skeleton& skeleton, const std::vector<aiMatrix4x4>& world)
+{
+    const int left = boneNamed(skeleton, "bip01 l thigh"), right = boneNamed(skeleton, "bip01 r thigh");
+    if (left < 0 || right < 0) return aiMatrix3x3();
+    aiVector3D x = positionOf(world[left]) - positionOf(world[right]);
+    x.z = 0.0f;
+    if (x.SquareLength() < 1e-8f) return aiMatrix3x3();
+    x.Normalize();
+    return aiMatrix3x3(x.x, -x.y, 0.0f, x.y, x.x, 0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+std::string lowerExtension(const std::string& path)
+{
+    std::string ext = FileIO::fromPath(FileIO::toPath(path).extension());
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return ext;
+}
+
+bool isFbxGlb(const std::string& ext)
+{
+    return ext == ".fbx" || ext == ".glb" || ext == ".gltf";
+}
+
+FbxGlbConvertReport convertFbxGlb(const std::string& path, const fs::path& work)
+{
+    FbxGlbConvertOptions options;
+    options.writeQC = false;
+    options.exportTextures = false;
+    options.maxBones = 0;
+    FbxGlbConverter converter;
+    return converter.Convert(path, FileIO::fromPath(work / "fbx"), options);
+}
+
+DecompileResult decompile(const std::string& path, const fs::path& work)
+{
+    return DecompileStudioModel(path, FileIO::fromPath(work / "mdl" / FileIO::toPath(path).stem()));
 }
 
 // SMD's euler angles of a rotation, R = Rz Ry Rx
@@ -164,7 +265,7 @@ void readOptions(const std::string& options, retarget::QcSequence& sequence)
 namespace retarget
 {
 
-RetargetResult Retarget(const std::string& sourceRest, const std::string& sourceMotion, const std::string& targetRest, const std::string& outPath)
+RetargetResult Retarget(const std::string& sourceRest, const std::string& sourceMotion, const std::string& targetRest, const std::string& outPath, int fps)
 {
     RetargetResult result;
     Skeleton rest, motion, target;
@@ -180,10 +281,52 @@ RetargetResult Retarget(const std::string& sourceRest, const std::string& source
     {
         const auto found = motionBone.find(autorig::CanonicalBoneName(target.names[i]));
         if (found != motionBone.end()) from[i] = found->second;
-        else result.unmatched.push_back(target.names[i]);
     }
 
-    const float sourceLegs = legLength(rest), targetLegs = legLength(target);
+    for (size_t i = 0; i < target.names.size(); ++i)
+    {
+        const int parent = target.parents[i];
+        if (from[i] < 0 || parent < 0 || autorig::CanonicalBoneName(target.names[i]).rfind("bip01", 0) == 0) continue;
+        bool under = false;
+        if (parent < static_cast<int>(i) && from[parent] >= 0)
+            for (int up = motion.parents[from[i]], guard = 0; up >= 0 && !under && guard < static_cast<int>(motion.names.size()); up = motion.parents[up], ++guard)
+                under = up == from[parent];
+        if (!under) from[i] = -1;
+    }
+
+    const bool biped = isBiped(motion) && isBiped(target);
+
+    if (!biped)
+    {
+        const std::vector<int> want = spineOf(target), have = spineOf(motion);
+        for (size_t k = 0; k < want.size() && !have.empty(); ++k)
+            from[want[k]] = have[want.size() > 1 ? (2 * k * (have.size() - 1) + want.size() - 1) / (2 * (want.size() - 1)) : have.size() - 1];
+    }
+    for (size_t i = 0; i < target.names.size(); ++i)
+        if (from[i] < 0) result.unmatched.push_back(target.names[i]);
+
+    const size_t bones = target.names.size();
+    const std::vector<aiMatrix4x4> targetWorld = autorig::ComputeWorldTransforms(bonesAt(target, 0));
+
+    std::vector<aiMatrix4x4> sourceWorld = autorig::ComputeWorldTransforms(bonesAt(motion, 0));
+    {
+        const std::vector<aiMatrix4x4> restWorld = autorig::ComputeWorldTransforms(bonesAt(rest, 0));
+        std::map<std::string, int> restBone;
+        for (size_t i = 0; i < rest.names.size(); ++i) restBone.emplace(autorig::CanonicalBoneName(rest.names[i]), static_cast<int>(i));
+        for (size_t i = 0; i < motion.names.size(); ++i)
+        {
+            const auto found = restBone.find(autorig::CanonicalBoneName(motion.names[i]));
+            if (found != restBone.end()) sourceWorld[i] = restWorld[found->second];
+        }
+    }
+
+    const bool mirror = !biped && isMirrored(motion, sourceWorld) && !isMirrored(target, targetWorld);
+    if (mirror)
+        for (aiMatrix4x4& m : sourceWorld) m = reflected(m);
+    const aiMatrix3x3 facing = biped ? aiMatrix3x3() : bodyFrame(target, targetWorld) * bodyFrame(motion, sourceWorld).Transpose();
+    const int sourceHips = biped ? bipedRoot(motion) : hipsOf(motion);
+    const float sourceLegs = legLength(rest, biped ? bipedRoot(rest) : hipsOf(rest), aiMatrix3x3(facing).Transpose() * aiVector3D(0.0f, 0.0f, 1.0f));
+    const float targetLegs = legLength(target, biped ? bipedRoot(target) : hipsOf(target), aiVector3D(0.0f, 0.0f, 1.0f));
     if (sourceLegs <= 0.0f || targetLegs <= 0.0f)
     {
         result.error = "The feet of the skeletons were not found, to size the motion by";
@@ -191,29 +334,62 @@ RetargetResult Retarget(const std::string& sourceRest, const std::string& source
     }
     result.scale = targetLegs / sourceLegs;
 
+    std::vector<aiMatrix3x3> offset(bones);
+    if (!biped)
+    {
+        std::vector<aiMatrix3x3> align(bones);
+        for (size_t i = 0; i < bones; ++i)
+        {
+            const int parent = target.parents[i];
+            if (parent >= 0 && parent < static_cast<int>(i)) align[i] = align[parent];
+            // the one matched child, or the one up the trunk
+            int child = -1, children = 0, trunk = -1;
+            for (size_t c = i + 1; c < bones; ++c)
+                if (target.parents[c] == static_cast<int>(i) && from[c] >= 0)
+                {
+                    child = static_cast<int>(c);
+                    children++;
+                    const std::string name = autorig::CanonicalBoneName(target.names[c]);
+                    if (name.rfind("bip01 spine", 0) == 0 || name == "bip01 neck" || name == "bip01 head") trunk = child;
+                }
+            if (trunk >= 0)
+            {
+                child = trunk;
+                children = 1;
+            }
+            if (from[i] >= 0 && children == 1)
+            {
+                aiVector3D want = positionOf(targetWorld[child]) - positionOf(targetWorld[i]);
+                aiVector3D have = facing * (positionOf(sourceWorld[from[child]]) - positionOf(sourceWorld[from[i]]));
+                if (want.SquareLength() > 1e-8f && have.SquareLength() > 1e-8f)
+                    aiMatrix3x3::FromToMatrix(want.Normalize(), have.Normalize(), align[i]);
+            }
+            if (from[i] >= 0) offset[i] = (facing * aiMatrix3x3(sourceWorld[from[i]])).Transpose() * align[i] * aiMatrix3x3(targetWorld[i]);
+        }
+    }
+
     // world rotations, so an extra bone in a chain does not add up
-    const int sourceRoot = bipedRoot(motion);
-    const size_t bones = target.names.size();
     std::vector<std::vector<std::array<float, 6>>> frames(motion.frames.size(), target.frames[0]);
     std::vector<aiMatrix3x3> turned(bones);
     for (size_t frame = 0; frame < frames.size(); ++frame)
     {
-        const std::vector<aiMatrix4x4> world = autorig::ComputeWorldTransforms(bonesAt(motion, frame));
+        std::vector<aiMatrix4x4> world = autorig::ComputeWorldTransforms(bonesAt(motion, frame));
+        if (mirror)
+            for (aiMatrix4x4& m : world) m = reflected(m);
         for (size_t i = 0; i < bones; ++i)
         {
             std::array<float, 6>& value = frames[frame][i];
             const int parent = target.parents[i];
             const aiMatrix3x3 local(autorig::SmdEulerRotation(value[3], value[4], value[5]));
-            turned[i] = from[i] >= 0 ? aiMatrix3x3(world[from[i]]) : parent >= 0 ? turned[parent] * local : local;
+            turned[i] = from[i] >= 0 ? facing * aiMatrix3x3(world[from[i]]) * offset[i] : parent >= 0 ? turned[parent] * local : local;
             smdEuler(parent >= 0 ? aiMatrix3x3(turned[parent]).Transpose() * turned[i] : turned[i], value[3], value[4], value[5]);
+            if (parent >= 0 || sourceHips < 0) continue;
             // root movement at the target's size
-            if (parent < 0 && sourceRoot >= 0)
-            {
-                const aiMatrix4x4& root = world[sourceRoot];
-                value[0] = root.a4 * result.scale;
-                value[1] = root.b4 * result.scale;
-                value[2] = root.c4 * result.scale;
-            }
+            aiVector3D at = positionOf(world[sourceHips]) * result.scale;
+            if (!biped) at = positionOf(targetWorld[i]) + facing * (positionOf(world[sourceHips]) - positionOf(sourceWorld[sourceHips])) * result.scale;
+            value[0] = at.x;
+            value[1] = at.y;
+            value[2] = at.z;
         }
     }
 
@@ -228,8 +404,9 @@ RetargetResult Retarget(const std::string& sourceRest, const std::string& source
                     break;
                 }
     size_t step = 1;
-    while (step < 30 && (30 % step || moving * ((frames.size() + step - 1) / step) * 2 + bones * 12 > kMostSequenceBytes)) step++;
-    result.fps = static_cast<int>(30 / step);
+    fps = std::max(fps, 1);
+    while (step < static_cast<size_t>(fps) && (fps % step || moving * ((frames.size() + step - 1) / step) * 2 + bones * 12 > kMostSequenceBytes)) step++;
+    result.fps = static_cast<int>(fps / step);
 
     std::string smd = "version 1\nnodes\n";
     char text[256];
@@ -263,34 +440,101 @@ RetargetResult Retarget(const std::string& sourceRest, const std::string& source
     return result;
 }
 
-RetargetResult RetargetGr2Motion(const std::string& characterGr2, const std::string& motionGr2, const std::string& targetRest, const std::string& outPath, const std::string& workFolder)
+std::string SourceSkeleton(const std::string& path, const std::string& workFolder, std::string& error)
 {
-    RetargetResult result;
+    const std::string ext = lowerExtension(path);
+    const fs::path work = FileIO::toPath(workFolder), file = FileIO::toPath(path);
     std::error_code ec;
-    const fs::path work = FileIO::toPath(workFolder);
     fs::create_directories(work, ec);
-    const fs::path character = FileIO::toPath(characterGr2), motion = FileIO::toPath(motionGr2);
-    const fs::path rest = work / FileIO::toPath(FileIO::fromPath(character.stem()) + "_rest.smd");
-    const fs::path moved = work / FileIO::toPath(FileIO::fromPath(motion.stem()) + "_motion.smd");
-    if (!fs::exists(rest, ec))
+    if (ext == ".smd") return path;
+    if (ext == ".gr2")
     {
+        const fs::path rest = work / FileIO::toPath(FileIO::fromPath(file.stem()) + "_rest.smd");
         Gr2Converter converter;
         Gr2ConverterSettings settings;
         settings.ExportMaterials = false;
         converter.SetConverterSettings(settings);
-        if (converter.ConvertSingleGr2File(characterGr2, FileIO::fromPath(rest)) != GR2_CONVERT_RET_OK || !fs::exists(rest, ec))
+        if (converter.ConvertSingleGr2File(path, FileIO::fromPath(rest)) == GR2_CONVERT_RET_OK && fs::exists(rest, ec)) return FileIO::fromPath(rest);
+    }
+    else if (isFbxGlb(ext))
+    {
+        const FbxGlbConvertReport report = convertFbxGlb(path, work);
+        if (report.ok) return report.referenceSmd.empty() ? report.skeletonSmd : report.referenceSmd;
+    }
+    else if (ext == ".mdl")
+    {
+        const DecompileResult decompiled = decompile(path, work);
+        const std::string body = decompiled.ok ? QcBody(decompiled.qcPath) : std::string();
+        if (!body.empty() && fs::exists(FileIO::toPath(body), ec)) return body;
+    }
+    else
+    {
+        error = FileIO::fromPath(file.filename()) + " is not a .smd, .gr2, .fbx, .glb or .mdl";
+        return {};
+    }
+    error = "Could not read the skeleton of " + FileIO::fromPath(file.filename());
+    return {};
+}
+
+std::vector<QcSequence> SourceMotions(const std::string& path, const std::string& character, const std::string& workFolder, std::string& error)
+{
+    std::vector<QcSequence> motions;
+    const std::string ext = lowerExtension(path);
+    const fs::path work = FileIO::toPath(workFolder), file = FileIO::toPath(path);
+    const std::string stem = FileIO::fromPath(file.stem());
+    std::error_code ec;
+    fs::create_directories(work, ec);
+    QcSequence motion;
+    motion.name = stem;
+    if (ext == ".smd")
+    {
+        motion.path = path;
+        motions.push_back(motion);
+    }
+    else if (ext == ".gr2")
+    {
+        if (lowerExtension(character) != ".gr2")
         {
-            result.error = "Could not read the skeleton of " + FileIO::fromPath(character.filename());
-            return result;
+            error = "A .gr2 motion needs a .gr2 character";
+            return {};
+        }
+        const fs::path moved = work / FileIO::toPath(stem + "_motion.smd");
+        Gr2Converter converter;
+        if (converter.ConvertGr2Animation(path, FileIO::fromPath(moved), 0, character) == GR2_CONVERT_RET_OK && fs::exists(moved, ec))
+        {
+            motion.path = FileIO::fromPath(moved);
+            motions.push_back(motion);
         }
     }
-    Gr2Converter converter;
-    if (converter.ConvertGr2Animation(motionGr2, FileIO::fromPath(moved), 0, characterGr2) != GR2_CONVERT_RET_OK || !fs::exists(moved, ec))
+    else if (isFbxGlb(ext))
     {
-        result.error = "Could not read the motion " + FileIO::fromPath(motion.filename());
-        return result;
+        const FbxGlbConvertReport report = convertFbxGlb(path, work);
+        for (const FbxGlbAnimationInfo& animation : report.animations)
+        {
+            // a single animation is named after its file
+            motion.name = report.animations.size() == 1 ? stem : animation.name;
+            motion.path = FileIO::fromPath(FileIO::toPath(report.outputFolder) / FileIO::toPath(animation.file + ".smd"));
+            motions.push_back(motion);
+        }
     }
-    return Retarget(FileIO::fromPath(rest), FileIO::fromPath(moved), targetRest, outPath);
+    else if (ext == ".mdl")
+    {
+        const DecompileResult decompiled = decompile(path, work);
+        if (decompiled.ok)
+            for (QcSequence sequence : QcSequences(decompiled.qcPath))
+            {
+                if (lowerExtension(sequence.path) != ".smd") sequence.path += ".smd";
+                sequence.path = FileIO::fromPath(FileIO::toPath(decompiled.qcPath).parent_path() / FileIO::toPath(sequence.path));
+                motions.push_back(sequence);
+            }
+    }
+    else
+    {
+        error = FileIO::fromPath(file.filename()) + " is not a .smd, .gr2, .fbx, .glb or .mdl";
+        return {};
+    }
+    if (motions.empty()) error = "No motion was found in " + FileIO::fromPath(file.filename());
+    return motions;
 }
 
 bool AddSequence(const std::string& qcPath, const std::string& name, const std::string& animPath, int fps, bool loop, std::string& error, const std::string& activity, int weight)

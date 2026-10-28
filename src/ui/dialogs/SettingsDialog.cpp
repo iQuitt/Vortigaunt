@@ -24,6 +24,7 @@
 #endif
 
 #include "LanguageManager.h"
+#include "ShellActionDialog.h"
 #include "ThemeManager.h"
 #include "core/VortigauntLog.h"
 
@@ -141,6 +142,17 @@ void SettingsDialog::setupUI()
     vtfShellButtonsLayout->addWidget(m_unregisterVtfThumbnailerBtn);
     shellLayout->addLayout(vtfShellButtonsLayout);
 
+    m_contextMenuStatusLabel = new QLabel();
+    shellLayout->addWidget(m_contextMenuStatusLabel);
+
+    auto* contextMenuButtonsLayout = new QHBoxLayout();
+    m_registerContextMenuBtn = new QPushButton(tr("Register Context Menu"));
+    m_registerContextMenuBtn->setToolTip(tr("Adds a VortigauntTool submenu to .mdl, .qc, .fbx and .glb files in Explorer"));
+    m_unregisterContextMenuBtn = new QPushButton(tr("Unregister Context Menu"));
+    contextMenuButtonsLayout->addWidget(m_registerContextMenuBtn);
+    contextMenuButtonsLayout->addWidget(m_unregisterContextMenuBtn);
+    shellLayout->addLayout(contextMenuButtonsLayout);
+
     shellGroup->setLayout(shellLayout);
     mainLayout->addWidget(shellGroup);
 #endif
@@ -158,6 +170,8 @@ void SettingsDialog::setupUI()
     connect(m_unregisterThumbnailerBtn, &QPushButton::clicked, this, &SettingsDialog::onUnregisterThumbnailer);
     connect(m_registerVtfThumbnailerBtn, &QPushButton::clicked, this, &SettingsDialog::onRegisterVtfThumbnailer);
     connect(m_unregisterVtfThumbnailerBtn, &QPushButton::clicked, this, &SettingsDialog::onUnregisterVtfThumbnailer);
+    connect(m_registerContextMenuBtn, &QPushButton::clicked, this, &SettingsDialog::onRegisterContextMenu);
+    connect(m_unregisterContextMenuBtn, &QPushButton::clicked, this, &SettingsDialog::onUnregisterContextMenu);
 #endif
 }
 
@@ -172,6 +186,7 @@ void SettingsDialog::loadSettings()
 #ifdef Q_OS_WIN
     updateThumbnailerStatus();
     updateVtfThumbnailerStatus();
+    updateContextMenuStatus();
 #endif
 }
 
@@ -533,6 +548,32 @@ void SettingsDialog::onUnregisterVtfThumbnailer()
         QMessageBox::information(this, tr("Success"), tr("VTF Thumbnailer has been successfully unregistered."));
     }
     updateVtfThumbnailerStatus();
+}
+
+void SettingsDialog::updateContextMenuStatus()
+{
+    if (!m_contextMenuStatusLabel) return;
+    const bool registered = ShellActionDialog::isContextMenuRegistered();
+    m_contextMenuStatusLabel->setText(registered ? tr("Context Menu Status: Active") : tr("Context Menu Status: Inactive"));
+    m_contextMenuStatusLabel->setStyleSheet(registered ? "color: #4CAF50; font-weight: bold;" : "color: gray;");
+    m_registerContextMenuBtn->setEnabled(!registered);
+    m_unregisterContextMenuBtn->setEnabled(registered);
+}
+
+void SettingsDialog::onRegisterContextMenu()
+{
+    if (ShellActionDialog::registerContextMenu())
+        QMessageBox::information(this, tr("Success"), tr("The context menu has been registered. On Windows 11 it is under \"Show more options\"."));
+    else
+        QMessageBox::critical(this, tr("Error"), tr("The context menu could not be written to the registry."));
+    updateContextMenuStatus();
+}
+
+void SettingsDialog::onUnregisterContextMenu()
+{
+    ShellActionDialog::unregisterContextMenu();
+    QMessageBox::information(this, tr("Success"), tr("The context menu has been unregistered."));
+    updateContextMenuStatus();
 }
 #endif
 

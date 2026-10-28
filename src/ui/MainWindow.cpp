@@ -400,7 +400,7 @@ void MainWindow::setupRibbon()
     tool(m_mapPortAction, QStringLiteral("GR2 to\nmap"), kIconMap);
     connect(m_mapPortAction, &QAction::triggered, this, &MainWindow::onOpenMapPorter);
 #endif
-    m_retargetAction = new QAction(tr("Retarget Metin2 motions onto a GoldSrc model's skeleton..."), this);
+    m_retargetAction = new QAction(tr("Retarget motions onto a GoldSrc model's skeleton..."), this);
     tool(m_retargetAction, tr("Retarget\nanimation"), kIconRig);
     connect(m_retargetAction, &QAction::triggered, this, &MainWindow::onOpenRetargetDialog);
     m_hudSpriteAction = new QAction(tr("Make a weapon's 640hud sprite from its model..."), this);

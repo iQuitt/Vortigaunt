@@ -1517,6 +1517,10 @@ WAV</source>
 WAV</translation>
     </message>
     <message>
+        <source>Retarget motions onto a GoldSrc model&apos;s skeleton...</source>
+        <translation>Retarget motions onto a GoldSrc model&apos;s skeleton...</translation>
+    </message>
+    <message>
         <source>Animation Retargeting</source>
         <translation>Animation Retargeting</translation>
     </message>
@@ -1805,10 +1809,6 @@ viewer</translation>
     <message>
         <source>Weapon</source>
         <translation>Weapon</translation>
-    </message>
-    <message>
-        <source>Retarget Metin2 motions onto a GoldSrc model&apos;s skeleton...</source>
-        <translation>Retarget Metin2 motions onto a GoldSrc model&apos;s skeleton...</translation>
     </message>
     <message>
         <source>Retarget
@@ -2271,6 +2271,21 @@ The operation is picked from the file type.</translation>
     </message>
 </context>
 <context>
+    <name>ModelViewerWindow</name>
+    <message>
+        <source>Sequence:</source>
+        <translation>Sequence:</translation>
+    </message>
+    <message>
+        <source>Play</source>
+        <translation>Play</translation>
+    </message>
+    <message>
+        <source>Could not read %1</source>
+        <translation>Could not read %1</translation>
+    </message>
+</context>
+<context>
     <name>MseViewerWidget</name>
     <message>
         <source>No MSE loaded - nothing to export.</source>
@@ -2652,16 +2667,16 @@ size) so the effect usually fits one .mdl.</translation>
         <translation>Animation Retargeting</translation>
     </message>
     <message>
-        <source>Plays Metin2 motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. Every joint turns as in Metin2, the bones keep the model&apos;s lengths and the walk is sized by the legs.</source>
-        <translation>Plays Metin2 motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. Every joint turns as in Metin2, the bones keep the model&apos;s lengths and the walk is sized by the legs.</translation>
+        <source>Plays motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. The bones keep the model&apos;s lengths and the walk is sized by the legs. Sources can be .gr2, .fbx, .glb, .smd or .mdl.</source>
+        <translation>Plays motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. The bones keep the model&apos;s lengths and the walk is sized by the legs. Sources can be .gr2, .fbx, .glb, .smd or .mdl.</translation>
     </message>
     <message>
-        <source>Metin2</source>
-        <translation>Metin2</translation>
+        <source>Source</source>
+        <translation>Source</translation>
     </message>
     <message>
-        <source>The character the motions are of: a .gr2 with its skeleton (warrior_4-1.gr2)</source>
-        <translation>The character the motions are of: a .gr2 with its skeleton (warrior_4-1.gr2)</translation>
+        <source>The character the motions are of, with its skeleton: .gr2, .fbx, .glb, .smd or .mdl</source>
+        <translation>The character the motions are of, with its skeleton: .gr2, .fbx, .glb, .smd or .mdl</translation>
     </message>
     <message>
         <source>Browse...</source>
@@ -2670,6 +2685,10 @@ size) so the effect usually fits one .mdl.</translation>
     <message>
         <source>Character:</source>
         <translation>Character:</translation>
+    </message>
+    <message>
+        <source>Left empty, the character&apos;s own animations are used</source>
+        <translation>Left empty, the character&apos;s own animations are used</translation>
     </message>
     <message>
         <source>Add...</source>
@@ -2736,16 +2755,24 @@ size) so the effect usually fits one .mdl.</translation>
         <translation>Select the character</translation>
     </message>
     <message>
-        <source>Granny models (*.gr2);;All files (*.*)</source>
-        <translation>Granny models (*.gr2);;All files (*.*)</translation>
+        <source>Models (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)</source>
+        <translation>Models (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)</translation>
+    </message>
+    <message>
+        <source>Motions (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)</source>
+        <translation>Motions (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)</translation>
+    </message>
+    <message>
+        <source>Give the character and the QC of the reference model.</source>
+        <translation>Give the character and the QC of the reference model.</translation>
+    </message>
+    <message>
+        <source>Retargeting the motions of %1 files...</source>
+        <translation>Retargeting the motions of %1 files...</translation>
     </message>
     <message>
         <source>Select the motions</source>
         <translation>Select the motions</translation>
-    </message>
-    <message>
-        <source>Granny motions (*.gr2);;All files (*.*)</source>
-        <translation>Granny motions (*.gr2);;All files (*.*)</translation>
     </message>
     <message>
         <source>Select the QC</source>
@@ -2768,16 +2795,8 @@ size) so the effect usually fits one .mdl.</translation>
         <translation>Retargeting...</translation>
     </message>
     <message>
-        <source>Give the character, at least one motion and the QC of the reference model.</source>
-        <translation>Give the character, at least one motion and the QC of the reference model.</translation>
-    </message>
-    <message>
         <source>The QC has no body SMD to take the skeleton from.</source>
         <translation>The QC has no body SMD to take the skeleton from.</translation>
-    </message>
-    <message>
-        <source>Retargeting %1 motions...</source>
-        <translation>Retargeting %1 motions...</translation>
     </message>
     <message>
         <source>%1: %2 frames at %3 fps</source>
@@ -2863,6 +2882,18 @@ size) so the effect usually fits one .mdl.</translation>
         <translation>Cancel</translation>
     </message>
     <message>
+        <source>Register Context Menu</source>
+        <translation>Register Context Menu</translation>
+    </message>
+    <message>
+        <source>Adds a VortigauntTool submenu to .mdl, .qc, .fbx and .glb files in Explorer</source>
+        <translation>Adds a VortigauntTool submenu to .mdl, .qc, .fbx and .glb files in Explorer</translation>
+    </message>
+    <message>
+        <source>Unregister Context Menu</source>
+        <translation>Unregister Context Menu</translation>
+    </message>
+    <message>
         <source>Executables (*.exe);;All files (*.*)</source>
         <translation>Executables (*.exe);;All files (*.*)</translation>
     </message>
@@ -2935,6 +2966,26 @@ size) so the effect usually fits one .mdl.</translation>
         <translation>VTF Thumbnailer has been successfully unregistered.</translation>
     </message>
     <message>
+        <source>Context Menu Status: Active</source>
+        <translation>Context Menu Status: Active</translation>
+    </message>
+    <message>
+        <source>Context Menu Status: Inactive</source>
+        <translation>Context Menu Status: Inactive</translation>
+    </message>
+    <message>
+        <source>The context menu has been registered. On Windows 11 it is under &quot;Show more options&quot;.</source>
+        <translation>The context menu has been registered. On Windows 11 it is under &quot;Show more options&quot;.</translation>
+    </message>
+    <message>
+        <source>The context menu could not be written to the registry.</source>
+        <translation>The context menu could not be written to the registry.</translation>
+    </message>
+    <message>
+        <source>The context menu has been unregistered.</source>
+        <translation>The context menu has been unregistered.</translation>
+    </message>
+    <message>
         <source>Browse...</source>
         <translation>Browse...</translation>
     </message>
@@ -2965,6 +3016,81 @@ size) so the effect usually fits one .mdl.</translation>
     <message>
         <source>Select Model Viewer Executable</source>
         <translation>Select Model Viewer Executable</translation>
+    </message>
+</context>
+<context>
+    <name>ShellActionDialog</name>
+    <message>
+        <source>Decompile model</source>
+        <translation>Decompile model</translation>
+    </message>
+    <message>
+        <source>Convert to GoldSrc</source>
+        <translation>Convert to GoldSrc</translation>
+    </message>
+    <message>
+        <source>Compile model</source>
+        <translation>Compile model</translation>
+    </message>
+    <message>
+        <source>Details of the selected file show here</source>
+        <translation>Details of the selected file show here</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Open folder</translation>
+    </message>
+    <message>
+        <source>View model</source>
+        <translation>View model</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Close</translation>
+    </message>
+    <message>
+        <source>%1: waiting</source>
+        <translation>%1: waiting</translation>
+    </message>
+    <message>
+        <source>%1 already exists. Overwrite the files in it?</source>
+        <translation>%1 already exists. Overwrite the files in it?</translation>
+    </message>
+    <message>
+        <source>skipped, the folder already exists</source>
+        <translation>skipped, the folder already exists</translation>
+    </message>
+    <message>
+        <source>Select studiomdl</source>
+        <translation>Select studiomdl</translation>
+    </message>
+    <message>
+        <source>Programs (*.exe);;All files (*.*)</source>
+        <translation>Programs (*.exe);;All files (*.*)</translation>
+    </message>
+    <message>
+        <source>%1: working...</source>
+        <translation>%1: working...</translation>
+    </message>
+    <message>
+        <source>%1 SMD files, %2 textures</source>
+        <translation>%1 SMD files, %2 textures</translation>
+    </message>
+    <message>
+        <source>QC: %1</source>
+        <translation>QC: %1</translation>
+    </message>
+    <message>
+        <source>%1 bones, %2 animations</source>
+        <translation>%1 bones, %2 animations</translation>
+    </message>
+    <message>
+        <source>written to %1</source>
+        <translation>written to %1</translation>
+    </message>
+    <message>
+        <source>Compile and view</source>
+        <translation>Compile and view</translation>
     </message>
 </context>
 <context>

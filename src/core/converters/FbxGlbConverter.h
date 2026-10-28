@@ -43,6 +43,7 @@ struct FbxGlbConvertReport
 
     std::string outputFolder;
     std::string referenceSmd;  // empty when the file had no mesh
+    std::string skeletonSmd;   
     std::string qcPath;
 
     int sourceNodes = 0;

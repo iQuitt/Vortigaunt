@@ -65,6 +65,7 @@ set(VORTIGAUNT_GUI_HEADERS
     ui/dialogs/AudioConvertDialog.h
     ui/dialogs/HudSpriteDialog.h
     ui/dialogs/RetargetDialog.h
+    ui/dialogs/ShellActionDialog.h
     ui/widgets/QcPreview.h
     ui/HudIcon.h
 
@@ -72,6 +73,7 @@ set(VORTIGAUNT_GUI_HEADERS
     ui/workspaces/ArchiveWorkspace.h
     ui/workspaces/TextureWorkspace.h
     ui/workspaces/WeaponFitWorkspace.h
+    ui/windows/ModelViewerWindow.h
     ui/windows/SpriteViewerWindow.h
 
 
@@ -173,6 +175,7 @@ set(VORTIGAUNT_GUI
     ui/dialogs/AudioConvertDialog.cpp
     ui/dialogs/HudSpriteDialog.cpp
     ui/dialogs/RetargetDialog.cpp
+    ui/dialogs/ShellActionDialog.cpp
     ui/widgets/QcPreview.cpp
     ui/HudIcon.cpp
 
@@ -180,6 +183,7 @@ set(VORTIGAUNT_GUI
     ui/workspaces/ArchiveWorkspace.cpp
     ui/workspaces/TextureWorkspace.cpp
     ui/workspaces/WeaponFitWorkspace.cpp
+    ui/windows/ModelViewerWindow.cpp
     ui/windows/SpriteViewerWindow.cpp
 
 

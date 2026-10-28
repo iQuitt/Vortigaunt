@@ -113,11 +113,9 @@ std::string NormalizeBoneName(const std::string& name)
     return out;
 }
 
-std::string CanonicalBoneName(const std::string& name)
+static std::unordered_map<std::string, std::string> HumanoidAliases()
 {
-    std::string normalized = NormalizeBoneName(name);
-
-    static const std::unordered_map<std::string, std::string> kAliases = {
+    std::unordered_map<std::string, std::string> aliases = {
         { "bip01 l arm", "bip01 l clavicle" },
         { "bip01 r arm", "bip01 r clavicle" },
         { "bip01 l arm1", "bip01 l upperarm" },
@@ -130,8 +128,66 @@ std::string CanonicalBoneName(const std::string& name)
         { "bip01 r leg1", "bip01 r calf" },
         { "bip01 l toe", "bip01 l toe0" },
         { "bip01 r toe", "bip01 r toe0" },
+        { "hips", "bip01 pelvis" },
+        { "pelvis", "bip01 pelvis" },
+        { "spine", "bip01 spine" },
+        { "spine1", "bip01 spine1" },
+        { "spine2", "bip01 spine2" },
+        { "chest", "bip01 spine1" },
+        { "upperchest", "bip01 spine2" },
+        { "spine 01", "bip01 spine" },
+        { "spine 02", "bip01 spine1" },
+        { "spine 03", "bip01 spine2" },
+        { "neck", "bip01 neck" },
+        { "neck 01", "bip01 neck" },
+        { "head", "bip01 head" },
     };
+    const char* fingers[] = { "thumb", "index", "middle", "ring", "pinky" };
+    const char* unityJoints[] = { "proximal", "intermediate", "distal" };
+    for (const auto& [side, s] : { std::pair<std::string, std::string>{ "left", "l" }, { "right", "r" } })
+    {
+        const std::string bip = "bip01 " + s + " ";
+        for (const auto& [from, to] : std::initializer_list<std::pair<const char*, const char*>>{
+                 { "shoulder", "clavicle" }, { "arm", "upperarm" }, { "forearm", "forearm" }, { "hand", "hand" }, { "upleg", "thigh" },
+                 { "leg", "calf" }, { "foot", "foot" }, { "toebase", "toe0" }, { "upperarm", "upperarm" }, { "lowerarm", "forearm" },
+                 { "upperleg", "thigh" }, { "lowerleg", "calf" }, { "toes", "toe0" } })
+            aliases.emplace(side + from, bip + to);
+        for (const auto& [from, to] : std::initializer_list<std::pair<const char*, const char*>>{
+                 { "clavicle", "clavicle" }, { "upperarm", "upperarm" }, { "lowerarm", "forearm" }, { "hand", "hand" },
+                 { "thigh", "thigh" }, { "calf", "calf" }, { "foot", "foot" }, { "ball", "toe0" } })
+            aliases.emplace(std::string(from) + " " + s, bip + to);
+        // League of Legends
+        for (const auto& [from, to] : std::initializer_list<std::pair<const char*, const char*>>{
+                 { "clavicle", "clavicle" }, { "shoulder", "upperarm" }, { "elbow", "forearm" }, { "hand", "hand" }, { "hip", "thigh" },
+                 { "knee", "calf" }, { "kneelower", "calf" }, { "foot", "foot" }, { "toe", "toe0" } })
+            aliases.emplace(s + " " + from, bip + to);
+        for (int f = 0; f < 5; f++)
+            for (int j = 0; j < 3; j++)
+            {
+                const std::string biped = bip + "finger" + std::to_string(f) + (j ? std::to_string(j) : std::string());
+                aliases.emplace(side + "hand" + fingers[f] + std::to_string(j + 1), biped);
+                aliases.emplace(side + fingers[f] + unityJoints[j], biped);
+                aliases.emplace(std::string(fingers[f]) + " 0" + std::to_string(j + 1) + " " + s, biped);
+                aliases.emplace(s + " " + fingers[f] + std::to_string(j + 1), biped);
+            }
+    }
+    return aliases;
+}
 
+std::string CanonicalBoneName(const std::string& name)
+{
+    std::string normalized = NormalizeBoneName(name);
+
+    const size_t bar = normalized.find_last_of(":|");
+    if (bar != std::string::npos) normalized = normalized.substr(bar + 1);
+	if (normalized.rfind("mixamorig", 0) == 0) // maybe followed by a number, then a space, then the bone name
+    {
+        size_t at = 9;
+        while (at < normalized.size() && (std::isdigit(static_cast<unsigned char>(normalized[at])) || normalized[at] == ' ')) at++;
+        normalized = normalized.substr(at);
+    }
+
+    static const std::unordered_map<std::string, std::string> kAliases = HumanoidAliases();
     auto found = kAliases.find(normalized);
     return (found == kAliases.end()) ? normalized : found->second;
 }
@@ -262,14 +318,6 @@ BoneMatch MatchBonesForPosing(const std::vector<SmdBone>& from,
         }
         const int targetBone = direct[i];
 
-        // Only a child that is the same joint on both sides says anything about
-        // this bone's length. A helper hanging off the head does not, and taking
-        // it would stretch the head to a helper's length.
-        //
-        // And only when there is exactly ONE such child: a bone that branches
-        // cannot line all its children up at once, and picking one of them
-        // arbitrarily is how the neck came out squashed to a third of its
-        // length - its first matched child is a collarbone, not the head.
         int matchedChild = -1;
         int matchedCount = 0;
         for (int child : fromChildren[i])

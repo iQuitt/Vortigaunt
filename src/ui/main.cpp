@@ -30,6 +30,7 @@
 #include "windows/MseViewerWindow.h"
 #endif
 #include "dialogs/SettingsDialog.h"
+#include "dialogs/ShellActionDialog.h"
 
 #include "LanguageManager.h"
 #include "utils/Platform.h"
@@ -96,6 +97,11 @@ int main(int argc, char* argv[])
     app.setWindowIcon(QIcon(":/app2.ico"));
     
     LanguageManager::instance();
+
+    // Explorer's context menu: --shell <action> <file>
+    const QStringList shellArgs = app.arguments();
+    if (shellArgs.size() >= 4 && shellArgs.at(1) == QLatin1String("--shell"))
+        return ShellActionDialog::run(shellArgs.at(2), shellArgs.mid(3));
 
     static Discord_Integration discord;
     static QTimer discordTimer;

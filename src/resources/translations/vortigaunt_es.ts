@@ -1517,6 +1517,10 @@ WAV</source>
 WAV</translation>
     </message>
     <message>
+        <source>Retarget motions onto a GoldSrc model&apos;s skeleton...</source>
+        <translation>Hacer retargeting de movimientos al esqueleto de un modelo GoldSrc...</translation>
+    </message>
+    <message>
         <source>Animation Retargeting</source>
         <translation>Retargeting de animaciones</translation>
     </message>
@@ -1805,10 +1809,6 @@ MSE</translation>
     <message>
         <source>Weapon</source>
         <translation>Arma</translation>
-    </message>
-    <message>
-        <source>Retarget Metin2 motions onto a GoldSrc model&apos;s skeleton...</source>
-        <translation>Hacer retargeting de movimientos de Metin2 al esqueleto de un modelo GoldSrc...</translation>
     </message>
     <message>
         <source>Retarget
@@ -2271,6 +2271,21 @@ La operación se elige según el tipo de archivo.</translation>
     </message>
 </context>
 <context>
+    <name>ModelViewerWindow</name>
+    <message>
+        <source>Sequence:</source>
+        <translation>Secuencia:</translation>
+    </message>
+    <message>
+        <source>Play</source>
+        <translation>Reproducir</translation>
+    </message>
+    <message>
+        <source>Could not read %1</source>
+        <translation>No se pudo leer %1</translation>
+    </message>
+</context>
+<context>
     <name>MseViewerWidget</name>
     <message>
         <source>No MSE loaded - nothing to export.</source>
@@ -2652,16 +2667,16 @@ fijo), así que el efecto suele caber en un .mdl.</translation>
         <translation>Retargeting de animaciones</translation>
     </message>
     <message>
-        <source>Plays Metin2 motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. Every joint turns as in Metin2, the bones keep the model&apos;s lengths and the walk is sized by the legs.</source>
-        <translation>Reproduce movimientos de Metin2 en el esqueleto de un modelo de referencia: cada movimiento se convierte en un SMD junto al QC del modelo y en una secuencia dentro de él. Cada articulación gira como en Metin2, los huesos conservan las longitudes del modelo y el paso se escala según las piernas.</translation>
+        <source>Plays motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. The bones keep the model&apos;s lengths and the walk is sized by the legs. Sources can be .gr2, .fbx, .glb, .smd or .mdl.</source>
+        <translation>Reproduce movimientos en el esqueleto de un modelo de referencia: cada movimiento se convierte en un SMD junto al QC del modelo y en una secuencia dentro de él. Los huesos conservan las longitudes del modelo y el paso se escala según las piernas. Las fuentes pueden ser .gr2, .fbx, .glb, .smd o .mdl.</translation>
     </message>
     <message>
-        <source>Metin2</source>
-        <translation>Metin2</translation>
+        <source>Source</source>
+        <translation>Origen</translation>
     </message>
     <message>
-        <source>The character the motions are of: a .gr2 with its skeleton (warrior_4-1.gr2)</source>
-        <translation>El personaje al que pertenecen los movimientos: un .gr2 con su esqueleto (warrior_4-1.gr2)</translation>
+        <source>The character the motions are of, with its skeleton: .gr2, .fbx, .glb, .smd or .mdl</source>
+        <translation>El personaje de los movimientos, con su esqueleto: .gr2, .fbx, .glb, .smd o .mdl</translation>
     </message>
     <message>
         <source>Browse...</source>
@@ -2670,6 +2685,10 @@ fijo), así que el efecto suele caber en un .mdl.</translation>
     <message>
         <source>Character:</source>
         <translation>Personaje:</translation>
+    </message>
+    <message>
+        <source>Left empty, the character&apos;s own animations are used</source>
+        <translation>Si se deja vacío, se usan las animaciones del propio personaje</translation>
     </message>
     <message>
         <source>Add...</source>
@@ -2736,16 +2755,24 @@ fijo), así que el efecto suele caber en un .mdl.</translation>
         <translation>Selecciona el personaje</translation>
     </message>
     <message>
-        <source>Granny models (*.gr2);;All files (*.*)</source>
-        <translation>Modelos Granny (*.gr2);;Todos los archivos (*.*)</translation>
+        <source>Models (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)</source>
+        <translation>Modelos (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;Todos los archivos (*.*)</translation>
+    </message>
+    <message>
+        <source>Motions (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)</source>
+        <translation>Movimientos (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;Todos los archivos (*.*)</translation>
+    </message>
+    <message>
+        <source>Give the character and the QC of the reference model.</source>
+        <translation>Indica el personaje y el QC del modelo de referencia.</translation>
+    </message>
+    <message>
+        <source>Retargeting the motions of %1 files...</source>
+        <translation>Haciendo retargeting de los movimientos de %1 archivos...</translation>
     </message>
     <message>
         <source>Select the motions</source>
         <translation>Selecciona los movimientos</translation>
-    </message>
-    <message>
-        <source>Granny motions (*.gr2);;All files (*.*)</source>
-        <translation>Movimientos Granny (*.gr2);;Todos los archivos (*.*)</translation>
     </message>
     <message>
         <source>Select the QC</source>
@@ -2768,16 +2795,8 @@ fijo), así que el efecto suele caber en un .mdl.</translation>
         <translation>Haciendo retargeting...</translation>
     </message>
     <message>
-        <source>Give the character, at least one motion and the QC of the reference model.</source>
-        <translation>Indica el personaje, al menos un movimiento y el QC del modelo de referencia.</translation>
-    </message>
-    <message>
         <source>The QC has no body SMD to take the skeleton from.</source>
         <translation>El QC no tiene un SMD de body del que tomar el esqueleto.</translation>
-    </message>
-    <message>
-        <source>Retargeting %1 motions...</source>
-        <translation>Haciendo retargeting de %1 movimientos...</translation>
     </message>
     <message>
         <source>%1: %2 frames at %3 fps</source>
@@ -2863,6 +2882,18 @@ fijo), así que el efecto suele caber en un .mdl.</translation>
         <translation>Cancelar</translation>
     </message>
     <message>
+        <source>Register Context Menu</source>
+        <translation>Registrar menú contextual</translation>
+    </message>
+    <message>
+        <source>Adds a VortigauntTool submenu to .mdl, .qc, .fbx and .glb files in Explorer</source>
+        <translation>Añade un submenú de VortigauntTool a los archivos .mdl, .qc, .fbx y .glb en el Explorador</translation>
+    </message>
+    <message>
+        <source>Unregister Context Menu</source>
+        <translation>Quitar menú contextual</translation>
+    </message>
+    <message>
         <source>Executables (*.exe);;All files (*.*)</source>
         <translation>Ejecutables (*.exe);;Todos los archivos (*.*)</translation>
     </message>
@@ -2935,6 +2966,26 @@ fijo), así que el efecto suele caber en un .mdl.</translation>
         <translation>El registro del Miniaturizador VTF se ha eliminado correctamente.</translation>
     </message>
     <message>
+        <source>Context Menu Status: Active</source>
+        <translation>Estado del menú contextual: activo</translation>
+    </message>
+    <message>
+        <source>Context Menu Status: Inactive</source>
+        <translation>Estado del menú contextual: inactivo</translation>
+    </message>
+    <message>
+        <source>The context menu has been registered. On Windows 11 it is under &quot;Show more options&quot;.</source>
+        <translation>Se ha registrado el menú contextual. En Windows 11 está en &quot;Mostrar más opciones&quot;.</translation>
+    </message>
+    <message>
+        <source>The context menu could not be written to the registry.</source>
+        <translation>No se pudo escribir el menú contextual en el registro.</translation>
+    </message>
+    <message>
+        <source>The context menu has been unregistered.</source>
+        <translation>Se ha quitado el menú contextual.</translation>
+    </message>
+    <message>
         <source>Browse...</source>
         <translation>Examinar...</translation>
     </message>
@@ -2965,6 +3016,81 @@ fijo), así que el efecto suele caber en un .mdl.</translation>
     <message>
         <source>Select Model Viewer Executable</source>
         <translation>Seleccionar Ejecutable del Visor de Modelos</translation>
+    </message>
+</context>
+<context>
+    <name>ShellActionDialog</name>
+    <message>
+        <source>Decompile model</source>
+        <translation>Descompilar modelo</translation>
+    </message>
+    <message>
+        <source>Convert to GoldSrc</source>
+        <translation>Convertir a GoldSrc</translation>
+    </message>
+    <message>
+        <source>Compile model</source>
+        <translation>Compilar modelo</translation>
+    </message>
+    <message>
+        <source>Details of the selected file show here</source>
+        <translation>Aquí se muestran los detalles del archivo seleccionado</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Abrir carpeta</translation>
+    </message>
+    <message>
+        <source>View model</source>
+        <translation>Ver modelo</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
+    <message>
+        <source>%1: waiting</source>
+        <translation>%1: en espera</translation>
+    </message>
+    <message>
+        <source>%1 already exists. Overwrite the files in it?</source>
+        <translation>%1 ya existe. ¿Sobrescribir los archivos que contiene?</translation>
+    </message>
+    <message>
+        <source>skipped, the folder already exists</source>
+        <translation>omitido, la carpeta ya existe</translation>
+    </message>
+    <message>
+        <source>Select studiomdl</source>
+        <translation>Selecciona studiomdl</translation>
+    </message>
+    <message>
+        <source>Programs (*.exe);;All files (*.*)</source>
+        <translation>Programas (*.exe);;Todos los archivos (*.*)</translation>
+    </message>
+    <message>
+        <source>%1: working...</source>
+        <translation>%1: procesando...</translation>
+    </message>
+    <message>
+        <source>%1 SMD files, %2 textures</source>
+        <translation>%1 archivos SMD, %2 texturas</translation>
+    </message>
+    <message>
+        <source>QC: %1</source>
+        <translation>QC: %1</translation>
+    </message>
+    <message>
+        <source>%1 bones, %2 animations</source>
+        <translation>%1 huesos, %2 animaciones</translation>
+    </message>
+    <message>
+        <source>written to %1</source>
+        <translation>escrito en %1</translation>
+    </message>
+    <message>
+        <source>Compile and view</source>
+        <translation>Compilar y ver</translation>
     </message>
 </context>
 <context>

@@ -1514,6 +1514,10 @@ WAV</source>
 dönüştür</translation>
     </message>
     <message>
+        <source>Retarget motions onto a GoldSrc model&apos;s skeleton...</source>
+        <translation>Hareketleri bir GoldSrc modelinin iskeletine retarget et...</translation>
+    </message>
+    <message>
         <source>Animation Retargeting</source>
         <translation>Animasyon Retargeting</translation>
     </message>
@@ -1798,10 +1802,6 @@ görüntüleyici</translation>
     <message>
         <source>Weapon</source>
         <translation>Silah</translation>
-    </message>
-    <message>
-        <source>Retarget Metin2 motions onto a GoldSrc model&apos;s skeleton...</source>
-        <translation>Metin2 hareketlerini bir GoldSrc modelinin iskeletine retarget et...</translation>
     </message>
     <message>
         <source>Retarget
@@ -2267,6 +2267,21 @@ The operation is picked from the file type.</source>
     </message>
 </context>
 <context>
+    <name>ModelViewerWindow</name>
+    <message>
+        <source>Sequence:</source>
+        <translation>Sequence:</translation>
+    </message>
+    <message>
+        <source>Play</source>
+        <translation>Oynat</translation>
+    </message>
+    <message>
+        <source>Could not read %1</source>
+        <translation>%1 okunamadı</translation>
+    </message>
+</context>
+<context>
     <name>MseViewerWidget</name>
     <message>
         <source>No MSE loaded - nothing to export.</source>
@@ -2648,16 +2663,16 @@ boyutta kalır), böylece efekt genelde tek .mdl&apos;ye sığar.</translation>
         <translation>Animasyon Retargeting</translation>
     </message>
     <message>
-        <source>Plays Metin2 motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. Every joint turns as in Metin2, the bones keep the model&apos;s lengths and the walk is sized by the legs.</source>
-        <translation>Metin2 hareketlerini bir referans modelin iskeletinde oynatır: her hareket, modelin QC&apos;sinin yanında bir SMD ve QC&apos;de bir sequence olur. Her eklem Metin2&apos;deki gibi döner, kemikler modelin uzunluklarını korur ve yürüyüş bacak boyuna göre ölçeklenir.</translation>
+        <source>Plays motions on the skeleton of a reference model: each motion becomes an SMD beside the model&apos;s QC and a sequence in it. The bones keep the model&apos;s lengths and the walk is sized by the legs. Sources can be .gr2, .fbx, .glb, .smd or .mdl.</source>
+        <translation>Hareketleri bir referans modelin iskeletinde oynatır: her hareket, modelin QC&apos;sinin yanında bir SMD ve QC&apos;de bir sequence olur. Kemikler modelin uzunluklarını korur ve yürüyüş bacak boyuna göre ölçeklenir. Kaynak .gr2, .fbx, .glb, .smd veya .mdl olabilir.</translation>
     </message>
     <message>
-        <source>Metin2</source>
-        <translation>Metin2</translation>
+        <source>Source</source>
+        <translation>Kaynak</translation>
     </message>
     <message>
-        <source>The character the motions are of: a .gr2 with its skeleton (warrior_4-1.gr2)</source>
-        <translation>Hareketlerin ait olduğu karakter: iskeletini taşıyan bir .gr2 (warrior_4-1.gr2)</translation>
+        <source>The character the motions are of, with its skeleton: .gr2, .fbx, .glb, .smd or .mdl</source>
+        <translation>Hareketlerin ait olduğu karakter, iskeletiyle: .gr2, .fbx, .glb, .smd veya .mdl</translation>
     </message>
     <message>
         <source>Browse...</source>
@@ -2666,6 +2681,10 @@ boyutta kalır), böylece efekt genelde tek .mdl&apos;ye sığar.</translation>
     <message>
         <source>Character:</source>
         <translation>Karakter:</translation>
+    </message>
+    <message>
+        <source>Left empty, the character&apos;s own animations are used</source>
+        <translation>Boş bırakılırsa karakterin kendi animasyonları kullanılır</translation>
     </message>
     <message>
         <source>Add...</source>
@@ -2732,16 +2751,24 @@ boyutta kalır), böylece efekt genelde tek .mdl&apos;ye sığar.</translation>
         <translation>Karakteri seç</translation>
     </message>
     <message>
-        <source>Granny models (*.gr2);;All files (*.*)</source>
-        <translation>Granny modelleri (*.gr2);;Tüm dosyalar (*.*)</translation>
+        <source>Models (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)</source>
+        <translation>Modeller (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Motions (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)</source>
+        <translation>Hareketler (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Give the character and the QC of the reference model.</source>
+        <translation>Karakteri ve referans modelin QC&apos;sini verin.</translation>
+    </message>
+    <message>
+        <source>Retargeting the motions of %1 files...</source>
+        <translation>%1 dosyanın hareketleri retarget ediliyor...</translation>
     </message>
     <message>
         <source>Select the motions</source>
         <translation>Hareketleri seç</translation>
-    </message>
-    <message>
-        <source>Granny motions (*.gr2);;All files (*.*)</source>
-        <translation>Granny hareketleri (*.gr2);;Tüm dosyalar (*.*)</translation>
     </message>
     <message>
         <source>Select the QC</source>
@@ -2764,16 +2791,8 @@ boyutta kalır), böylece efekt genelde tek .mdl&apos;ye sığar.</translation>
         <translation>Retarget ediliyor...</translation>
     </message>
     <message>
-        <source>Give the character, at least one motion and the QC of the reference model.</source>
-        <translation>Karakteri, en az bir hareketi ve referans modelin QC&apos;sini ver.</translation>
-    </message>
-    <message>
         <source>The QC has no body SMD to take the skeleton from.</source>
         <translation>QC&apos;de iskeletin alınacağı bir body SMD&apos;si yok.</translation>
-    </message>
-    <message>
-        <source>Retargeting %1 motions...</source>
-        <translation>%1 hareket retarget ediliyor...</translation>
     </message>
     <message>
         <source>%1: %2 frames at %3 fps</source>
@@ -2859,6 +2878,18 @@ boyutta kalır), böylece efekt genelde tek .mdl&apos;ye sığar.</translation>
         <translation>İptal</translation>
     </message>
     <message>
+        <source>Register Context Menu</source>
+        <translation>Sağ Tık Menüsünü Kaydet</translation>
+    </message>
+    <message>
+        <source>Adds a VortigauntTool submenu to .mdl, .qc, .fbx and .glb files in Explorer</source>
+        <translation>Dosya Gezgini&apos;nde .mdl, .qc, .fbx ve .glb dosyalarına VortigauntTool alt menüsü ekler</translation>
+    </message>
+    <message>
+        <source>Unregister Context Menu</source>
+        <translation>Sağ Tık Menüsünü Kaldır</translation>
+    </message>
+    <message>
         <source>Executables (*.exe);;All files (*.*)</source>
         <translation>Çalıştırılabilir dosyalar (*.exe);;Tüm dosyalar (*.*)</translation>
     </message>
@@ -2931,6 +2962,26 @@ boyutta kalır), böylece efekt genelde tek .mdl&apos;ye sığar.</translation>
         <translation>VTF Küçük Resim Oluşturucu kaydı başarıyla kaldırıldı.</translation>
     </message>
     <message>
+        <source>Context Menu Status: Active</source>
+        <translation>Sağ Tık Menüsü Durumu: Etkin</translation>
+    </message>
+    <message>
+        <source>Context Menu Status: Inactive</source>
+        <translation>Sağ Tık Menüsü Durumu: Devre dışı</translation>
+    </message>
+    <message>
+        <source>The context menu has been registered. On Windows 11 it is under &quot;Show more options&quot;.</source>
+        <translation>Sağ tık menüsü kaydedildi. Windows 11&apos;de &quot;Daha fazla seçenek göster&quot; altındadır.</translation>
+    </message>
+    <message>
+        <source>The context menu could not be written to the registry.</source>
+        <translation>Sağ tık menüsü kayıt defterine yazılamadı.</translation>
+    </message>
+    <message>
+        <source>The context menu has been unregistered.</source>
+        <translation>Sağ tık menüsü kaldırıldı.</translation>
+    </message>
+    <message>
         <source>Browse...</source>
         <translation>Gözat...</translation>
     </message>
@@ -2961,6 +3012,81 @@ boyutta kalır), böylece efekt genelde tek .mdl&apos;ye sığar.</translation>
     <message>
         <source>Select Model Viewer Executable</source>
         <translation>Model Görüntüleyici Uygulaması Seç</translation>
+    </message>
+</context>
+<context>
+    <name>ShellActionDialog</name>
+    <message>
+        <source>Decompile model</source>
+        <translation>Modeli decompile et</translation>
+    </message>
+    <message>
+        <source>Convert to GoldSrc</source>
+        <translation>GoldSrc&apos;ye dönüştür</translation>
+    </message>
+    <message>
+        <source>Compile model</source>
+        <translation>Modeli compile et</translation>
+    </message>
+    <message>
+        <source>Details of the selected file show here</source>
+        <translation>Seçili dosyanın ayrıntıları burada görünür</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Klasörü aç</translation>
+    </message>
+    <message>
+        <source>View model</source>
+        <translation>Modeli görüntüle</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Kapat</translation>
+    </message>
+    <message>
+        <source>%1: waiting</source>
+        <translation>%1: bekliyor</translation>
+    </message>
+    <message>
+        <source>%1 already exists. Overwrite the files in it?</source>
+        <translation>%1 zaten var. İçindeki dosyaların üzerine yazılsın mı?</translation>
+    </message>
+    <message>
+        <source>skipped, the folder already exists</source>
+        <translation>atlandı, klasör zaten var</translation>
+    </message>
+    <message>
+        <source>Select studiomdl</source>
+        <translation>studiomdl&apos;yi seçin</translation>
+    </message>
+    <message>
+        <source>Programs (*.exe);;All files (*.*)</source>
+        <translation>Programlar (*.exe);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>%1: working...</source>
+        <translation>%1: işleniyor...</translation>
+    </message>
+    <message>
+        <source>%1 SMD files, %2 textures</source>
+        <translation>%1 SMD dosyası, %2 doku</translation>
+    </message>
+    <message>
+        <source>QC: %1</source>
+        <translation>QC: %1</translation>
+    </message>
+    <message>
+        <source>%1 bones, %2 animations</source>
+        <translation>%1 kemik, %2 animasyon</translation>
+    </message>
+    <message>
+        <source>written to %1</source>
+        <translation>%1 olarak yazıldı</translation>
+    </message>
+    <message>
+        <source>Compile and view</source>
+        <translation>Compile et ve görüntüle</translation>
     </message>
 </context>
 <context>

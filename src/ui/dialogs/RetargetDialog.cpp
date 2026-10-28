@@ -22,6 +22,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSet>
 #include <QSettings>
 #include <QSplitter>
 #include <QUrl>
@@ -63,20 +64,21 @@ RetargetDialog::RetargetDialog(QWidget* parent)
     leftScroll->setWidget(left);
     auto* layout = new QVBoxLayout(left);
 
-    auto* intro = new QLabel(tr("Plays Metin2 motions on the skeleton of a reference model: each motion becomes an SMD "
-                                            "beside the model's QC and a sequence in it. Every joint turns as in Metin2, the bones "
-                                            "keep the model's lengths and the walk is sized by the legs."));
+    auto* intro = new QLabel(tr("Plays motions on the skeleton of a reference model: each motion becomes an SMD beside the "
+                                "model's QC and a sequence in it. The bones keep the model's lengths and the walk is sized by the legs. "
+                                "Sources can be .gr2, .fbx, .glb, .smd or .mdl."));
     intro->setWordWrap(true);
     layout->addWidget(intro);
 
-    auto* sourceGroup = new QGroupBox(tr("Metin2"));
+    auto* sourceGroup = new QGroupBox(tr("Source"));
     auto* sourceForm = new QFormLayout(sourceGroup);
     m_characterEdit = new QLineEdit(QDir::toNativeSeparators(settings().value(kCharacterKey).toString()));
-    m_characterEdit->setPlaceholderText(tr("The character the motions are of: a .gr2 with its skeleton (warrior_4-1.gr2)"));
+    m_characterEdit->setPlaceholderText(tr("The character the motions are of, with its skeleton: .gr2, .fbx, .glb, .smd or .mdl"));
     auto* characterBrowse = new QPushButton(tr("Browse..."));
     sourceForm->addRow(tr("Character:"), browseRow(m_characterEdit, characterBrowse));
     m_motionList = new QListWidget();
     m_motionList->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    m_motionList->setToolTip(tr("Left empty, the character's own animations are used"));
     auto* motionButtons = new QVBoxLayout();
     auto* addMotions = new QPushButton(tr("Add..."));
     auto* removeMotions = new QPushButton(tr("Remove"));
@@ -141,13 +143,13 @@ RetargetDialog::RetargetDialog(QWidget* parent)
         if (!path.isEmpty()) edit->setText(QDir::toNativeSeparators(path));
     };
     connect(characterBrowse, &QPushButton::clicked, this, [this, browseFile]() {
-        browseFile(m_characterEdit, tr("Select the character"), tr("Granny models (*.gr2);;All files (*.*)"));
+        browseFile(m_characterEdit, tr("Select the character"), tr("Models (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)"));
     });
     connect(addMotions, &QPushButton::clicked, this, [this]() {
         const QString from = m_motionList->count() ? QFileInfo(m_motionList->item(m_motionList->count() - 1)->text()).absolutePath()
                                                    : QFileInfo(m_characterEdit->text()).absolutePath();
         for (const QString& path : QFileDialog::getOpenFileNames(this, tr("Select the motions"), from,
-                                                                 tr("Granny motions (*.gr2);;All files (*.*)")))
+                                                                 tr("Motions (*.gr2 *.fbx *.glb *.gltf *.smd *.mdl);;All files (*.*)")))
             if (m_motionList->findItems(QDir::toNativeSeparators(path), Qt::MatchExactly).isEmpty())
                 m_motionList->addItem(QDir::toNativeSeparators(path));
     });
@@ -190,11 +192,13 @@ void RetargetDialog::onRetarget()
     const QString qc = m_qcEdit->text().trimmed();
     QStringList motions;
     for (int i = 0; i < m_motionList->count(); ++i) motions << m_motionList->item(i)->text();
-    if (!QFileInfo::exists(character) || !QFileInfo::exists(qc) || motions.isEmpty())
+    if (!QFileInfo::exists(character) || !QFileInfo::exists(qc))
     {
-        m_report->setPlainText(tr("Give the character, at least one motion and the QC of the reference model."));
+        m_report->setPlainText(tr("Give the character and the QC of the reference model."));
         return;
     }
+    // the character's own animations
+    if (motions.isEmpty()) motions << character;
     const QString body = QString::fromStdString(retarget::QcBody(qc.toStdString()));
     if (body.isEmpty() || !QFileInfo::exists(body))
     {
@@ -214,7 +218,7 @@ void RetargetDialog::onRetarget()
     if (compile && !studiomdl.isEmpty()) SettingsDialog::setStudioMdlPath(QDir::fromNativeSeparators(studiomdl));
     const QString work = QDir(QDir::tempPath()).filePath(QStringLiteral("vortigaunt_retarget"));
 
-    m_report->setPlainText(tr("Retargeting %1 motions...").arg(motions.size()));
+    m_report->setPlainText(tr("Retargeting the motions of %1 files...").arg(motions.size()));
     setBusy(true);
     std::thread([this, character, qc, body, motions, anims, animsFolder, loop, compile, studiomdl, work]() {
         // report line, and English in the log
@@ -224,36 +228,56 @@ void RetargetDialog::onRetarget()
         };
         int retargeted = 0;
         QString first;
-        for (const QString& motion : motions)
+        std::string error;
+        const std::string rest = retarget::SourceSkeleton(character.toStdString(), work.toStdString(), error);
+        if (rest.empty())
         {
-            const QString name = QFileInfo(motion).completeBaseName();
-            const retarget::RetargetResult r = retarget::RetargetGr2Motion(character.toStdString(), motion.toStdString(), body.toStdString(),
-                                                               QDir(animsFolder).filePath(name + QStringLiteral(".smd")).toStdString(), work.toStdString());
-            if (!r.ok)
+            const QString line = QString::fromStdString(error);
+            report(line, line, QStringLiteral("^1"));
+        }
+        QSet<QString> taken;
+        for (const QString& file : rest.empty() ? QStringList() : motions)
+        {
+            const std::vector<retarget::QcSequence> sequences = retarget::SourceMotions(file.toStdString(), character.toStdString(), work.toStdString(), error);
+            if (sequences.empty())
             {
-                const QString line = QStringLiteral("%1: %2").arg(name, QString::fromStdString(r.error));
+                const QString line = QStringLiteral("%1: %2").arg(QFileInfo(file).fileName(), QString::fromStdString(error));
                 report(line, line, QStringLiteral("^1"));
-                continue;
             }
-            std::string error;
-            if (!retarget::AddSequence(qc.toStdString(), name.toStdString(), (anims + QStringLiteral("/") + name).toStdString(), r.fps, loop, error))
+            for (const retarget::QcSequence& sequence : sequences)
             {
-                const QString line = QStringLiteral("%1: %2").arg(name, QString::fromStdString(error));
-                report(line, line, QStringLiteral("^1"));
-                continue;
+                // a name not used yet in this run
+                QString name = QString::fromStdString(sequence.name);
+                for (int n = 2; taken.contains(name.toLower()); ++n) name = QString::fromStdString(sequence.name) + QStringLiteral("_%1").arg(n);
+                taken.insert(name.toLower());
+                const retarget::RetargetResult r = retarget::Retarget(rest, sequence.path, body.toStdString(),
+                                                                      QDir(animsFolder).filePath(name + QStringLiteral(".smd")).toStdString(), sequence.fps);
+                if (!r.ok)
+                {
+                    const QString line = QStringLiteral("%1: %2").arg(name, QString::fromStdString(r.error));
+                    report(line, line, QStringLiteral("^1"));
+                    continue;
+                }
+                if (!retarget::AddSequence(qc.toStdString(), name.toStdString(), (anims + QStringLiteral("/") + name).toStdString(), r.fps,
+                                           loop || sequence.loop, error, sequence.activity))
+                {
+                    const QString line = QStringLiteral("%1: %2").arg(name, QString::fromStdString(error));
+                    report(line, line, QStringLiteral("^1"));
+                    continue;
+                }
+                QString shown = tr("%1: %2 frames at %3 fps").arg(name).arg(r.frames).arg(r.fps);
+                QString logged = QStringLiteral("%1: %2 frames at %3 fps").arg(name).arg(r.frames).arg(r.fps);
+                if (!r.unmatched.empty())
+                {
+                    QStringList bones;
+                    for (const std::string& bone : r.unmatched) bones << QString::fromStdString(bone);
+                    shown += tr(", kept at rest: %1").arg(bones.join(QStringLiteral(", ")));
+                    logged += QStringLiteral(", kept at rest: %1").arg(bones.join(QStringLiteral(", ")));
+                }
+                report(shown, logged);
+                if (!retargeted) first = name;
+                retargeted++;
             }
-            QString shown = tr("%1: %2 frames at %3 fps").arg(name).arg(r.frames).arg(r.fps);
-            QString logged = QStringLiteral("%1: %2 frames at %3 fps").arg(name).arg(r.frames).arg(r.fps);
-            if (!r.unmatched.empty())
-            {
-                QStringList bones;
-                for (const std::string& bone : r.unmatched) bones << QString::fromStdString(bone);
-                shown += tr(", kept at rest: %1").arg(bones.join(QStringLiteral(", ")));
-                logged += QStringLiteral(", kept at rest: %1").arg(bones.join(QStringLiteral(", ")));
-            }
-            report(shown, logged);
-            if (!retargeted) first = name;
-            retargeted++;
         }
         if (retargeted && compile)
         {

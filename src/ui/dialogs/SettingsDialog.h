@@ -54,6 +54,8 @@ private slots:
     void onUnregisterThumbnailer();
     void onRegisterVtfThumbnailer();
     void onUnregisterVtfThumbnailer();
+    void onRegisterContextMenu();
+    void onUnregisterContextMenu();
 #endif
 
 private:
@@ -62,6 +64,7 @@ private:
 #ifdef Q_OS_WIN
     void updateThumbnailerStatus();
     void updateVtfThumbnailerStatus();
+    void updateContextMenuStatus();
     bool callThumbnailerDllFunction(const QString& dllFileName, const char* functionName);
 #endif
 
@@ -83,6 +86,10 @@ private:
     QLabel* m_vtfThumbnailerStatusLabel{nullptr};
     QPushButton* m_registerVtfThumbnailerBtn{nullptr};
     QPushButton* m_unregisterVtfThumbnailerBtn{nullptr};
+
+    QLabel* m_contextMenuStatusLabel{nullptr};
+    QPushButton* m_registerContextMenuBtn{nullptr};
+    QPushButton* m_unregisterContextMenuBtn{nullptr};
 #endif
 };
 
