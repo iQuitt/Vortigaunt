@@ -149,6 +149,8 @@ public:
         ScaleEverything = 63
     };
     void Scale(float factor, int parts);
+    // puts a picture in place of a texture; true when the UVs were pixel ones and were refitted
+    bool ReplaceTexture(int index, const StudioTexture& picture);
 
 
     bool MakeDoubleSided(float thickness, bool rims, int texture, int& added, std::string& error);

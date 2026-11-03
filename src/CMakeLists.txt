@@ -83,6 +83,7 @@ set(VORTIGAUNT_GUI_HEADERS
     ui/widgets/TextureView.h
     ui/widgets/PaletteWidget.h
     ui/widgets/StudioModelView.h
+    ui/widgets/UvMapEditor.h
 
 
     ui/ThemeManager.h
@@ -192,6 +193,7 @@ set(VORTIGAUNT_GUI
     ui/widgets/RibbonBar.cpp
     ui/widgets/PaletteWidget.cpp
     ui/widgets/StudioModelView.cpp
+    ui/widgets/UvMapEditor.cpp
 
 
     core/LanguageManager.cpp

@@ -2321,6 +2321,10 @@ Operacja jest wybierana według typu pliku.</translation>
         <translation>Kontroler %1</translation>
     </message>
     <message>
+        <source>UV Map</source>
+        <translation>Mapa UV</translation>
+    </message>
+    <message>
         <source>Transformation</source>
         <translation>Przekształcenie</translation>
     </message>
@@ -2673,6 +2677,86 @@ Operacja jest wybierana według typu pliku.</translation>
         <translation>Siatka %1</translation>
     </message>
     <message>
+        <source>Select</source>
+        <translation>Zaznaczanie</translation>
+    </message>
+    <message>
+        <source>Islands</source>
+        <translation>Wyspy</translation>
+    </message>
+    <message>
+        <source>A click takes every face joined to the one clicked</source>
+        <translation>Kliknięcie zaznacza wszystkie ściany połączone z klikniętą</translation>
+    </message>
+    <message>
+        <source>Points</source>
+        <translation>Punkty</translation>
+    </message>
+    <message>
+        <source>Show Texture</source>
+        <translation>Pokaż teksturę</translation>
+    </message>
+    <message>
+        <source>Drag a face or point to move it, drag on empty space to box-select (Shift adds, Ctrl removes). Right or middle drag pans, the wheel zooms, F frames the texture.</source>
+        <translation>Przeciągnij ścianę lub punkt, aby go przesunąć; przeciągnij w pustym miejscu, aby zaznaczyć ramką (Shift dodaje, Ctrl usuwa). Przeciąganie prawym lub środkowym przyciskiem przesuwa widok, kółko przybliża, F kadruje teksturę.</translation>
+    </message>
+    <message>
+        <source>Move (pixels)</source>
+        <translation>Przesuń (piksele)</translation>
+    </message>
+    <message>
+        <source>Scale (%)</source>
+        <translation>Skaluj (%)</translation>
+    </message>
+    <message>
+        <source>Flip Horizontally</source>
+        <translation>Odbij w poziomie</translation>
+    </message>
+    <message>
+        <source>Flip Vertically</source>
+        <translation>Odbij w pionie</translation>
+    </message>
+    <message>
+        <source>Fit to Texture</source>
+        <translation>Dopasuj do tekstury</translation>
+    </message>
+    <message>
+        <source>Stretches the selection over the whole texture</source>
+        <translation>Rozciąga zaznaczenie na całą teksturę</translation>
+    </message>
+    <message>
+        <source>Snap to Pixels</source>
+        <translation>Przyciągnij do pikseli</translation>
+    </message>
+    <message>
+        <source>Rounds to whole pixels, as the model file keeps them</source>
+        <translation>Zaokrągla do pełnych pikseli, tak jak zapisuje je plik modelu</translation>
+    </message>
+    <message>
+        <source>Select All</source>
+        <translation>Zaznacz wszystko</translation>
+    </message>
+    <message>
+        <source>Select None</source>
+        <translation>Odznacz wszystko</translation>
+    </message>
+    <message>
+        <source>Fit View</source>
+        <translation>Dopasuj widok</translation>
+    </message>
+    <message>
+        <source>Selected points: %1</source>
+        <translation>Zaznaczone punkty: %1</translation>
+    </message>
+    <message>
+        <source>Nothing selected: edits move everything</source>
+        <translation>Nic nie zaznaczono: zmiany przesuwają wszystko</translation>
+    </message>
+    <message>
+        <source>Edit UV Map</source>
+        <translation>Edytuj mapę UV</translation>
+    </message>
+    <message>
         <source>Eye Position</source>
         <translation>Pozycja oczu</translation>
     </message>
@@ -2935,6 +3019,14 @@ Operacja jest wybierana według typu pliku.</translation>
     <message>
         <source>%1 has changes that are not saved. Save them?</source>
         <translation>%1 ma niezapisane zmiany. Zapisać je?</translation>
+    </message>
+    <message>
+        <source>Warning</source>
+        <translation>Ostrzeżenie</translation>
+    </message>
+    <message>
+        <source>The model has more than %1 attachments. Maximum allowed is 4. Are you sure you want to continue?</source>
+        <translation>Model ma więcej niż %1 załączników. Dozwolone są najwyżej 4. Czy na pewno chcesz kontynuować?</translation>
     </message>
     <message>
         <source>Event %1</source>

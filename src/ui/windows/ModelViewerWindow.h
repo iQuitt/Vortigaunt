@@ -33,6 +33,7 @@ class QTabBar;
 class QUndoGroup;
 class QUndoStack;
 class StudioModel;
+class UvMapEditor;
 struct StudioTexture;
 
 // GoldSrc model viewer: model tabs, a 3D view, docked panels and a timeline
@@ -113,6 +114,8 @@ private:
     QWidget* buildHitboxes();
     QWidget* buildConsole();
     QWidget* buildTransform();
+    QWidget* buildUvMap();
+    void showUvMap();
     void applyTransform();
     void applyScene();
     void importTexture();
@@ -180,6 +183,7 @@ private:
     bool m_filling = false;  // panels being filled, not edited
     QDockWidget* m_displayDock = nullptr;
     QDockWidget* m_texturesDock = nullptr;
+    QDockWidget* m_uvDock = nullptr;
     QWidget* m_consolePanel = nullptr;
     QByteArray m_defaultLayout;
     bool m_remembersLayout = true;
@@ -194,6 +198,7 @@ private:
     int m_refreshTicks = 0;
     QComboBox* m_poseCombo = nullptr;
     QLabel* m_textureImage = nullptr;
+    UvMapEditor* m_uvEditor = nullptr;
 
     QWidget* m_timeline = nullptr;
     QSlider* m_frameSlider = nullptr;
@@ -287,6 +292,17 @@ private:
     QSpinBox* m_topSpin = nullptr;
     QSpinBox* m_bottomSpin = nullptr;
     QLineEdit* m_colormapValue = nullptr;
+
+    QComboBox* m_uvTexture = nullptr;
+    QComboBox* m_uvMesh = nullptr;
+    QCheckBox* m_uvPicture = nullptr;
+    QLabel* m_uvSelection = nullptr;
+    QDoubleSpinBox* m_uvMoveU = nullptr;
+    QDoubleSpinBox* m_uvMoveV = nullptr;
+    QDoubleSpinBox* m_uvAngle = nullptr;
+    QDoubleSpinBox* m_uvScaleU = nullptr;
+    QDoubleSpinBox* m_uvScaleV = nullptr;
+    int m_uvStep = 0;  // one undo step per drag or button
 
     VectorEdit m_eyePosition, m_boundsMin, m_boundsMax, m_clipMin, m_clipMax;
     std::vector<std::pair<QCheckBox*, int>> m_modelFlags;

@@ -85,6 +85,51 @@ bool readFile(const std::filesystem::path& path, std::vector<uint8_t>& out)
     return f.good();
 }
 
+// a mesh's strips and fans as triangles; UVs divided by width and height
+void readTricmds(const std::vector<uint8_t>& file, size_t at, float width, float height, int numVertices, int numNormals,
+                 std::vector<StudioTriVertex>& triangles)
+{
+    std::vector<StudioTriVertex> run;
+    for (;;)
+    {
+        int16_t count = 0;
+        if (!readAt(file, at, count) || count == 0)
+            break;
+        at += 2;
+        const bool fan = count < 0;
+        const size_t n = static_cast<size_t>(fan ? -count : count);
+        if (!inside(file, at, n, 8))
+            break;
+        run.resize(n);
+        for (size_t i = 0; i < n; i++)
+        {
+            int16_t raw[4];
+            std::memcpy(raw, file.data() + at + i * 8, 8);
+            run[i].vertex = raw[0];
+            run[i].normal = raw[1];
+            run[i].u = static_cast<float>(raw[2]) / width;
+            run[i].v = static_cast<float>(raw[3]) / height;
+        }
+        at += n * 8;
+        for (size_t i = 2; i < n; i++)
+        {
+            StudioTriVertex tri[3];
+            if (fan)
+                tri[0] = run[0], tri[1] = run[i - 1], tri[2] = run[i];
+            else if (i % 2 == 0)
+                tri[0] = run[i - 2], tri[1] = run[i - 1], tri[2] = run[i];
+            else
+                tri[0] = run[i - 1], tri[1] = run[i - 2], tri[2] = run[i];
+            bool valid = true;
+            for (const StudioTriVertex& tv : tri)
+                if (tv.vertex < 0 || tv.vertex >= numVertices || tv.normal < 0 || tv.normal >= numNormals)
+                    valid = false;
+            if (valid)
+                triangles.insert(triangles.end(), tri, tri + 3);
+        }
+    }
+}
+
 // name.mdl -> nameT.mdl, name01.mdl
 std::filesystem::path sibling(const std::filesystem::path& model, const std::string& suffix)
 {
@@ -411,63 +456,7 @@ bool StudioModel::Load(const std::string& path)
                 const float height = mesh.texture >= 0 ? static_cast<float>(std::max(1, textures[mesh.texture].height)) : 1.0f;
 
 
-                size_t at = static_cast<size_t>(intAt(file, meshAt + 4));
-                std::vector<StudioTriVertex> run;
-                for (;;)
-                {
-                    int16_t count = 0;
-                    if (!readAt(file, at, count) || count == 0)
-                    {
-                        break;
-                    }
-                    at += 2;
-                    const bool fan = count < 0;
-                    const size_t n = static_cast<size_t>(fan ? -count : count);
-                    if (!inside(file, at, n, 8))
-                    {
-                        break;
-                    }
-                    run.resize(n);
-                    for (size_t i = 0; i < n; i++)
-                    {
-                        int16_t raw[4];
-                        std::memcpy(raw, file.data() + at + i * 8, 8);
-                        run[i].vertex = raw[0];
-                        run[i].normal = raw[1];
-                        run[i].u = static_cast<float>(raw[2]) / width;
-                        run[i].v = static_cast<float>(raw[3]) / height;
-                    }
-                    at += n * 8;
-
-                    for (size_t i = 2; i < n; i++)
-                    {
-                        StudioTriVertex tri[3];
-                        if (fan)
-                        {
-                            tri[0] = run[0]; tri[1] = run[i - 1]; tri[2] = run[i];
-                        }
-                        else if (i % 2 == 0)
-                        {
-                            tri[0] = run[i - 2]; tri[1] = run[i - 1]; tri[2] = run[i];
-                        }
-                        else
-                        {
-                            tri[0] = run[i - 1]; tri[1] = run[i - 2]; tri[2] = run[i];
-                        }
-                        bool valid = true;
-                        for (const StudioTriVertex& tv : tri)
-                        {
-                            if (tv.vertex < 0 || tv.vertex >= numVertices || tv.normal < 0 || tv.normal >= numNormals)
-                            {
-                                valid = false;
-                            }
-                        }
-                        if (valid)
-                        {
-                            mesh.triangles.insert(mesh.triangles.end(), tri, tri + 3);
-                        }
-                    }
-                }
+                readTricmds(file, static_cast<size_t>(intAt(file, meshAt + 4)), width, height, numVertices, numNormals, mesh.triangles);
                 model.meshes.push_back(std::move(mesh));
             }
             part.models.push_back(std::move(model));
@@ -708,26 +697,45 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
                     if (texture < 0 || static_cast<size_t>(texture) >= grew.size() || (grew[texture].first == 1.0f && grew[texture].second == 1.0f))
                         continue;
                     // tricmds: count (<0 fan), then vertex, normal, s, t per corner
-                    size_t at = static_cast<size_t>(intAt(file, meshAt + 4));
-                    for (;;)
-                    {
-                        int16_t count = 0;
-                        if (!readAt(file, at, count) || count == 0)
-                            break;
-                        at += 2;
-                        const size_t corners = static_cast<size_t>(count < 0 ? -count : count);
-                        if (!inside(file, at, corners, 8))
-                            break;
-                        for (size_t c = 0; c < corners; c++)
+                    const size_t first = static_cast<size_t>(intAt(file, meshAt + 4));
+                    auto eachCorner = [&](auto&& visit) {
+                        size_t at = first;
+                        for (;;)
                         {
-                            int16_t st[2];
-                            std::memcpy(st, file.data() + at + c * 8 + 4, 4);
-                            st[0] = static_cast<int16_t>(std::lround(st[0] * grew[texture].first));
-                            st[1] = static_cast<int16_t>(std::lround(st[1] * grew[texture].second));
-                            std::memcpy(file.data() + at + c * 8 + 4, st, 4);
+                            int16_t count = 0;
+                            if (!readAt(file, at, count) || count == 0)
+                                break;
+                            at += 2;
+                            const size_t corners = static_cast<size_t>(count < 0 ? -count : count);
+                            if (!inside(file, at, corners, 8))
+                                break;
+                            for (size_t c = 0; c < corners; c++) visit(file.data() + at + c * 8 + 4);
+                            at += corners * 8;
                         }
-                        at += corners * 8;
+                    };
+                    // the ratio the edited UVs ask for: the size ratio, or 1 when ReplaceTexture refitted pixel UVs
+                    std::pair<float, float> ratio = grew[texture];
+                    const StudioSubModel* sub = b < bodyParts.size() && static_cast<size_t>(m) < bodyParts[b].models.size() ? &bodyParts[b].models[m] : nullptr;
+                    if (sub && static_cast<size_t>(k) < sub->meshes.size())
+                    {
+                        int maxS = 0, maxT = 0;
+                        eachCorner([&](uint8_t* st) {
+                            int16_t raw[2];
+                            std::memcpy(raw, st, 4);
+                            maxS = std::max<int>(maxS, raw[0]), maxT = std::max<int>(maxT, raw[1]);
+                        });
+                        float maxU = 0.0f, maxV = 0.0f;
+                        for (const StudioTriVertex& corner : sub->meshes[k].triangles) maxU = std::max(maxU, corner.u), maxV = std::max(maxV, corner.v);
+                        if (maxS > 0) ratio.first = maxU * textures[texture].width / maxS;
+                        if (maxT > 0) ratio.second = maxV * textures[texture].height / maxT;
                     }
+                    eachCorner([&](uint8_t* st) {
+                        int16_t raw[2];
+                        std::memcpy(raw, st, 4);
+                        raw[0] = static_cast<int16_t>(std::lround(raw[0] * ratio.first));
+                        raw[1] = static_cast<int16_t>(std::lround(raw[1] * ratio.second));
+                        std::memcpy(st, raw, 4);
+                    });
                 }
             }
         }
@@ -751,6 +759,18 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
                            static_cast<size_t>(intAt(file, modelAt + 92)) != sub.normals.size();
             for (size_t k = 0; k < sub.meshes.size() && !changed; k++)
                 changed = static_cast<size_t>(intAt(file, meshIndex + k * kMeshSize)) != sub.meshes[k].triangles.size() / 3;
+            for (size_t k = 0; k < sub.meshes.size() && !changed; k++)
+            {
+                const StudioMesh& mesh = sub.meshes[k];
+                const bool known = mesh.texture >= 0 && mesh.texture < static_cast<int>(textures.size());
+                const float width = known ? static_cast<float>(std::max(1, textures[mesh.texture].width)) : 1.0f;
+                const float height = known ? static_cast<float>(std::max(1, textures[mesh.texture].height)) : 1.0f;
+                std::vector<StudioTriVertex> stored;
+                readTricmds(file, static_cast<size_t>(intAt(file, meshIndex + k * kMeshSize + 4)), 1.0f, 1.0f, intAt(file, modelAt + 80), intAt(file, modelAt + 92), stored);
+                changed = stored.size() != mesh.triangles.size();
+                for (size_t i = 0; i < stored.size() && !changed; i++)
+                    changed = std::lround(mesh.triangles[i].u * width) != std::lround(stored[i].u) || std::lround(mesh.triangles[i].v * height) != std::lround(stored[i].v);
+            }
             if (!changed)
                 continue;
 
@@ -920,6 +940,37 @@ void StudioModel::Scale(float factor, int parts)
         eyePosition *= factor;
     if (parts & ScaleAttachments)
         for (StudioAttachment& attachment : attachments) attachment.origin *= factor;
+}
+
+bool StudioModel::ReplaceTexture(int index, const StudioTexture& picture)
+{
+    if (index < 0 || index >= static_cast<int>(textures.size()) || picture.width <= 0 || picture.height <= 0)
+        return false;
+    StudioTexture& texture = textures[index];
+    std::vector<StudioMesh*> users;
+    for (StudioBodyPart& part : bodyParts)
+        for (StudioSubModel& sub : part.models)
+            for (StudioMesh& mesh : sub.meshes)
+                if (mesh.texture == index)
+                    users.push_back(&mesh);
+    float maxU = 0.0f, maxV = 0.0f;
+    for (const StudioMesh* mesh : users)
+        for (const StudioTriVertex& corner : mesh->triangles)
+            maxU = std::max(maxU, corner.u), maxV = std::max(maxV, corner.v);
+    const float oldWidth = static_cast<float>(std::max(1, texture.width)), oldHeight = static_cast<float>(std::max(1, texture.height));
+    const bool pixelUvs = (maxU > 1.01f || maxV > 1.01f) && maxU * oldWidth <= picture.width + 1.0f && maxV * oldHeight <= picture.height + 1.0f;
+    if (pixelUvs)
+        for (StudioMesh* mesh : users)
+            for (StudioTriVertex& corner : mesh->triangles)
+            {
+                corner.u *= oldWidth / picture.width;
+                corner.v *= oldHeight / picture.height;
+            }
+    texture.width = picture.width;
+    texture.height = picture.height;
+    texture.pixels = picture.pixels;
+    texture.palette = picture.palette;
+    return pixelUvs;
 }
 
 bool StudioModel::MakeDoubleSided(float thickness, bool rims, int texture, int& added, std::string& error)

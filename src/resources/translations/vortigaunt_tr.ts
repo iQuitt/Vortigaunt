@@ -2319,6 +2319,10 @@ The operation is picked from the file type.</source>
         <translation>Kontrolcü %1</translation>
     </message>
     <message>
+        <source>UV Map</source>
+        <translation>UV Haritası</translation>
+    </message>
+    <message>
         <source>Transformation</source>
         <translation>Dönüştürme</translation>
     </message>
@@ -2671,6 +2675,86 @@ The operation is picked from the file type.</source>
         <translation>Mesh %1</translation>
     </message>
     <message>
+        <source>Select</source>
+        <translation>Seçim</translation>
+    </message>
+    <message>
+        <source>Islands</source>
+        <translation>Adalar</translation>
+    </message>
+    <message>
+        <source>A click takes every face joined to the one clicked</source>
+        <translation>Bir tıklama, tıklanan yüze bağlı tüm yüzleri seçer</translation>
+    </message>
+    <message>
+        <source>Points</source>
+        <translation>Noktalar</translation>
+    </message>
+    <message>
+        <source>Show Texture</source>
+        <translation>Dokuyu Göster</translation>
+    </message>
+    <message>
+        <source>Drag a face or point to move it, drag on empty space to box-select (Shift adds, Ctrl removes). Right or middle drag pans, the wheel zooms, F frames the texture.</source>
+        <translation>Taşımak için bir yüzü ya da noktayı sürükleyin, boş alanda sürükleyerek kutu seçimi yapın (Shift ekler, Ctrl çıkarır). Sağ ya da orta tuşla sürükleme kaydırır, tekerlek yakınlaştırır, F dokuyu ekrana sığdırır.</translation>
+    </message>
+    <message>
+        <source>Move (pixels)</source>
+        <translation>Taşı (piksel)</translation>
+    </message>
+    <message>
+        <source>Scale (%)</source>
+        <translation>Ölçekle (%)</translation>
+    </message>
+    <message>
+        <source>Flip Horizontally</source>
+        <translation>Yatay Çevir</translation>
+    </message>
+    <message>
+        <source>Flip Vertically</source>
+        <translation>Dikey Çevir</translation>
+    </message>
+    <message>
+        <source>Fit to Texture</source>
+        <translation>Dokuya Sığdır</translation>
+    </message>
+    <message>
+        <source>Stretches the selection over the whole texture</source>
+        <translation>Seçimi tüm dokuya yayar</translation>
+    </message>
+    <message>
+        <source>Snap to Pixels</source>
+        <translation>Piksele Yasla</translation>
+    </message>
+    <message>
+        <source>Rounds to whole pixels, as the model file keeps them</source>
+        <translation>Model dosyası tam piksel sakladığı için tam piksele yuvarlar</translation>
+    </message>
+    <message>
+        <source>Select All</source>
+        <translation>Tümünü Seç</translation>
+    </message>
+    <message>
+        <source>Select None</source>
+        <translation>Seçimi Kaldır</translation>
+    </message>
+    <message>
+        <source>Fit View</source>
+        <translation>Görünümü Sığdır</translation>
+    </message>
+    <message>
+        <source>Selected points: %1</source>
+        <translation>Seçili nokta: %1</translation>
+    </message>
+    <message>
+        <source>Nothing selected</source>
+        <translation>Seçim yok</translation>
+    </message>
+    <message>
+        <source>Edit UV Map</source>
+        <translation>UV Haritasını Düzenle</translation>
+    </message>
+    <message>
         <source>Eye Position</source>
         <translation>Göz Konumu</translation>
     </message>
@@ -2933,6 +3017,14 @@ The operation is picked from the file type.</source>
     <message>
         <source>%1 has changes that are not saved. Save them?</source>
         <translation>%1 dosyasında kaydedilmemiş değişiklikler var. Kaydedilsin mi?</translation>
+    </message>
+    <message>
+        <source>Warning</source>
+        <translation>Uyarı</translation>
+    </message>
+    <message>
+        <source>The model has more than %1 attachments. Maximum allowed is 4. Are you sure you want to continue?</source>
+        <translation>Modelde %1&apos;den fazla attachment var. En fazla 4&apos;e izin verilir. Devam etmek istediğinize emin misiniz?</translation>
     </message>
     <message>
         <source>Event %1</source>

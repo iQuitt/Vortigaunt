@@ -2320,6 +2320,10 @@ The operation is picked from the file type.</translation>
         <translation>Controller %1</translation>
     </message>
     <message>
+        <source>UV Map</source>
+        <translation>UV Map</translation>
+    </message>
+    <message>
         <source>Transformation</source>
         <translation>Transformation</translation>
     </message>
@@ -2672,6 +2676,86 @@ The operation is picked from the file type.</translation>
         <translation>Mesh %1</translation>
     </message>
     <message>
+        <source>Select</source>
+        <translation>Select</translation>
+    </message>
+    <message>
+        <source>Islands</source>
+        <translation>Islands</translation>
+    </message>
+    <message>
+        <source>A click takes every face joined to the one clicked</source>
+        <translation>A click takes every face joined to the one clicked</translation>
+    </message>
+    <message>
+        <source>Points</source>
+        <translation>Points</translation>
+    </message>
+    <message>
+        <source>Show Texture</source>
+        <translation>Show Texture</translation>
+    </message>
+    <message>
+        <source>Drag a face or point to move it, drag on empty space to box-select (Shift adds, Ctrl removes). Right or middle drag pans, the wheel zooms, F frames the texture.</source>
+        <translation>Drag a face or point to move it, drag on empty space to box-select (Shift adds, Ctrl removes). Right or middle drag pans, the wheel zooms, F frames the texture.</translation>
+    </message>
+    <message>
+        <source>Move (pixels)</source>
+        <translation>Move (pixels)</translation>
+    </message>
+    <message>
+        <source>Scale (%)</source>
+        <translation>Scale (%)</translation>
+    </message>
+    <message>
+        <source>Flip Horizontally</source>
+        <translation>Flip Horizontally</translation>
+    </message>
+    <message>
+        <source>Flip Vertically</source>
+        <translation>Flip Vertically</translation>
+    </message>
+    <message>
+        <source>Fit to Texture</source>
+        <translation>Fit to Texture</translation>
+    </message>
+    <message>
+        <source>Stretches the selection over the whole texture</source>
+        <translation>Stretches the selection over the whole texture</translation>
+    </message>
+    <message>
+        <source>Snap to Pixels</source>
+        <translation>Snap to Pixels</translation>
+    </message>
+    <message>
+        <source>Rounds to whole pixels, as the model file keeps them</source>
+        <translation>Rounds to whole pixels, as the model file keeps them</translation>
+    </message>
+    <message>
+        <source>Select All</source>
+        <translation>Select All</translation>
+    </message>
+    <message>
+        <source>Select None</source>
+        <translation>Select None</translation>
+    </message>
+    <message>
+        <source>Fit View</source>
+        <translation>Fit View</translation>
+    </message>
+    <message>
+        <source>Selected points: %1</source>
+        <translation>Selected points: %1</translation>
+    </message>
+    <message>
+        <source>Nothing selected</source>
+        <translation>Nothing selected</translation>
+    </message>
+    <message>
+        <source>Edit UV Map</source>
+        <translation>Edit UV Map</translation>
+    </message>
+    <message>
         <source>Eye Position</source>
         <translation>Eye Position</translation>
     </message>
@@ -2934,6 +3018,14 @@ The operation is picked from the file type.</translation>
     <message>
         <source>%1 has changes that are not saved. Save them?</source>
         <translation>%1 has changes that are not saved. Save them?</translation>
+    </message>
+    <message>
+        <source>Warning</source>
+        <translation>Warning</translation>
+    </message>
+    <message>
+        <source>The model has more than %1 attachments. Maximum allowed is 4. Are you sure you want to continue?</source>
+        <translation>The model has more than %1 attachments. Maximum allowed is 4. Are you sure you want to continue?</translation>
     </message>
     <message>
         <source>Event %1</source>

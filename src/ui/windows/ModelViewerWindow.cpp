@@ -5,6 +5,7 @@
 
 #include "core/VortigauntLog.h"
 #include "core/mdl/StudioModel.h"
+#include "ui/widgets/UvMapEditor.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -41,6 +42,7 @@
 #include <QSettings>
 #include <QSlider>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QStackedWidget>
 #include <QStyle>
 #include <QTabBar>
@@ -288,6 +290,7 @@ ModelViewerWindow::ModelViewerWindow(QWidget* parent)
     addPanel(QT_TR_NOOP("Sequences"), buildSequences(), first);
     addPanel(QT_TR_NOOP("Body Parts"), buildBody(), first);
     m_texturesDock = addPanel(QT_TR_NOOP("Textures"), buildTextures(), first);
+    m_uvDock = addPanel(QT_TR_NOOP("UV Map"), buildUvMap(), first);
     addPanel(QT_TR_NOOP("Model Data"), buildModelData(), first);
     addPanel(QT_TR_NOOP("Bones"), buildBones(), first);
     addPanel(QT_TR_NOOP("Bone Controllers"), buildControllers(), first);
@@ -299,6 +302,14 @@ ModelViewerWindow::ModelViewerWindow(QWidget* parent)
     m_edit->resizeDocks({ first }, { kPanelHeight }, Qt::Vertical);
     m_defaultLayout = m_edit->saveState(kLayoutVersion);
     connect(m_texturesDock, &QDockWidget::visibilityChanged, this, [this](bool visible) { m_sceneTabs->setCurrentIndex(visible ? 1 : 0); });
+    connect(m_uvDock, &QDockWidget::visibilityChanged, this, [this](bool visible) {
+        m_uvEditor->setVisible(visible);
+        if (visible)
+        {
+            m_sceneTabs->setCurrentIndex(0);
+            showUvMap();
+        }
+    });
 
     connect(m_tabs, &QTabBar::currentChanged, this, &ModelViewerWindow::showAsset);
     connect(m_tabs, &QTabBar::tabCloseRequested, this, &ModelViewerWindow::closeAsset);
@@ -384,7 +395,16 @@ QWidget* ModelViewerWindow::buildView()
     m_view = new StudioModelView();
     m_view->placeholder = tr("Open a model.");
     m_view->setHoldUnlooped(true);
-    m_sceneStack->addWidget(m_view);
+    // the UV editor sits beside the 3D view while the UV Map panel is open
+    auto* split = new QSplitter(Qt::Horizontal);
+    m_uvEditor = new UvMapEditor();
+    m_uvEditor->setObjectName(QStringLiteral("uvEditor"));
+    m_uvEditor->hide();
+    split->addWidget(m_uvEditor);
+    split->addWidget(m_view);
+    split->setStretchFactor(0, 1);
+    split->setStretchFactor(1, 1);
+    m_sceneStack->addWidget(split);
     auto* scroll = new QScrollArea();
     scroll->setWidgetResizable(true);
     m_textureImage = new QLabel();
@@ -1208,6 +1228,146 @@ QWidget* ModelViewerWindow::buildTextures()
     return panel;
 }
 
+QWidget* ModelViewerWindow::buildUvMap()
+{
+    auto* panel = new QWidget();
+    auto* row = new QHBoxLayout(panel);
+    auto* grid = new QGridLayout();
+    grid->addWidget(new QLabel(tr("Texture")), 0, 0);
+    m_uvTexture = new QComboBox();
+    m_uvTexture->setObjectName(QStringLiteral("uvTexture"));
+    grid->addWidget(m_uvTexture, 0, 1, 1, 2);
+    grid->addWidget(new QLabel(tr("Mesh")), 1, 0);
+    m_uvMesh = new QComboBox();
+    m_uvMesh->setObjectName(QStringLiteral("uvMesh"));
+    grid->addWidget(m_uvMesh, 1, 1, 1, 2);
+    grid->addWidget(new QLabel(tr("Select")), 2, 0);
+    auto* islands = new QRadioButton(tr("Islands"));
+    islands->setToolTip(tr("A click takes every face joined to the one clicked"));
+    islands->setChecked(true);
+    auto* points = new QRadioButton(tr("Points"));
+    points->setObjectName(QStringLiteral("uvPoints"));
+    grid->addWidget(islands, 2, 1);
+    grid->addWidget(points, 2, 2);
+    m_uvPicture = new QCheckBox(tr("Show Texture"));
+    m_uvPicture->setChecked(true);
+    grid->addWidget(m_uvPicture, 3, 0, 1, 3);
+    m_uvSelection = new QLabel();
+    grid->addWidget(m_uvSelection, 4, 0, 1, 3);
+    auto* help = new QLabel(tr("Drag a face or point to move it, drag on empty space to box-select (Shift adds, Ctrl removes). "
+                               "Right or middle drag pans, the wheel zooms, F frames the texture."));
+    help->setWordWrap(true);
+    help->setMaximumWidth(260);
+    grid->addWidget(help, 5, 0, 1, 3);
+    grid->setRowStretch(6, 1);
+    row->addLayout(grid);
+
+    // edits act on the selection, or on everything when nothing is selected
+    grid = new QGridLayout();
+    auto* moveBox = new QGroupBox(tr("Move (pixels)"));
+    auto* moveGrid = new QGridLayout(moveBox);
+    m_uvMoveU = doubleSpin(-4096.0, 4096.0, 1);
+    m_uvMoveV = doubleSpin(-4096.0, 4096.0, 1);
+    moveGrid->addWidget(new QLabel(QStringLiteral("U")), 0, 0);
+    moveGrid->addWidget(m_uvMoveU, 0, 1);
+    moveGrid->addWidget(new QLabel(QStringLiteral("V")), 0, 2);
+    moveGrid->addWidget(m_uvMoveV, 0, 3);
+    auto* move = new QPushButton(tr("Move"));
+    moveGrid->addWidget(move, 0, 4);
+    grid->addWidget(moveBox, 0, 0);
+    auto* rotateBox = new QGroupBox(tr("Rotate"));
+    auto* rotateGrid = new QGridLayout(rotateBox);
+    m_uvAngle = doubleSpin(-360.0, 360.0, 1);
+    m_uvAngle->setValue(90.0);
+    m_uvAngle->setSuffix(QStringLiteral("°"));
+    rotateGrid->addWidget(m_uvAngle, 0, 0);
+    auto* rotate = new QPushButton(tr("Rotate"));
+    rotateGrid->addWidget(rotate, 0, 1);
+    grid->addWidget(rotateBox, 1, 0);
+    auto* scaleBox = new QGroupBox(tr("Scale (%)"));
+    auto* scaleGrid = new QGridLayout(scaleBox);
+    m_uvScaleU = doubleSpin(-1000.0, 1000.0, 1);
+    m_uvScaleV = doubleSpin(-1000.0, 1000.0, 1);
+    m_uvScaleU->setValue(100.0);
+    m_uvScaleV->setValue(100.0);
+    scaleGrid->addWidget(new QLabel(QStringLiteral("U")), 0, 0);
+    scaleGrid->addWidget(m_uvScaleU, 0, 1);
+    scaleGrid->addWidget(new QLabel(QStringLiteral("V")), 0, 2);
+    scaleGrid->addWidget(m_uvScaleV, 0, 3);
+    auto* scale = new QPushButton(tr("Scale"));
+    scaleGrid->addWidget(scale, 0, 4);
+    grid->addWidget(scaleBox, 2, 0);
+    grid->setRowStretch(3, 1);
+    row->addLayout(grid);
+
+    auto* column = new QVBoxLayout();
+    auto* flipU = new QPushButton(tr("Flip Horizontally"));
+    auto* flipV = new QPushButton(tr("Flip Vertically"));
+    auto* fit = new QPushButton(tr("Fit to Texture"));
+    fit->setToolTip(tr("Stretches the selection over the whole texture"));
+    auto* snap = new QPushButton(tr("Snap to Pixels"));
+    snap->setToolTip(tr("Rounds to whole pixels, as the model file keeps them"));
+    auto* all = new QPushButton(tr("Select All"));
+    auto* none = new QPushButton(tr("Select None"));
+    auto* frame = new QPushButton(tr("Fit View"));
+    for (QPushButton* button : { flipU, flipV, fit, snap, all, none, frame }) column->addWidget(button);
+    column->addStretch(1);
+    row->addLayout(column);
+
+    connect(m_uvTexture, &QComboBox::currentIndexChanged, this, [this](int texture) {
+        const QSignalBlocker block(m_uvMesh);
+        m_uvMesh->clear();
+        const Asset* shown = asset();
+        if (shown && texture >= 0)
+        {
+            m_uvMesh->addItem(tr("All"));
+            int count = 0;
+            for (const StudioBodyPart& part : shown->model->bodyParts)
+                for (const StudioSubModel& sub : part.models)
+                    for (const StudioMesh& each : sub.meshes)
+                        if (each.texture == texture) m_uvMesh->addItem(tr("Mesh %1").arg(++count));
+        }
+        showUvMap();
+    });
+    connect(m_uvMesh, &QComboBox::currentIndexChanged, this, &ModelViewerWindow::showUvMap);
+    connect(m_uvPicture, &QCheckBox::toggled, this, &ModelViewerWindow::showUvMap);
+    connect(points, &QRadioButton::toggled, this, [this](bool on) { m_uvEditor->setSelectMode(on ? UvMapEditor::SelectPoints : UvMapEditor::SelectIslands); });
+    connect(m_uvEditor, &UvMapEditor::selectionChanged, this, [this](int count) {
+        m_uvSelection->setText(count ? tr("Selected points: %1").arg(count) : tr("Nothing selected: edits move everything"));
+    });
+    // a drag is one undo step
+    connect(m_uvEditor, &UvMapEditor::edited, this, [this](bool finished) {
+        editModel(tr("Edit UV Map"), QStringLiteral("uv %1").arg(m_uvStep), [this](StudioModel& model) { m_uvEditor->apply(model); });
+        if (finished) ++m_uvStep;
+    });
+    connect(move, &QPushButton::clicked, this, [this]() { m_uvEditor->move(QPointF(m_uvMoveU->value(), m_uvMoveV->value())); });
+    connect(rotate, &QPushButton::clicked, this, [this]() { m_uvEditor->rotate(m_uvAngle->value()); });
+    connect(scale, &QPushButton::clicked, this, [this]() { m_uvEditor->scale(m_uvScaleU->value() / 100.0, m_uvScaleV->value() / 100.0); });
+    connect(flipU, &QPushButton::clicked, this, [this]() { m_uvEditor->flip(true); });
+    connect(flipV, &QPushButton::clicked, this, [this]() { m_uvEditor->flip(false); });
+    connect(fit, &QPushButton::clicked, m_uvEditor, &UvMapEditor::fitToTexture);
+    connect(snap, &QPushButton::clicked, m_uvEditor, &UvMapEditor::snapToPixels);
+    connect(all, &QPushButton::clicked, m_uvEditor, &UvMapEditor::selectAll);
+    connect(none, &QPushButton::clicked, m_uvEditor, &UvMapEditor::selectNone);
+    connect(frame, &QPushButton::clicked, m_uvEditor, &UvMapEditor::frame);
+    m_uvSelection->setText(tr("Nothing selected: edits move everything"));
+    return panel;
+}
+
+void ModelViewerWindow::showUvMap()
+{
+    // only while the panel is open
+    if (m_uvEditor->isHidden()) return;
+    const Asset* shown = asset();
+    if (!shown) return;
+    const int texture = m_uvTexture->currentIndex();
+    m_uvEditor->setMeshes(*shown->model, texture, m_uvMesh->currentIndex() - 1);
+    const bool known = texture >= 0 && texture < static_cast<int>(shown->model->textures.size());
+    m_uvEditor->setPicture(known && m_uvPicture->isChecked()
+                               ? StudioModelView::textureImage(shown->model->textures[texture], m_topSpin->value(), m_bottomSpin->value())
+                               : QImage());
+}
+
 QWidget* ModelViewerWindow::buildModelData()
 {
     auto* panel = new QWidget();
@@ -1671,13 +1831,10 @@ void ModelViewerWindow::importTexture()
         QMessageBox::warning(this, tr("Import Texture"), tr("Could not read %1 as a picture of 256 colours or fewer.").arg(QFileInfo(path).fileName()));
         return;
     }
-    editModel(tr("Import Texture"), QString(), [index, picture](StudioModel& model) {
-        if (index >= static_cast<int>(model.textures.size())) return;
-        StudioTexture& texture = model.textures[index];
-        texture.width = picture.width;
-        texture.height = picture.height;
-        texture.pixels = picture.pixels;
-        texture.palette = picture.palette;
+    const QString name = QString::fromStdString(shown->model->textures[index].name);
+    editModel(tr("Import Texture"), QString(), [index, picture, name](StudioModel& model) {
+        if (model.ReplaceTexture(index, picture))
+            VortigauntLog::Vortigaunt_Printf(QStringLiteral("%1: UVs refitted to %2x%3").arg(name).arg(picture.width).arg(picture.height));
     });
 }
 
@@ -1708,12 +1865,9 @@ void ModelViewerWindow::importAllTextures()
     editModel(tr("Import All Textures"), QString(), [found](StudioModel& model) {
         for (const auto& [index, picture] : found)
         {
-            if (index >= static_cast<int>(model.textures.size())) continue;
-            StudioTexture& texture = model.textures[index];
-            texture.width = picture.width;
-            texture.height = picture.height;
-            texture.pixels = picture.pixels;
-            texture.palette = picture.palette;
+            if (index < static_cast<int>(model.textures.size()) && model.ReplaceTexture(index, picture))
+                VortigauntLog::Vortigaunt_Printf(QStringLiteral("%1: UVs refitted to %2x%3")
+                                                     .arg(QString::fromStdString(model.textures[index].name)).arg(picture.width).arg(picture.height));
         }
     });
 }
@@ -1886,7 +2040,8 @@ void ModelViewerWindow::showAsset(int index)
     const Asset* shown = asset();
     m_undoGroup->setActiveStack(shown ? shown->undo : nullptr);
     QComboBox* combos[] = { m_sequenceCombo, m_eventCombo,      m_partCombo,      m_subModelCombo, m_skinCombo,      m_textureCombo, m_meshCombo,
-                            m_boneCombo,     m_controllerCombo, m_controllerBone, m_attachmentCombo, m_attachmentBone, m_hitboxCombo,  m_hitboxBone };
+                            m_boneCombo,     m_controllerCombo, m_controllerBone, m_attachmentCombo, m_attachmentBone, m_hitboxCombo,  m_hitboxBone,
+                            m_uvTexture,     m_uvMesh };
     {
         std::vector<std::unique_ptr<QSignalBlocker>> blocks;
         for (QComboBox* combo : combos)
@@ -1899,6 +2054,8 @@ void ModelViewerWindow::showAsset(int index)
         {
             setWindowTitle(tr("Model Viewer"));
             m_modelInfo.clear();
+            m_uvEditor->setMeshes(StudioModel(), -1, -1);
+            m_uvEditor->setPicture(QImage());
         }
         // with no model only the console is enabled
         for (QDockWidget* panel : m_edit->findChildren<QDockWidget*>()) panel->widget()->setEnabled(shown || panel->widget() == m_consolePanel);
@@ -1917,6 +2074,7 @@ void ModelViewerWindow::showAsset(int index)
         fillCombo(m_partCombo, data.bodyParts, [&](size_t i) { return QString::fromStdString(data.bodyParts[i].name); });
         fillCombo(m_skinCombo, data.skinFamilies, [&](size_t i) { return tr("Skin %1").arg(i + 1); });
         fillCombo(m_textureCombo, data.textures, [&](size_t i) { return textureLabel(data.textures[i]); });
+        fillCombo(m_uvTexture, data.textures, [&](size_t i) { return textureLabel(data.textures[i]); });
         for (QComboBox* bones : { m_boneCombo, m_controllerBone, m_attachmentBone, m_hitboxBone })
             fillCombo(bones, data.bones, [&](size_t i) { return indexed(data.bones[i].name, static_cast<int>(i)); });
         fillCombo(m_controllerCombo, data.controllers, [&](size_t i) {
@@ -1940,6 +2098,9 @@ void ModelViewerWindow::showAsset(int index)
     m_textureCombo->setCurrentIndex(-1);
     m_textureCombo->setCurrentIndex(data.textures.empty() ? -1 : 0);
     if (data.textures.empty()) showTexture();
+    m_uvEditor->setMeshes(data, -1, -1);
+    m_uvTexture->setCurrentIndex(-1);
+    m_uvTexture->setCurrentIndex(data.textures.empty() ? -1 : 0);
     for (QComboBox* combo : { m_boneCombo, m_controllerCombo, m_attachmentCombo, m_hitboxCombo })
         if (combo->count()) combo->setCurrentIndex(0);
     showBone(m_boneCombo->currentIndex());
@@ -2149,6 +2310,7 @@ void ModelViewerWindow::refreshPanels()
     };
     rename(m_sequenceCombo, [&](int i) { return indexed(data.sequences[i].name, i); });
     rename(m_textureCombo, [&](int i) { return textureLabel(data.textures[i]); });
+    rename(m_uvTexture, [&](int i) { return textureLabel(data.textures[i]); });
     for (QComboBox* bones : { m_boneCombo, m_controllerBone, m_attachmentBone, m_hitboxBone })
         rename(bones, [&](int i) { return indexed(data.bones[i].name, i); });
     if (m_attachmentCombo->count() != static_cast<int>(data.attachments.size())) fillAttachments();
@@ -2168,6 +2330,7 @@ void ModelViewerWindow::refreshPanels()
     }
     showSubModel(m_subModelCombo->currentIndex());
     showTexture();
+    showUvMap();
     showBone(m_boneCombo->currentIndex());
     showController(m_controllerCombo->currentIndex());
     showAttachment(m_attachmentCombo->currentIndex());
@@ -2230,6 +2393,15 @@ bool ModelViewerWindow::confirmClose(int index)
 
 bool ModelViewerWindow::closeAll()
 {
+    const Asset* shown = asset();
+    const StudioModel& data = *shown->model;
+
+	if (data.attachments.size() > static_cast<size_t>(kStudioMaxAttachments))
+	{
+        const QMessageBox::StandardButton answer = QMessageBox::question(
+            this, tr("Warning"), tr("The model has more than %1 attachments. Maximum allowed is 4. Are you sure you want to continue?").arg(kStudioMaxAttachments),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+	}
     for (int i = 0; i < static_cast<int>(m_assets.size()); ++i)
         if (!confirmClose(i)) return false;
     // discarded changes are not asked about again
