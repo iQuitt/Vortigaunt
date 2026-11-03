@@ -344,341 +344,6 @@ Exitosos: %1 de %2</translation>
     </message>
 </context>
 <context>
-    <name>AutoRigDialog</name>
-    <message>
-        <source>GoldSrc Auto-Rig (Beta)</source>
-        <translation>Auto-Rig (Beta) de GoldSrc</translation>
-    </message>
-    <message>
-        <source>Input Mesh (with skeleton)</source>
-        <translation>Malla de Entrada (con esqueleto)</translation>
-    </message>
-    <message>
-        <source>Select SMD</source>
-        <translation>Seleccionar SMD</translation>
-    </message>
-    <message>
-        <source>Reference Model (optional)</source>
-        <translation>Modelo de referencia (opcional)</translation>
-    </message>
-    <message>
-        <source>An already rigged SMD to copy the rigging from</source>
-        <translation>Un SMD ya riggeado del que copiar el rigging</translation>
-    </message>
-    <message>
-        <source>Rig by example. Every vertex takes the bone of the closest point on this model&apos;s surface, so the result inherits how the original artist rigged it: which helper bones they deformed with, where they put the seams.
-
-Bones are matched by name, so the reference can be any model whose skeleton names agree - Half-Life, Counter-Strike and CSO all use Biped names.
-
-Whatever the reference does not cover - a cape, a backpack, hair it never had - falls back to Bone Heat Diffusion. Leave empty to rig from geometry alone.
-
-The mesh has to be sitting on the skeleton already: the closer the two models overlap, the more of the rigging carries over.</source>
-        <translation>Rigging por ejemplo. Cada vértice toma el hueso del punto más cercano de la superficie de este modelo, así que el resultado hereda cómo lo riggeó el artista original: con qué huesos auxiliares deformó y dónde puso las costuras.
-
-Los huesos se emparejan por nombre, así que la referencia puede ser cualquier modelo cuyo esqueleto tenga los mismos nombres; Half-Life, Counter-Strike y CSO usan nombres Biped.
-
-Lo que la referencia no cubre (una capa, una mochila, un pelo que nunca tuvo) usa Bone Heat Diffusion. Déjalo vacío para riggear solo a partir de la geometría.
-
-La malla tiene que estar ya sobre el esqueleto: cuanto más se solapen los dos modelos, más rigging se transfiere.</translation>
-    </message>
-    <message>
-        <source>Output SMD</source>
-        <translation>SMD de Salida</translation>
-    </message>
-    <message>
-        <source>Output rigged SMD path</source>
-        <translation>Ruta del SMD de salida con rigging</translation>
-    </message>
-    <message>
-        <source>Options</source>
-        <translation>Opciones</translation>
-    </message>
-    <message>
-        <source>Manual Scale:</source>
-        <translation>Escala Manual:</translation>
-    </message>
-    <message>
-        <source>Write the reference model&apos;s skeleton</source>
-        <translation>Escribir el esqueleto del modelo de referencia</translation>
-    </message>
-    <message>
-        <source>Give the output the skeleton of the reference model instead of the one the mesh came in with. This is what porting a model needs: the animations of the target game are built for the target game&apos;s skeleton, so a model carrying its old skeleton cannot play them - studiomdl refuses it with &quot;illegal parent bone replacement&quot;.
-
-Turn this off only when the mesh is already on the skeleton you want to keep and the reference is there just to improve the rigging.
-
-Has no effect without a reference model.</source>
-        <translation>Da a la salida el esqueleto del modelo de referencia en lugar del que traía la malla. Es lo que necesita portar un modelo: las animaciones del juego de destino están hechas para su esqueleto, así que un modelo con su esqueleto antiguo no puede reproducirlas; studiomdl lo rechaza con &quot;illegal parent bone replacement&quot;.
-
-Desactívalo solo si la malla ya está en el esqueleto que quieres conservar y la referencia está solo para mejorar el rigging.
-
-No tiene efecto sin un modelo de referencia.</translation>
-    </message>
-    <message>
-        <source>Enable if mesh is oriented differently (e.g., from Blender)</source>
-        <translation>Activar si la malla está orientada de forma diferente (p. ej., desde Blender)</translation>
-    </message>
-    <message>
-        <source>Bone Heat Diffusion (recommended)</source>
-        <translation>Bone Heat Diffusion (recomendado)</translation>
-    </message>
-    <message>
-        <source>Solves smooth weights across the mesh surface and collapses them to one bone per vertex, which is what Blender does with Automatic Weights followed by Limit Total 1. It knows which bones a vertex can actually see, so weights cannot leak between limbs. Uncheck to use the older nearest-bone matching.</source>
-        <translation>Calcula pesos suaves por la superficie de la malla y los reduce a un hueso por vértice, como hace Blender con Automatic Weights seguido de Limit Total 1. Sabe qué huesos puede ver realmente un vértice, así que los pesos no se filtran entre extremidades. Desmárcalo para usar el emparejamiento antiguo por hueso más cercano.</translation>
-    </message>
-    <message>
-        <source>Snap seams to joints</source>
-        <translation>Ajustar costuras a las articulaciones</translation>
-    </message>
-    <message>
-        <source>Cuts the boundary between two bones on the plane through the joint they share. GoldSrc binds every vertex to a single bone, so a crease at the joint is unavoidable; it is smallest when the cut sits on the pivot.</source>
-        <translation>Corta el límite entre dos huesos en el plano que pasa por la articulación que comparten. GoldSrc une cada vértice a un solo hueso, así que un pliegue en la articulación es inevitable; es mínimo cuando el corte está en el pivote.</translation>
-    </message>
-    <message>
-        <source>Use Hierarchy Depth Penalty (Enable for Player Models)</source>
-        <translation>Usar Penalización por Profundidad de Jerarquía (Activar para Modelos de Jugador)</translation>
-    </message>
-    <message>
-        <source>Prevents helper bones from stealing vertices. Uncheck this for Hand/Viewmodel meshes.</source>
-        <translation>Evita que los huesos auxiliares roben vértices. Desmarca esto para mallas de Manos/Viewmodel.</translation>
-    </message>
-    <message>
-        <source>Log</source>
-        <translation>Registro</translation>
-    </message>
-    <message>
-        <source>Bones Configuration</source>
-        <translation>Configuración de Huesos</translation>
-    </message>
-    <message>
-        <source>Search bone...</source>
-        <translation>Buscar hueso...</translation>
-    </message>
-    <message>
-        <source>Skeleton Hierarchy</source>
-        <translation>Jerarquía del Esqueleto</translation>
-    </message>
-    <message>
-        <source>Select All</source>
-        <translation>Seleccionar Todo</translation>
-    </message>
-    <message>
-        <source>Deselect All</source>
-        <translation>Deseleccionar Todo</translation>
-    </message>
-    <message>
-        <source>No skeleton loaded</source>
-        <translation>Ningún esqueleto cargado</translation>
-    </message>
-    <message>
-        <source>Tip</source>
-        <translation>Consejo</translation>
-    </message>
-    <message>
-        <source>Click to view full size</source>
-        <translation>Haz clic para ver a tamaño completo</translation>
-    </message>
-    <message>
-        <source>Make sure your mesh is properly fitted to the bone like this image. Since Auto Rig is in beta, errors may occur.</source>
-        <translation>Asegúrate de que tu malla esté correctamente ajustada al hueso como en esta imagen. Como Auto-Rig está en beta, pueden ocurrir errores.</translation>
-    </message>
-    <message>
-        <source>Select Reference Model</source>
-        <translation>Seleccionar modelo de referencia</translation>
-    </message>
-    <message>
-        <source>SMD Files (*.smd);;All Files (*)</source>
-        <translation>Archivos SMD (*.smd);;Todos los archivos (*)</translation>
-    </message>
-    <message>
-        <source>Auto-Rig Tip - Full Preview</source>
-        <translation>Consejo de Auto-Rig - Vista Previa Completa</translation>
-    </message>
-    <message>
-        <source>Excluded automatically: %1</source>
-        <translation>Excluido automáticamente: %1</translation>
-    </message>
-    <message>
-        <source>%1 / %2 bones active</source>
-        <translation>%1 / %2 huesos activos</translation>
-    </message>
-    <message>
-        <source>Flip Y/Z axes</source>
-        <translation>Invertir ejes Y/Z</translation>
-    </message>
-    <message>
-        <source>Rig Mesh</source>
-        <translation>Aplicar Rigging a Malla</translation>
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation>Examinar...</translation>
-    </message>
-</context>
-<context>
-    <name>HandsWorkspace</name>
-    <message>
-        <source>Open v_ model</source>
-        <translation>Abrir modelo v_</translation>
-    </message>
-    <message>
-        <source>Open the view model whose hands are replaced</source>
-        <translation>Abrir el modelo de vista cuyas manos se reemplazan</translation>
-    </message>
-    <message>
-        <source>New hands</source>
-        <translation>Manos nuevas</translation>
-    </message>
-    <message>
-        <source>Build</source>
-        <translation>Compilar</translation>
-    </message>
-    <message>
-        <source>Put the new hands in the model, compile it with studiomdl and show it</source>
-        <translation>Poner las manos nuevas en el modelo, compilarlo con studiomdl y mostrarlo</translation>
-    </message>
-    <message>
-        <source>Save as</source>
-        <translation>Guardar como</translation>
-    </message>
-    <message>
-        <source>Write the model with the new hands</source>
-        <translation>Guardar el modelo con las manos nuevas</translation>
-    </message>
-    <message>
-        <source>View model</source>
-        <translation>Modelo de vista</translation>
-    </message>
-    <message>
-        <source>Open v_ model...</source>
-        <translation>Abrir modelo v_...</translation>
-    </message>
-    <message>
-        <source>The parts whose hands are replaced; a part with no hands found is replaced whole</source>
-        <translation>Las partes cuyas manos se reemplazan; una parte sin manos encontradas se reemplaza entera</translation>
-    </message>
-    <message>
-        <source>Replace the hands in:</source>
-        <translation>Reemplazar las manos en:</translation>
-    </message>
-    <message>
-        <source>Build and show</source>
-        <translation>Compilar y mostrar</translation>
-    </message>
-    <message>
-        <source>Show</source>
-        <translation>Mostrar</translation>
-    </message>
-    <message>
-        <source>Original</source>
-        <translation>Original</translation>
-    </message>
-    <message>
-        <source>Play</source>
-        <translation>Reproducir</translation>
-    </message>
-    <message>
-        <source>Animation:</source>
-        <translation>Animación:</translation>
-    </message>
-    <message>
-        <source>v_ model</source>
-        <translation>Modelo v_</translation>
-    </message>
-    <message>
-        <source>GoldSrc model (*.mdl)</source>
-        <translation>Modelo GoldSrc (*.mdl)</translation>
-    </message>
-    <message>
-        <source>Choose the new hands, an SMD or a view model to take them from; they are remembered</source>
-        <translation>Elige las manos nuevas, un SMD o un modelo de vista del que tomarlas; se recuerdan</translation>
-    </message>
-    <message>
-        <source>Choose new hands...</source>
-        <translation>Elegir manos nuevas...</translation>
-    </message>
-    <message>
-        <source>A reference SMD with its textures next to it, or a v_ model whose hands are taken. Any GoldSrc rig works: the arms are matched by their shape and the hands fitted joint by joint.</source>
-        <translation>Un SMD de referencia con sus texturas al lado, o un modelo v_ del que se toman las manos. Sirve cualquier esqueleto de GoldSrc: los brazos se emparejan por su forma y las manos se ajustan articulación por articulación.</translation>
-    </message>
-    <message>
-        <source>Open a v_ model from the ribbon, choose the new hands and build.</source>
-        <translation>Abre un modelo v_ desde la cinta, elige las manos nuevas y compila.</translation>
-    </message>
-    <message>
-        <source>Choose new hands</source>
-        <translation>Elegir manos nuevas</translation>
-    </message>
-    <message>
-        <source>Hands (*.smd *.mdl);;SMD model (*.smd);;GoldSrc model (*.mdl)</source>
-        <translation>Manos (*.smd *.mdl);;Modelo SMD (*.smd);;Modelo GoldSrc (*.mdl)</translation>
-    </message>
-    <message>
-        <source>%1 (%2 of %3 triangles are hands)</source>
-        <translation>%1 (%2 de %3 triángulos son manos)</translation>
-    </message>
-    <message>
-        <source>%1 (%2 triangles, no hands)</source>
-        <translation>%1 (%2 triángulos, sin manos)</translation>
-    </message>
-    <message>
-        <source>The model has to be compiled with studiomdl. Set the location of studiomdl in Settings.</source>
-        <translation>El modelo debe compilarse con studiomdl. Indica la ubicación de studiomdl en Configuración.</translation>
-    </message>
-    <message>
-        <source>Could not make a folder to build in.</source>
-        <translation>No se pudo crear una carpeta para compilar.</translation>
-    </message>
-    <message>
-        <source>studiomdl could not compile the model:
-
-%1</source>
-        <translation>studiomdl no pudo compilar el modelo:
-
-%1</translation>
-    </message>
-    <message numerus="yes">
-        <source>%n triangle(s) of the old hands out</source>
-        <translation>
-            <numerusform>%n triángulo de las manos antiguas quitado</numerusform>
-            <numerusform>%n triángulos de las manos antiguas quitados</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n triangle(s) of the new hands in</source>
-        <translation>
-            <numerusform>%n triángulo de las manos nuevas añadido</numerusform>
-            <numerusform>%n triángulos de las manos nuevas añadidos</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Fitted onto the model&apos;s arms by their shape: %1 bones.</source>
-        <translation>Ajustadas a los brazos del modelo por su forma: %1 huesos.</translation>
-    </message>
-    <message>
-        <source>The bone names did not match: each vertex took the bone of the old hands where it lies.</source>
-        <translation>Los nombres de los huesos no coincidieron: cada vértice tomó el hueso de las manos antiguas donde se encuentra.</translation>
-    </message>
-    <message>
-        <source>%1 of %2 bones matched by name.</source>
-        <translation>%1 de %2 huesos coincidieron por nombre.</translation>
-    </message>
-    <message numerus="yes">
-        <source>%n warning(s) in the console</source>
-        <translation>
-            <numerusform>%n advertencia en la consola</numerusform>
-            <numerusform>%n advertencias en la consola</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Save v_ model</source>
-        <translation>Guardar modelo v_</translation>
-    </message>
-    <message>
-        <source>Could not write %1.</source>
-        <translation>No se pudo escribir %1.</translation>
-    </message>
-</context>
-<context>
     <name>HudSpriteDialog</name>
     <message>
         <source>Side</source>
@@ -1521,6 +1186,16 @@ WAV</translation>
         <translation>Hacer retargeting de movimientos al esqueleto de un modelo GoldSrc...</translation>
     </message>
     <message>
+        <source>Look through GoldSrc models: sequences, parts, textures, skeleton...</source>
+        <translation>Explorar modelos GoldSrc: secuencias, partes, texturas, esqueleto...</translation>
+    </message>
+    <message>
+        <source>Model
+viewer</source>
+        <translation>Visor de
+modelos</translation>
+    </message>
+    <message>
         <source>Animation Retargeting</source>
         <translation>Retargeting de animaciones</translation>
     </message>
@@ -2178,6 +1853,10 @@ La operación se elige según el tipo de archivo.</translation>
 </translation>
     </message>
     <message>
+        <source>Model Viewer</source>
+        <translation>Visor de modelos</translation>
+    </message>
+    <message>
         <source>HUD Sprite</source>
         <translation>Sprite de HUD</translation>
     </message>
@@ -2273,16 +1952,1044 @@ La operación se elige según el tipo de archivo.</translation>
 <context>
     <name>ModelViewerWindow</name>
     <message>
-        <source>Sequence:</source>
-        <translation>Secuencia:</translation>
+        <source>Open a model.</source>
+        <translation>Abre un modelo.</translation>
     </message>
     <message>
-        <source>Play</source>
-        <translation>Reproducir</translation>
+        <source>Sequences</source>
+        <translation>Secuencias</translation>
     </message>
     <message>
-        <source>Could not read %1</source>
-        <translation>No se pudo leer %1</translation>
+        <source>Textures</source>
+        <translation>Texturas</translation>
+    </message>
+    <message>
+        <source>Scene</source>
+        <translation>Escena</translation>
+    </message>
+    <message>
+        <source>Bones</source>
+        <translation>Huesos</translation>
+    </message>
+    <message>
+        <source>Attachments</source>
+        <translation>Adjuntos</translation>
+    </message>
+    <message>
+        <source>Hitboxes</source>
+        <translation>Hitboxes</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>Archivo</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
+    <message>
+        <source>Skeleton</source>
+        <translation>Esqueleto</translation>
+    </message>
+    <message>
+        <source>Wireframe</source>
+        <translation>Alambre</translation>
+    </message>
+    <message>
+        <source>Ground</source>
+        <translation>Suelo</translation>
+    </message>
+    <message>
+        <source>Background colour...</source>
+        <translation>Color de fondo...</translation>
+    </message>
+    <message>
+        <source>Console</source>
+        <translation>Consola</translation>
+    </message>
+    <message>
+        <source>Rocket Trail</source>
+        <translation>Estela de cohete</translation>
+    </message>
+    <message>
+        <source>Grenade Smoke</source>
+        <translation>Humo de granada</translation>
+    </message>
+    <message>
+        <source>Gib Blood</source>
+        <translation>Sangre de restos</translation>
+    </message>
+    <message>
+        <source>Model Rotate</source>
+        <translation>Rotar modelo</translation>
+    </message>
+    <message>
+        <source>Green Trail</source>
+        <translation>Estela verde</translation>
+    </message>
+    <message>
+        <source>Zombie Blood</source>
+        <translation>Sangre de zombi</translation>
+    </message>
+    <message>
+        <source>Orange Trail</source>
+        <translation>Estela naranja</translation>
+    </message>
+    <message>
+        <source>Purple Trail</source>
+        <translation>Estela morada</translation>
+    </message>
+    <message>
+        <source>No Shade Light</source>
+        <translation>Luz sin sombreado</translation>
+    </message>
+    <message>
+        <source>Hitbox Collision</source>
+        <translation>Colisión de hitbox</translation>
+    </message>
+    <message>
+        <source>Force Skylight</source>
+        <translation>Forzar luz del cielo</translation>
+    </message>
+    <message>
+        <source>Cameras</source>
+        <translation>Cámaras</translation>
+    </message>
+    <message>
+        <source>Model Display</source>
+        <translation>Visualización del modelo</translation>
+    </message>
+    <message>
+        <source>Body Parts</source>
+        <translation>Partes del cuerpo</translation>
+    </message>
+    <message>
+        <source>Model Data</source>
+        <translation>Datos del modelo</translation>
+    </message>
+    <message>
+        <source>Bone Controllers</source>
+        <translation>Controladores de huesos</translation>
+    </message>
+    <message>
+        <source>FPS:</source>
+        <translation>FPS:</translation>
+    </message>
+    <message>
+        <source>Drawn Polygons:</source>
+        <translation>Polígonos dibujados:</translation>
+    </message>
+    <message>
+        <source>Texture</source>
+        <translation>Textura</translation>
+    </message>
+    <message>
+        <source>Pose</source>
+        <translation>Pose</translation>
+    </message>
+    <message>
+        <source>Frame</source>
+        <translation>Fotograma</translation>
+    </message>
+    <message>
+        <source>Restart Sequence</source>
+        <translation>Reiniciar secuencia</translation>
+    </message>
+    <message>
+        <source>Previous Frame</source>
+        <translation>Fotograma anterior</translation>
+    </message>
+    <message>
+        <source>Skip 5 Frames Earlier</source>
+        <translation>Retroceder 5 fotogramas</translation>
+    </message>
+    <message>
+        <source>Play/Pause</source>
+        <translation>Reproducir/Pausa</translation>
+    </message>
+    <message>
+        <source>Skip 5 Frames Later</source>
+        <translation>Avanzar 5 fotogramas</translation>
+    </message>
+    <message>
+        <source>Next Frame</source>
+        <translation>Fotograma siguiente</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>Velocidad</translation>
+    </message>
+    <message>
+        <source>Load...</source>
+        <translation>Cargar...</translation>
+    </message>
+    <message>
+        <source>Close All</source>
+        <translation>Cerrar todo</translation>
+    </message>
+    <message>
+        <source>Take Screenshot...</source>
+        <translation>Tomar captura...</translation>
+    </message>
+    <message>
+        <source>Asset</source>
+        <translation>Recurso</translation>
+    </message>
+    <message>
+        <source>Dock Widgets</source>
+        <translation>Paneles</translation>
+    </message>
+    <message>
+        <source>Reset Dock Widgets</source>
+        <translation>Restablecer paneles</translation>
+    </message>
+    <message>
+        <source>Show Controls Bar</source>
+        <translation>Mostrar barra de controles</translation>
+    </message>
+    <message>
+        <source>Show Timeline</source>
+        <translation>Mostrar línea de tiempo</translation>
+    </message>
+    <message>
+        <source>Previous Camera</source>
+        <translation>Cámara anterior</translation>
+    </message>
+    <message>
+        <source>Next Camera</source>
+        <translation>Cámara siguiente</translation>
+    </message>
+    <message>
+        <source>Center View</source>
+        <translation>Centrar vista</translation>
+    </message>
+    <message>
+        <source>Center On Positive X</source>
+        <translation>Centrar en X positivo</translation>
+    </message>
+    <message>
+        <source>Center On Negative X</source>
+        <translation>Centrar en X negativo</translation>
+    </message>
+    <message>
+        <source>Center On Positive Y</source>
+        <translation>Centrar en Y positivo</translation>
+    </message>
+    <message>
+        <source>Center On Negative Y</source>
+        <translation>Centrar en Y negativo</translation>
+    </message>
+    <message>
+        <source>Center On Positive Z</source>
+        <translation>Centrar en Z positivo</translation>
+    </message>
+    <message>
+        <source>Center On Negative Z</source>
+        <translation>Centrar en Z negativo</translation>
+    </message>
+    <message>
+        <source>Save View</source>
+        <translation>Guardar vista</translation>
+    </message>
+    <message>
+        <source>Restore View</source>
+        <translation>Restaurar vista</translation>
+    </message>
+    <message>
+        <source>Dump Model Info...</source>
+        <translation>Volcar información del modelo...</translation>
+    </message>
+    <message>
+        <source>Arc Ball</source>
+        <translation>Órbita</translation>
+    </message>
+    <message>
+        <source>First Person</source>
+        <translation>Primera persona</translation>
+    </message>
+    <message>
+        <source>Free Look</source>
+        <translation>Vista libre</translation>
+    </message>
+    <message>
+        <source>Previous</source>
+        <translation>Anterior</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Siguiente</translation>
+    </message>
+    <message>
+        <source>Field Of View</source>
+        <translation>Campo de visión</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Predeterminado</translation>
+    </message>
+    <message>
+        <source>Pitch</source>
+        <translation>Inclinación</translation>
+    </message>
+    <message>
+        <source>Yaw</source>
+        <translation>Giro</translation>
+    </message>
+    <message>
+        <source>Center</source>
+        <translation>Centro</translation>
+    </message>
+    <message>
+        <source>Distance</source>
+        <translation>Distancia</translation>
+    </message>
+    <message>
+        <source>Projection Mode</source>
+        <translation>Modo de proyección</translation>
+    </message>
+    <message>
+        <source>Perspective</source>
+        <translation>Perspectiva</translation>
+    </message>
+    <message>
+        <source>Origin</source>
+        <translation>Origen</translation>
+    </message>
+    <message>
+        <source>Model</source>
+        <translation>Modelo</translation>
+    </message>
+    <message>
+        <source>Background</source>
+        <translation>Fondo</translation>
+    </message>
+    <message>
+        <source>Center On World Origin</source>
+        <translation>Centrar en el origen del mundo</translation>
+    </message>
+    <message>
+        <source>Align On Ground</source>
+        <translation>Alinear con el suelo</translation>
+    </message>
+    <message>
+        <source>Show Ground</source>
+        <translation>Mostrar suelo</translation>
+    </message>
+    <message>
+        <source>Enable Texture</source>
+        <translation>Activar textura</translation>
+    </message>
+    <message>
+        <source>Mirror Model</source>
+        <translation>Reflejar modelo</translation>
+    </message>
+    <message>
+        <source>Enable Tiling</source>
+        <translation>Activar mosaico</translation>
+    </message>
+    <message>
+        <source>Tile Size</source>
+        <translation>Tamaño del mosaico</translation>
+    </message>
+    <message>
+        <source>Show Background</source>
+        <translation>Mostrar fondo</translation>
+    </message>
+    <message>
+        <source>Background colour</source>
+        <translation>Color de fondo</translation>
+    </message>
+    <message>
+        <source>Orthographic</source>
+        <translation>Ortográfica</translation>
+    </message>
+    <message>
+        <source>Model Viewer</source>
+        <translation>Visor de modelos</translation>
+    </message>
+    <message>
+        <source>Skin %1</source>
+        <translation>Skin %1</translation>
+    </message>
+    <message>
+        <source>Mouth</source>
+        <translation>Boca</translation>
+    </message>
+    <message>
+        <source>Controller %1</source>
+        <translation>Controlador %1</translation>
+    </message>
+    <message>
+        <source>Transformation</source>
+        <translation>Transformación</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Guardar</translation>
+    </message>
+    <message>
+        <source>Save As...</source>
+        <translation>Guardar como...</translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation>Editar</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>Deshacer</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>Rehacer</translation>
+    </message>
+    <message>
+        <source>First Person Camera For View Models</source>
+        <translation>Cámara en primera persona para modelos de vista</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <source>Play Sounds</source>
+        <translation>Reproducir sonidos</translation>
+    </message>
+    <message>
+        <source>Ground Length</source>
+        <translation>Longitud del suelo</translation>
+    </message>
+    <message>
+        <source>Open an image</source>
+        <translation>Abrir una imagen</translation>
+    </message>
+    <message>
+        <source>Images (*.png *.bmp *.jpg *.tga)</source>
+        <translation>Imágenes (*.png *.bmp *.jpg *.tga)</translation>
+    </message>
+    <message>
+        <source>Render Mode</source>
+        <translation>Modo de renderizado</translation>
+    </message>
+    <message>
+        <source>Flat Shaded</source>
+        <translation>Sombreado plano</translation>
+    </message>
+    <message>
+        <source>Smooth Shaded</source>
+        <translation>Sombreado suave</translation>
+    </message>
+    <message>
+        <source>Texture Shaded</source>
+        <translation>Texturizado</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation>Opacidad</translation>
+    </message>
+    <message>
+        <source>Backface Culling</source>
+        <translation>Ocultar caras traseras</translation>
+    </message>
+    <message>
+        <source>Wireframe Overlay</source>
+        <translation>Superponer malla</translation>
+    </message>
+    <message>
+        <source>Draw Shadows</source>
+        <translation>Dibujar sombras</translation>
+    </message>
+    <message>
+        <source>Fix Shadow Z Fighting</source>
+        <translation>Corregir parpadeo de sombras</translation>
+    </message>
+    <message>
+        <source>Show Hitboxes</source>
+        <translation>Mostrar hitboxes</translation>
+    </message>
+    <message>
+        <source>Show Bones</source>
+        <translation>Mostrar huesos</translation>
+    </message>
+    <message>
+        <source>Show Attachments</source>
+        <translation>Mostrar adjuntos</translation>
+    </message>
+    <message>
+        <source>Show Eye Position</source>
+        <translation>Mostrar posición de los ojos</translation>
+    </message>
+    <message>
+        <source>Show Bounding Box</source>
+        <translation>Mostrar caja delimitadora</translation>
+    </message>
+    <message>
+        <source>Show Clipping Box</source>
+        <translation>Mostrar caja de recorte</translation>
+    </message>
+    <message>
+        <source>Show Normals</source>
+        <translation>Mostrar normales</translation>
+    </message>
+    <message>
+        <source>Show Axes</source>
+        <translation>Mostrar ejes</translation>
+    </message>
+    <message>
+        <source>Show Player Hitbox</source>
+        <translation>Mostrar hitbox del jugador</translation>
+    </message>
+    <message>
+        <source>Mirror On X Axis</source>
+        <translation>Reflejar en el eje X</translation>
+    </message>
+    <message>
+        <source>Mirror On Y Axis</source>
+        <translation>Reflejar en el eje Y</translation>
+    </message>
+    <message>
+        <source>Mirror On Z Axis</source>
+        <translation>Reflejar en el eje Z</translation>
+    </message>
+    <message>
+        <source>Show Crosshair</source>
+        <translation>Mostrar mira</translation>
+    </message>
+    <message>
+        <source>Show Guidelines</source>
+        <translation>Mostrar guías</translation>
+    </message>
+    <message>
+        <source>Show Off-screen Areas</source>
+        <translation>Mostrar áreas fuera de pantalla</translation>
+    </message>
+    <message>
+        <source>Aspect Ratio</source>
+        <translation>Relación de aspecto</translation>
+    </message>
+    <message>
+        <source>Looping Mode</source>
+        <translation>Modo de bucle</translation>
+    </message>
+    <message>
+        <source>Always Loop</source>
+        <translation>Repetir siempre</translation>
+    </message>
+    <message>
+        <source>Never Loop</source>
+        <translation>No repetir nunca</translation>
+    </message>
+    <message>
+        <source>Controls the viewer&apos;s looping mode. Default uses the sequence setting.</source>
+        <translation>Modo de bucle del visor. Predeterminado usa el ajuste de la secuencia.</translation>
+    </message>
+    <message>
+        <source>Blends</source>
+        <translation>Mezclas</translation>
+    </message>
+    <message>
+        <source>Duration</source>
+        <translation>Duración</translation>
+    </message>
+    <message>
+        <source>Frames</source>
+        <translation>Fotogramas</translation>
+    </message>
+    <message>
+        <source>Standard</source>
+        <translation>Estándar</translation>
+    </message>
+    <message>
+        <source>Counter-Strike</source>
+        <translation>Counter-Strike</translation>
+    </message>
+    <message>
+        <source>Properties</source>
+        <translation>Propiedades</translation>
+    </message>
+    <message>
+        <source>Is Looping</source>
+        <translation>En bucle</translation>
+    </message>
+    <message>
+        <source>FPS</source>
+        <translation>FPS</translation>
+    </message>
+    <message>
+        <source>Activity</source>
+        <translation>Actividad</translation>
+    </message>
+    <message>
+        <source>Activity Weight</source>
+        <translation>Peso de la actividad</translation>
+    </message>
+    <message>
+        <source>Linear Movement</source>
+        <translation>Movimiento lineal</translation>
+    </message>
+    <message>
+        <source>Events</source>
+        <translation>Eventos</translation>
+    </message>
+    <message>
+        <source>Add New Event</source>
+        <translation>Añadir evento</translation>
+    </message>
+    <message>
+        <source>Remove Current Event</source>
+        <translation>Quitar este evento</translation>
+    </message>
+    <message>
+        <source>Id</source>
+        <translation>Id</translation>
+    </message>
+    <message>
+        <source>Options</source>
+        <translation>Opciones</translation>
+    </message>
+    <message>
+        <source>Part</source>
+        <translation>Parte</translation>
+    </message>
+    <message>
+        <source>Submodel</source>
+        <translation>Submodelo</translation>
+    </message>
+    <message>
+        <source>Skin</source>
+        <translation>Skin</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Nombre</translation>
+    </message>
+    <message>
+        <source># Meshes</source>
+        <translation>N.º de mallas</translation>
+    </message>
+    <message>
+        <source># Vertices</source>
+        <translation>N.º de vértices</translation>
+    </message>
+    <message>
+        <source># Normals</source>
+        <translation>N.º de normales</translation>
+    </message>
+    <message>
+        <source>Body Value</source>
+        <translation>Valor de body</translation>
+    </message>
+    <message>
+        <source>Texture Scale</source>
+        <translation>Escala de textura</translation>
+    </message>
+    <message>
+        <source>Mesh</source>
+        <translation>Malla</translation>
+    </message>
+    <message>
+        <source>Show UV Map</source>
+        <translation>Mostrar mapa UV</translation>
+    </message>
+    <message>
+        <source>Overlay UV Map</source>
+        <translation>Superponer mapa UV</translation>
+    </message>
+    <message>
+        <source>Anti-Alias Lines</source>
+        <translation>Suavizar líneas</translation>
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation>Banderas</translation>
+    </message>
+    <message>
+        <source>Chrome</source>
+        <translation>Cromo</translation>
+    </message>
+    <message>
+        <source>Additive</source>
+        <translation>Aditivo</translation>
+    </message>
+    <message>
+        <source>Transparent</source>
+        <translation>Transparente</translation>
+    </message>
+    <message>
+        <source>Flat Shade</source>
+        <translation>Sombreado plano</translation>
+    </message>
+    <message>
+        <source>Fullbright</source>
+        <translation>Brillo total</translation>
+    </message>
+    <message>
+        <source>Mipmaps</source>
+        <translation>Mipmaps</translation>
+    </message>
+    <message>
+        <source>Import Texture</source>
+        <translation>Importar textura</translation>
+    </message>
+    <message>
+        <source>Export Texture</source>
+        <translation>Exportar textura</translation>
+    </message>
+    <message>
+        <source>Export UV Map</source>
+        <translation>Exportar mapa UV</translation>
+    </message>
+    <message>
+        <source>Import All Textures</source>
+        <translation>Importar todas las texturas</translation>
+    </message>
+    <message>
+        <source>Export All Textures</source>
+        <translation>Exportar todas las texturas</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Desactivado</translation>
+    </message>
+    <message>
+        <source>Top Color</source>
+        <translation>Color superior</translation>
+    </message>
+    <message>
+        <source>Bottom Color</source>
+        <translation>Color inferior</translation>
+    </message>
+    <message>
+        <source>Colormap value</source>
+        <translation>Valor del mapa de color</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation>Todas</translation>
+    </message>
+    <message>
+        <source>Mesh %1</source>
+        <translation>Malla %1</translation>
+    </message>
+    <message>
+        <source>Eye Position</source>
+        <translation>Posición de los ojos</translation>
+    </message>
+    <message>
+        <source>Min</source>
+        <translation>Mín</translation>
+    </message>
+    <message>
+        <source>Max</source>
+        <translation>Máx</translation>
+    </message>
+    <message>
+        <source>Bounding Box</source>
+        <translation>Caja delimitadora</translation>
+    </message>
+    <message>
+        <source>Clipping Box</source>
+        <translation>Caja de recorte</translation>
+    </message>
+    <message>
+        <source>Highlight Bone</source>
+        <translation>Resaltar hueso</translation>
+    </message>
+    <message>
+        <source># Root Bones</source>
+        <translation>N.º de huesos raíz</translation>
+    </message>
+    <message>
+        <source>Bone Name</source>
+        <translation>Nombre del hueso</translation>
+    </message>
+    <message>
+        <source>Parent Bone</source>
+        <translation>Hueso padre</translation>
+    </message>
+    <message>
+        <source>Position</source>
+        <translation>Posición</translation>
+    </message>
+    <message>
+        <source>Position Scale</source>
+        <translation>Escala de posición</translation>
+    </message>
+    <message>
+        <source>Rotation</source>
+        <translation>Rotación</translation>
+    </message>
+    <message>
+        <source>Rotation Scale</source>
+        <translation>Escala de rotación</translation>
+    </message>
+    <message>
+        <source>Controller</source>
+        <translation>Controlador</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Valor</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation>Inicio</translation>
+    </message>
+    <message>
+        <source>End</source>
+        <translation>Fin</translation>
+    </message>
+    <message>
+        <source>Bone</source>
+        <translation>Hueso</translation>
+    </message>
+    <message>
+        <source>Rest</source>
+        <translation>Reposo</translation>
+    </message>
+    <message>
+        <source>Index</source>
+        <translation>Índice</translation>
+    </message>
+    <message>
+        <source>Mouth %1</source>
+        <translation>Boca %1</translation>
+    </message>
+    <message>
+        <source>Axis</source>
+        <translation>Eje</translation>
+    </message>
+    <message>
+        <source>Add New Attachment</source>
+        <translation>Añadir nuevo adjunto</translation>
+    </message>
+    <message>
+        <source>Remove Current Attachment</source>
+        <translation>Quitar el adjunto actual</translation>
+    </message>
+    <message>
+        <source>Place on Model</source>
+        <translation>Colocar en el modelo</translation>
+    </message>
+    <message>
+        <source>Click the model to put the current attachment there; dragging still turns the view</source>
+        <translation>Haz clic en el modelo para poner allí el adjunto actual; arrastrar sigue girando la vista</translation>
+    </message>
+    <message>
+        <source>Highlight Attachment</source>
+        <translation>Resaltar adjunto</translation>
+    </message>
+    <message>
+        <source>QC String</source>
+        <translation>Línea QC</translation>
+    </message>
+    <message>
+        <source>Highlight Hitbox</source>
+        <translation>Resaltar hitbox</translation>
+    </message>
+    <message>
+        <source>Hitgroup</source>
+        <translation>Grupo de impacto</translation>
+    </message>
+    <message>
+        <source>Minimum</source>
+        <translation>Mínimo</translation>
+    </message>
+    <message>
+        <source>Maximum</source>
+        <translation>Máximo</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Limpiar</translation>
+    </message>
+    <message>
+        <source>Mode</source>
+        <translation>Modo</translation>
+    </message>
+    <message>
+        <source>Rotate</source>
+        <translation>Rotar</translation>
+    </message>
+    <message>
+        <source>Scale</source>
+        <translation>Escalar</translation>
+    </message>
+    <message>
+        <source>Move</source>
+        <translation>Mover</translation>
+    </message>
+    <message>
+        <source>Values</source>
+        <translation>Valores</translation>
+    </message>
+    <message>
+        <source>Scale Meshes</source>
+        <translation>Escalar mallas</translation>
+    </message>
+    <message>
+        <source>Scale Hitboxes</source>
+        <translation>Escalar hitboxes</translation>
+    </message>
+    <message>
+        <source>Scale Sequence BBoxes</source>
+        <translation>Escalar cajas de secuencias</translation>
+    </message>
+    <message>
+        <source>Scale Bones</source>
+        <translation>Escalar huesos</translation>
+    </message>
+    <message>
+        <source>Scale Eye Position</source>
+        <translation>Escalar posición de los ojos</translation>
+    </message>
+    <message>
+        <source>Scale Attachments</source>
+        <translation>Escalar adjuntos</translation>
+    </message>
+    <message>
+        <source>Thickness</source>
+        <translation>Grosor</translation>
+    </message>
+    <message>
+        <source>0 shows the same faces from behind; more pushes the back side inward and gives the model depth</source>
+        <translation>0 muestra las mismas caras desde atrás; más empuja la cara trasera hacia dentro y da profundidad al modelo</translation>
+    </message>
+    <message>
+        <source>Faces</source>
+        <translation>Caras</translation>
+    </message>
+    <message>
+        <source>All Textures</source>
+        <translation>Todas las texturas</translation>
+    </message>
+    <message>
+        <source>Current Texture</source>
+        <translation>Textura actual</translation>
+    </message>
+    <message>
+        <source>Fill Rims</source>
+        <translation>Rellenar bordes</translation>
+    </message>
+    <message>
+        <source>Closes the open edges between the two sides when there is a thickness</source>
+        <translation>Cierra los bordes abiertos entre las dos caras cuando hay grosor</translation>
+    </message>
+    <message>
+        <source>Reset values on apply</source>
+        <translation>Restablecer valores al aplicar</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Aplicar</translation>
+    </message>
+    <message>
+        <source>The model would pass the engine&apos;s limits; see the console.</source>
+        <translation>El modelo superaría los límites del motor; consulta la consola.</translation>
+    </message>
+    <message>
+        <source>Images (*.bmp *.png *.tga *.jpg)</source>
+        <translation>Imágenes (*.bmp *.png *.tga *.jpg)</translation>
+    </message>
+    <message>
+        <source>Could not read %1 as a picture of 256 colours or fewer.</source>
+        <translation>No se pudo leer %1 como una imagen de 256 colores o menos.</translation>
+    </message>
+    <message>
+        <source>Attachment %1</source>
+        <translation>Adjunto %1</translation>
+    </message>
+    <message>
+        <source>Hitbox %1</source>
+        <translation>Hitbox %1</translation>
+    </message>
+    <message>
+        <source>None (0)</source>
+        <translation>Ninguna (0)</translation>
+    </message>
+    <message>
+        <source>Double-Side Face</source>
+        <translation>Cara de doble lado</translation>
+    </message>
+    <message>
+        <source>Adds a reversed face behind the faces the engine hides from behind (backface culling); a thickness gives them depth, as Blender&apos;s Solidify does</source>
+        <translation>Añade una cara invertida detrás de las caras que el motor oculta por detrás (backface culling); un grosor les da profundidad, como Solidify de Blender</translation>
+    </message>
+    <message>
+        <source>Could not save %1.</source>
+        <translation>No se pudo guardar %1.</translation>
+    </message>
+    <message>
+        <source>Save As</source>
+        <translation>Guardar como</translation>
+    </message>
+    <message>
+        <source>Studio models (*.mdl)</source>
+        <translation>Modelos de studio (*.mdl)</translation>
+    </message>
+    <message>
+        <source>Unsaved changes</source>
+        <translation>Cambios sin guardar</translation>
+    </message>
+    <message>
+        <source>%1 has changes that are not saved. Save them?</source>
+        <translation>%1 tiene cambios sin guardar. ¿Guardarlos?</translation>
+    </message>
+    <message>
+        <source>Event %1</source>
+        <translation>Evento %1</translation>
+    </message>
+    <message>
+        <source>Submodel %1</source>
+        <translation>Submodelo %1</translation>
+    </message>
+    <message>
+        <source>None (-1)</source>
+        <translation>Ninguno (-1)</translation>
+    </message>
+    <message>
+        <source>GoldSrc supports at most %1 attachments; this model has %2. Please decrease to 4 attachments. otherwise the engine will crash.</source>
+        <translation>GoldSrc admite como máximo %1 adjuntos; este modelo tiene %2. El motor ignora el resto.</translation>
+    </message>
+    <message>
+        <source>Open a model</source>
+        <translation>Abrir un modelo</translation>
+    </message>
+    <message>
+        <source>Studio models (*.mdl);;All files (*.*)</source>
+        <translation>Modelos Studio (*.mdl);;Todos los archivos (*.*)</translation>
+    </message>
+    <message>
+        <source>Save screenshot</source>
+        <translation>Guardar captura</translation>
+    </message>
+    <message>
+        <source>Images (*.png *.jpg *.bmp)</source>
+        <translation>Imágenes (*.png *.jpg *.bmp)</translation>
+    </message>
+    <message>
+        <source>Save model info</source>
+        <translation>Guardar información del modelo</translation>
+    </message>
+    <message>
+        <source>Text files (*.txt)</source>
+        <translation>Archivos de texto (*.txt)</translation>
+    </message>
+    <message>
+        <source>Export the texture</source>
+        <translation>Exportar la textura</translation>
+    </message>
+    <message>
+        <source>Images (*.bmp *.png)</source>
+        <translation>Imágenes (*.bmp *.png)</translation>
+    </message>
+    <message>
+        <source>Images (*.png *.bmp)</source>
+        <translation>Imágenes (*.png *.bmp)</translation>
+    </message>
+    <message>
+        <source>Export the textures to</source>
+        <translation>Exportar las texturas a</translation>
     </message>
 </context>
 <context>

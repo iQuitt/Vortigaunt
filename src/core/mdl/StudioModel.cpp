@@ -13,6 +13,8 @@
 
 namespace {
 
+constexpr float kDegreesToRadians = 3.14159265358979f / 180.0f;
+
 // from studio.h.
 constexpr size_t kBoneSize = 112;
 constexpr size_t kSequenceSize = 176;
@@ -188,6 +190,8 @@ bool StudioModel::Load(const std::string& path)
             sequence.activityWeight = intAt(file, at + 44);
             sequence.motionType = intAt(file, at + 68);
             sequence.linearMovement = vectorAt(at + 76);
+            sequence.boundsMin = vectorAt(at + 96);
+            sequence.boundsMax = vectorAt(at + 108);
             sequence.blendType = intAt(file, at + 128);
             sequence.entryNode = intAt(file, at + 160);
             sequence.exitNode = intAt(file, at + 164);
@@ -199,7 +203,7 @@ bool StudioModel::Load(const std::string& path)
                 for (int e = 0; e < numEvents; e++)
                 {
                     const size_t eventAt = eventIndex + static_cast<size_t>(e) * kEventSize;
-                    sequence.events.push_back({ intAt(file, eventAt), intAt(file, eventAt + 4), readName(file, eventAt + 12, 64) });
+                    sequence.events.push_back({ intAt(file, eventAt), intAt(file, eventAt + 4), readName(file, eventAt + 12, 64), intAt(file, eventAt + 8) });
                 }
             }
             sequences.push_back(sequence);
@@ -220,7 +224,9 @@ bool StudioModel::Load(const std::string& path)
     {
         char suffix[8];
         std::snprintf(suffix, sizeof(suffix), "%02d", g);
-        readFile(sibling(modelPath, suffix), m_groupFiles[g]);  
+        auto group = std::make_shared<std::vector<uint8_t>>();
+        if (readFile(sibling(modelPath, suffix), *group))
+            m_groupFiles[g] = std::move(group);
     }
 
     //attachments
@@ -269,6 +275,7 @@ bool StudioModel::Load(const std::string& path)
             controller.type = intAt(file, at + 4);
             readAt(file, at + 8, controller.start);
             readAt(file, at + 12, controller.end);
+            controller.rest = intAt(file, at + 16);
             controller.index = intAt(file, at + 20);
             if (controller.bone >= 0 && controller.bone < numBones)
                 controllers.push_back(controller);
@@ -290,6 +297,8 @@ bool StudioModel::Load(const std::string& path)
         }
     }
     ReadTextures(*textureSource);
+    if (externalTextures)
+        m_textureFile = std::make_shared<const std::vector<uint8_t>>(textureFile);
 
 
     std::vector<int16_t> skin;
@@ -395,6 +404,7 @@ bool StudioModel::Load(const std::string& path)
                 {
                     textureIndex = skin[skinRef];
                 }
+                mesh.skinRef = skinRef;
                 mesh.texture = (textureIndex >= 0 && textureIndex < static_cast<int>(textures.size())) ? textureIndex : -1;
 
                 const float width = mesh.texture >= 0 ? static_cast<float>(std::max(1, textures[mesh.texture].width)) : 1.0f;
@@ -465,7 +475,571 @@ bool StudioModel::Load(const std::string& path)
         bodyParts.push_back(std::move(part));
     }
 
-    m_groupFiles[0] = std::move(file);
+    m_groupFiles[0] = std::make_shared<const std::vector<uint8_t>>(std::move(file));
+    m_path = path;
+    return true;
+}
+
+namespace {
+
+void putBytes(std::vector<uint8_t>& file, size_t offset, const void* data, size_t size)
+{
+    if (offset <= file.size() && file.size() - offset >= size)
+        std::memcpy(file.data() + offset, data, size);
+}
+
+void putInt(std::vector<uint8_t>& file, size_t offset, int32_t value)
+{
+    putBytes(file, offset, &value, 4);
+}
+
+void putFloat(std::vector<uint8_t>& file, size_t offset, float value)
+{
+    putBytes(file, offset, &value, 4);
+}
+
+void putVector(std::vector<uint8_t>& file, size_t offset, const aiVector3D& value)
+{
+    const float v[3] = { value.x, value.y, value.z };
+    putBytes(file, offset, v, sizeof(v));
+}
+
+// fixed-size name, cut to keep the closing zero
+void putName(std::vector<uint8_t>& file, size_t offset, size_t length, const std::string& text)
+{
+    if (offset > file.size() || file.size() - offset < length)
+        return;
+    std::memset(file.data() + offset, 0, length);
+    std::memcpy(file.data() + offset, text.data(), std::min(text.size(), length - 1));
+}
+
+// 4-byte aligned space at the end of the file
+size_t appendRoom(std::vector<uint8_t>& file, size_t size)
+{
+    const size_t at = (file.size() + 3) & ~static_cast<size_t>(3);
+    file.resize(at + size, 0);
+    return at;
+}
+
+bool writeFile(const std::filesystem::path& path, const std::vector<uint8_t>& data)
+{
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    out.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
+    return out.good();
+}
+
+}  // namespace
+
+bool StudioModel::Save(const std::string& path, std::string& error) const
+{
+    if (m_groupFiles.empty() || !m_groupFiles[0])
+    {
+        error = "The model was not read from a file";
+        return false;
+    }
+    std::vector<uint8_t> file = *m_groupFiles[0];
+
+    putName(file, 8, 64, name);
+    putVector(file, 76, eyePosition);
+    putVector(file, 88, clipMin);
+    putVector(file, 100, clipMax);
+    putVector(file, 112, boundsMin);
+    putVector(file, 124, boundsMax);
+    putInt(file, 136, flags);
+
+    const size_t boneIndex = static_cast<size_t>(intAt(file, 144));
+    const size_t boneCount = std::min(bones.size(), static_cast<size_t>(std::max(0, intAt(file, 140))));
+    for (size_t i = 0; i < boneCount; i++)
+    {
+        const size_t at = boneIndex + i * kBoneSize;
+        putName(file, at, 32, bones[i].name);
+        putBytes(file, at + 64, bones[i].value, sizeof(bones[i].value));
+        putBytes(file, at + 88, bones[i].scale, sizeof(bones[i].scale));
+    }
+
+    // tables stay in place; entries dropped on load (no bone) are left out
+    const size_t controllerIndex = static_cast<size_t>(intAt(file, 152));
+    const size_t controllerCount = std::min(controllers.size(), static_cast<size_t>(std::max(0, intAt(file, 148))));
+    for (size_t i = 0; i < controllerCount; i++)
+    {
+        const size_t at = controllerIndex + i * kControllerSize;
+        const StudioBoneController& c = controllers[i];
+        putInt(file, at, c.bone);
+        putInt(file, at + 4, c.type);
+        putFloat(file, at + 8, c.start);
+        putFloat(file, at + 12, c.end);
+        putInt(file, at + 16, c.rest);
+        putInt(file, at + 20, c.index);
+    }
+    putInt(file, 148, static_cast<int32_t>(controllerCount));
+
+    const size_t hitboxIndex = static_cast<size_t>(intAt(file, 160));
+    const size_t hitboxCount = std::min(hitboxes.size(), static_cast<size_t>(std::max(0, intAt(file, 156))));
+    for (size_t i = 0; i < hitboxCount; i++)
+    {
+        const size_t at = hitboxIndex + i * kHitboxSize;
+        putInt(file, at, hitboxes[i].bone);
+        putInt(file, at + 4, hitboxes[i].group);
+        putVector(file, at + 8, hitboxes[i].min);
+        putVector(file, at + 20, hitboxes[i].max);
+    }
+    putInt(file, 156, static_cast<int32_t>(hitboxCount));
+
+    // more attachments than before move to the end of the file
+    size_t attachmentIndex = static_cast<size_t>(intAt(file, 216));
+    if (attachments.size() > static_cast<size_t>(std::max(0, intAt(file, 212))))
+        attachmentIndex = appendRoom(file, attachments.size() * kAttachmentSize);
+    for (size_t i = 0; i < attachments.size(); i++)
+    {
+        const size_t at = attachmentIndex + i * kAttachmentSize;
+        putName(file, at, 32, attachments[i].name);
+        putInt(file, at + 32, 0);
+        putInt(file, at + 36, attachments[i].bone);
+        putVector(file, at + 40, attachments[i].origin);
+    }
+    putInt(file, 212, static_cast<int32_t>(attachments.size()));
+    putInt(file, 216, static_cast<int32_t>(attachments.empty() ? 0 : attachmentIndex));
+
+    const size_t sequenceIndex = static_cast<size_t>(intAt(file, 168));
+    const size_t sequenceCount = std::min(sequences.size(), static_cast<size_t>(std::max(0, intAt(file, 164))));
+    for (size_t i = 0; i < sequenceCount; i++)
+    {
+        const size_t at = sequenceIndex + i * kSequenceSize;
+        const StudioSequence& s = sequences[i];
+        putFloat(file, at + 32, s.fps);
+        putInt(file, at + 36, s.flags);
+        putInt(file, at + 40, s.activity);
+        putInt(file, at + 44, s.activityWeight);
+        putVector(file, at + 76, s.linearMovement);
+        putVector(file, at + 96, s.boundsMin);
+        putVector(file, at + 108, s.boundsMax);
+        // more events than before move to the end of the file
+        const size_t had = static_cast<size_t>(std::max(0, intAt(file, at + 48)));
+        size_t eventIndex = static_cast<size_t>(intAt(file, at + 52));
+        if (s.events.size() > had)
+            eventIndex = appendRoom(file, s.events.size() * kEventSize);
+        for (size_t e = 0; e < s.events.size(); e++)
+        {
+            const size_t eventAt = eventIndex + e * kEventSize;
+            putInt(file, eventAt, s.events[e].frame);
+            putInt(file, eventAt + 4, s.events[e].event);
+            putInt(file, eventAt + 8, s.events[e].type);
+            putName(file, eventAt + 12, 64, s.events[e].options);
+        }
+        putInt(file, at + 48, static_cast<int32_t>(s.events.size()));
+        putInt(file, at + 52, static_cast<int32_t>(s.events.empty() ? 0 : eventIndex));
+    }
+
+    const size_t bodyPartIndex = static_cast<size_t>(intAt(file, 208));
+    const size_t bodyPartCount = std::min(bodyParts.size(), static_cast<size_t>(std::max(0, intAt(file, 204))));
+    for (size_t b = 0; b < bodyPartCount; b++)
+    {
+        const size_t partAt = bodyPartIndex + b * kBodyPartSize;
+        const size_t modelIndex = static_cast<size_t>(intAt(file, partAt + 72));
+        const size_t modelCount = std::min(bodyParts[b].models.size(), static_cast<size_t>(std::max(0, intAt(file, partAt + 64))));
+        for (size_t m = 0; m < modelCount; m++)
+        {
+            const size_t modelAt = modelIndex + m * kModelSize;
+            const StudioSubModel& sub = bodyParts[b].models[m];
+            putName(file, modelAt, 64, sub.name);
+            // vertices in place (scaling changes them)
+            const size_t vertexIndex = static_cast<size_t>(intAt(file, modelAt + 88));
+            const size_t vertexCount = std::min(sub.vertices.size(), static_cast<size_t>(std::max(0, intAt(file, modelAt + 80))));
+            for (size_t v = 0; v < vertexCount; v++) putVector(file, vertexIndex + v * 12, sub.vertices[v]);
+        }
+    }
+
+    // textures live here or in nameT.mdl
+    std::vector<uint8_t> textureFile;
+    if (externalTextures && m_textureFile)
+        textureFile = *m_textureFile;
+    std::vector<uint8_t>& textureSource = externalTextures && m_textureFile ? textureFile : file;
+    const size_t textureIndex = static_cast<size_t>(intAt(textureSource, 184));
+    const size_t textureCount = std::min(textures.size(), static_cast<size_t>(std::max(0, intAt(textureSource, 180))));
+    // resize factor per texture; mesh UVs are in pixels
+    std::vector<std::pair<float, float>> grew(textureCount, { 1.0f, 1.0f });
+    bool anyGrew = false;
+    for (size_t i = 0; i < textureCount; i++)
+    {
+        const size_t at = textureIndex + i * kTextureSize;
+        const StudioTexture& t = textures[i];
+        putName(textureSource, at, 64, t.name);
+        putInt(textureSource, at + 64, t.flags);
+        const size_t pixelCount = static_cast<size_t>(std::max(0, t.width)) * static_cast<size_t>(std::max(0, t.height));
+        if (t.pixels.size() != pixelCount || t.palette.size() != 768 || pixelCount == 0)
+            continue;
+        const int oldWidth = intAt(textureSource, at + 68), oldHeight = intAt(textureSource, at + 72);
+        size_t dataIndex = static_cast<size_t>(intAt(textureSource, at + 76));
+        if (oldWidth != t.width || oldHeight != t.height)
+        {
+            // a resized picture moves to the end of the file
+            dataIndex = appendRoom(textureSource, pixelCount + 768);
+            putInt(textureSource, at + 68, t.width);
+            putInt(textureSource, at + 72, t.height);
+            putInt(textureSource, at + 76, static_cast<int32_t>(dataIndex));
+            grew[i] = { oldWidth > 0 ? static_cast<float>(t.width) / oldWidth : 1.0f, oldHeight > 0 ? static_cast<float>(t.height) / oldHeight : 1.0f };
+            anyGrew = true;
+        }
+        putBytes(textureSource, dataIndex, t.pixels.data(), pixelCount);
+        putBytes(textureSource, dataIndex + pixelCount, t.palette.data(), 768);
+    }
+    if (anyGrew)
+    {
+        // meshes reach their texture through skin family 0
+        const int numSkinRef = intAt(textureSource, 192);
+        const size_t skinIndex = static_cast<size_t>(intAt(textureSource, 200));
+        for (size_t b = 0; b < bodyPartCount; b++)
+        {
+            const size_t partAt = bodyPartIndex + b * kBodyPartSize;
+            const size_t modelIndex = static_cast<size_t>(intAt(file, partAt + 72));
+            const int modelCount = intAt(file, partAt + 64);
+            for (int m = 0; m < modelCount; m++)
+            {
+                const size_t modelAt = modelIndex + static_cast<size_t>(m) * kModelSize;
+                const int meshCount = intAt(file, modelAt + 72);
+                const size_t meshIndex = static_cast<size_t>(intAt(file, modelAt + 76));
+                for (int k = 0; k < meshCount; k++)
+                {
+                    const size_t meshAt = meshIndex + static_cast<size_t>(k) * kMeshSize;
+                    const int skinRef = intAt(file, meshAt + 8);
+                    int16_t texture = static_cast<int16_t>(skinRef);
+                    if (skinRef >= 0 && skinRef < numSkinRef)
+                        readAt(textureSource, skinIndex + static_cast<size_t>(skinRef) * 2, texture);
+                    if (texture < 0 || static_cast<size_t>(texture) >= grew.size() || (grew[texture].first == 1.0f && grew[texture].second == 1.0f))
+                        continue;
+                    // tricmds: count (<0 fan), then vertex, normal, s, t per corner
+                    size_t at = static_cast<size_t>(intAt(file, meshAt + 4));
+                    for (;;)
+                    {
+                        int16_t count = 0;
+                        if (!readAt(file, at, count) || count == 0)
+                            break;
+                        at += 2;
+                        const size_t corners = static_cast<size_t>(count < 0 ? -count : count);
+                        if (!inside(file, at, corners, 8))
+                            break;
+                        for (size_t c = 0; c < corners; c++)
+                        {
+                            int16_t st[2];
+                            std::memcpy(st, file.data() + at + c * 8 + 4, 4);
+                            st[0] = static_cast<int16_t>(std::lround(st[0] * grew[texture].first));
+                            st[1] = static_cast<int16_t>(std::lround(st[1] * grew[texture].second));
+                            std::memcpy(file.data() + at + c * 8 + 4, st, 4);
+                        }
+                        at += corners * 8;
+                    }
+                }
+            }
+        }
+    }
+
+
+    // changed submodels are rewritten at the end; the engine lights normals mesh by mesh, so group them per mesh
+    for (size_t b = 0; b < bodyPartCount; b++)
+    {
+        const size_t partAt = bodyPartIndex + b * kBodyPartSize;
+        const size_t modelIndex = static_cast<size_t>(intAt(file, partAt + 72));
+        const size_t modelCount = std::min(bodyParts[b].models.size(), static_cast<size_t>(std::max(0, intAt(file, partAt + 64))));
+        for (size_t m = 0; m < modelCount; m++)
+        {
+            const size_t modelAt = modelIndex + m * kModelSize;
+            const StudioSubModel& sub = bodyParts[b].models[m];
+            const size_t meshIndex = static_cast<size_t>(intAt(file, modelAt + 76));
+            if (static_cast<size_t>(std::max(0, intAt(file, modelAt + 72))) != sub.meshes.size() || !inside(file, meshIndex, sub.meshes.size(), kMeshSize))
+                continue;
+            bool changed = static_cast<size_t>(intAt(file, modelAt + 80)) != sub.vertices.size() ||
+                           static_cast<size_t>(intAt(file, modelAt + 92)) != sub.normals.size();
+            for (size_t k = 0; k < sub.meshes.size() && !changed; k++)
+                changed = static_cast<size_t>(intAt(file, meshIndex + k * kMeshSize)) != sub.meshes[k].triangles.size() / 3;
+            if (!changed)
+                continue;
+
+            std::vector<aiVector3D> normals;
+            std::vector<uint8_t> normalBones;
+            std::vector<std::vector<int>> placed(sub.meshes.size());
+            std::vector<size_t> meshNormals(sub.meshes.size());
+            for (size_t k = 0; k < sub.meshes.size(); k++)
+            {
+                placed[k].assign(sub.normals.size(), -1);
+                const size_t first = normals.size();
+                for (const StudioTriVertex& corner : sub.meshes[k].triangles)
+                    if (placed[k][corner.normal] < 0)
+                    {
+                        placed[k][corner.normal] = static_cast<int>(normals.size());
+                        normals.push_back(sub.normals[corner.normal]);
+                        normalBones.push_back(static_cast<uint8_t>(sub.normalBones[corner.normal]));
+                    }
+                meshNormals[k] = normals.size() - first;
+            }
+            if (sub.vertices.size() > static_cast<size_t>(kStudioMaxVertices) || normals.size() > static_cast<size_t>(kStudioMaxVertices))
+            {
+                error = "Submodel \"" + sub.name + "\" has more vertices or normals than GoldSrc draws (" + std::to_string(kStudioMaxVertices) + ")";
+                return false;
+            }
+
+            const size_t vertexInfo = appendRoom(file, sub.vertices.size());
+            for (size_t v = 0; v < sub.vertices.size(); v++) file[vertexInfo + v] = static_cast<uint8_t>(sub.vertexBones[v]);
+            const size_t vertexData = appendRoom(file, sub.vertices.size() * 12);
+            for (size_t v = 0; v < sub.vertices.size(); v++) putVector(file, vertexData + v * 12, sub.vertices[v]);
+            const size_t normalInfo = appendRoom(file, normals.size());
+            if (!normals.empty())
+                std::memcpy(file.data() + normalInfo, normalBones.data(), normals.size());
+            const size_t normalData = appendRoom(file, normals.size() * 12);
+            for (size_t n = 0; n < normals.size(); n++) putVector(file, normalData + n * 12, normals[n]);
+            putInt(file, modelAt + 80, static_cast<int32_t>(sub.vertices.size()));
+            putInt(file, modelAt + 84, static_cast<int32_t>(vertexInfo));
+            putInt(file, modelAt + 88, static_cast<int32_t>(vertexData));
+            putInt(file, modelAt + 92, static_cast<int32_t>(normals.size()));
+            putInt(file, modelAt + 96, static_cast<int32_t>(normalInfo));
+            putInt(file, modelAt + 100, static_cast<int32_t>(normalData));
+
+            for (size_t k = 0; k < sub.meshes.size(); k++)
+            {
+                const StudioMesh& mesh = sub.meshes[k];
+                const size_t meshAt = meshIndex + k * kMeshSize;
+                const float width = mesh.texture >= 0 && mesh.texture < static_cast<int>(textures.size()) ? static_cast<float>(textures[mesh.texture].width) : 1.0f;
+                const float height = mesh.texture >= 0 && mesh.texture < static_cast<int>(textures.size()) ? static_cast<float>(textures[mesh.texture].height) : 1.0f;
+                // one 3-corner strip per face, ended by 0
+                const size_t faces = mesh.triangles.size() / 3;
+                const size_t runs = appendRoom(file, faces * (2 + 3 * 8) + 2);
+                size_t at = runs;
+                for (size_t i = 0; i < faces * 3; i++)
+                {
+                    if (i % 3 == 0)
+                    {
+                        const int16_t three = 3;
+                        putBytes(file, at, &three, 2);
+                        at += 2;
+                    }
+                    const StudioTriVertex& corner = mesh.triangles[i];
+                    const int16_t values[4] = { static_cast<int16_t>(corner.vertex), static_cast<int16_t>(placed[k][corner.normal]),
+                                                static_cast<int16_t>(std::lround(corner.u * width)), static_cast<int16_t>(std::lround(corner.v * height)) };
+                    putBytes(file, at, values, 8);
+                    at += 8;
+                }
+                putInt(file, meshAt, static_cast<int32_t>(faces));
+                putInt(file, meshAt + 4, static_cast<int32_t>(runs));
+                putInt(file, meshAt + 12, static_cast<int32_t>(meshNormals[k]));
+            }
+        }
+    }
+
+    putInt(file, 72, static_cast<int32_t>(file.size()));
+    const std::filesystem::path target = FileIO::toPath(path);
+    if (!writeFile(target, file))
+    {
+        error = "Could not write " + path;
+        return false;
+    }
+    if (externalTextures && m_textureFile)
+    {
+        putInt(textureFile, 72, static_cast<int32_t>(textureFile.size()));
+        if (!writeFile(sibling(target, "T"), textureFile))
+        {
+            error = "Could not write the textures beside " + path;
+            return false;
+        }
+    }
+    // copy name01.mdl... under the new name
+    if (FileIO::toPath(m_path) != target)
+        for (size_t g = 1; g < m_groupFiles.size(); g++)
+        {
+            if (!m_groupFiles[g])
+                continue;
+            char suffix[8];
+            std::snprintf(suffix, sizeof(suffix), "%02d", static_cast<int>(g));
+            if (!writeFile(sibling(target, suffix), *m_groupFiles[g]))
+            {
+                error = "Could not write the animations beside " + path;
+                return false;
+            }
+        }
+    return true;
+}
+
+void StudioModel::Rotate(const aiVector3D& degrees)
+{
+    aiMatrix4x4 turn;
+    turn.FromEulerAnglesXYZ(degrees.x * kDegreesToRadians, degrees.y * kDegreesToRadians, degrees.z * kDegreesToRadians);
+    for (StudioBone& bone : bones)
+    {
+        if (bone.parent >= 0)
+            continue;
+        aiMatrix4x4 local;
+        local.FromEulerAnglesXYZ(bone.value[3], bone.value[4], bone.value[5]);
+        local.a4 = bone.value[0];
+        local.b4 = bone.value[1];
+        local.c4 = bone.value[2];
+        aiVector3D scaling, angles, position;
+        (turn * local).Decompose(scaling, angles, position);
+        const float values[6] = { position.x, position.y, position.z, angles.x, angles.y, angles.z };
+        std::copy(values, values + 6, bone.value);
+    }
+}
+
+void StudioModel::Move(const aiVector3D& offset)
+{
+    for (StudioBone& bone : bones)
+    {
+        if (bone.parent >= 0)
+            continue;
+        bone.value[0] += offset.x;
+        bone.value[1] += offset.y;
+        bone.value[2] += offset.z;
+    }
+}
+
+void StudioModel::Scale(float factor, int parts)
+{
+    if (parts & ScaleMeshes)
+        for (StudioBodyPart& part : bodyParts)
+            for (StudioSubModel& sub : part.models)
+                for (aiVector3D& vertex : sub.vertices) vertex *= factor;
+    if (parts & ScaleHitboxes)
+        for (StudioHitbox& hitbox : hitboxes)
+        {
+            hitbox.min *= factor;
+            hitbox.max *= factor;
+        }
+    if (parts & ScaleSequenceBoxes)
+        for (StudioSequence& sequence : sequences)
+        {
+            sequence.boundsMin *= factor;
+            sequence.boundsMax *= factor;
+            sequence.linearMovement *= factor;
+        }
+    // position = value + scale * animation value
+    if (parts & ScaleBones)
+        for (StudioBone& bone : bones)
+            for (int i = 0; i < 3; i++)
+            {
+                bone.value[i] *= factor;
+                bone.scale[i] *= factor;
+            }
+    if (parts & ScaleEyePosition)
+        eyePosition *= factor;
+    if (parts & ScaleAttachments)
+        for (StudioAttachment& attachment : attachments) attachment.origin *= factor;
+}
+
+bool StudioModel::MakeDoubleSided(float thickness, bool rims, int texture, int& added, std::string& error)
+{
+    added = 0;
+    std::vector<StudioBodyPart> made = bodyParts;
+    for (StudioBodyPart& part : made)
+        for (StudioSubModel& sub : part.models)
+        {
+            auto chosen = [texture](const StudioMesh& mesh) { return texture < 0 || mesh.texture == texture; };
+            // rotated to start at the lowest index, so a face and its twin differ only in winding
+            auto faceKey = [](int a, int b, int c) {
+                if (b < a && b < c) return std::array<int, 3>{ b, c, a };
+                if (c < a && c < b) return std::array<int, 3>{ c, a, b };
+                return std::array<int, 3>{ a, b, c };
+            };
+            std::vector<std::array<int, 3>> faces;
+            for (const StudioMesh& mesh : sub.meshes)
+                for (size_t i = 0; i + 2 < mesh.triangles.size(); i += 3)
+                    faces.push_back(faceKey(mesh.triangles[i].vertex, mesh.triangles[i + 1].vertex, mesh.triangles[i + 2].vertex));
+            std::sort(faces.begin(), faces.end());
+
+            // inner shell: vertices pushed in along their mean normal
+            const size_t vertexCount = sub.vertices.size();
+            std::vector<int> inner(vertexCount, -1);
+            if (thickness != 0.0f)
+            {
+                std::vector<aiVector3D> along(vertexCount);
+                for (const StudioMesh& mesh : sub.meshes)
+                    if (chosen(mesh))
+                        for (const StudioTriVertex& corner : mesh.triangles) along[corner.vertex] += sub.normals[corner.normal];
+                for (size_t v = 0; v < vertexCount; v++)
+                {
+                    if (along[v].SquareLength() == 0.0f)
+                        continue;
+                    along[v].Normalize();
+                    inner[v] = static_cast<int>(sub.vertices.size());
+                    sub.vertices.push_back(sub.vertices[v] - along[v] * thickness);
+                    sub.vertexBones.push_back(sub.vertexBones[v]);
+                }
+            }
+            std::vector<int> flipped(sub.normals.size(), -1);
+            auto back = [&](StudioTriVertex corner) {
+                if (inner[corner.vertex] >= 0)
+                    corner.vertex = inner[corner.vertex];
+                if (flipped[corner.normal] < 0)
+                {
+                    flipped[corner.normal] = static_cast<int>(sub.normals.size());
+                    sub.normals.push_back(-sub.normals[corner.normal]);
+                    sub.normalBones.push_back(sub.normalBones[corner.normal]);
+                }
+                corner.normal = flipped[corner.normal];
+                return corner;
+            };
+
+            // original face counts and directed edges, for the rims
+            std::vector<size_t> had(sub.meshes.size());
+            std::vector<std::pair<int, int>> edges;
+            for (size_t k = 0; k < sub.meshes.size(); k++)
+            {
+                StudioMesh& mesh = sub.meshes[k];
+                had[k] = mesh.triangles.size();
+                if (!chosen(mesh))
+                    continue;
+                for (size_t i = 0; i + 2 < had[k]; i += 3)
+                {
+                    const StudioTriVertex a = mesh.triangles[i], b = mesh.triangles[i + 1], c = mesh.triangles[i + 2];
+                    edges.insert(edges.end(), { { a.vertex, b.vertex }, { b.vertex, c.vertex }, { c.vertex, a.vertex } });
+                    // already double-sided
+                    if (thickness == 0.0f && std::binary_search(faces.begin(), faces.end(), faceKey(a.vertex, c.vertex, b.vertex)))
+                        continue;
+                    mesh.triangles.insert(mesh.triangles.end(), { back(a), back(c), back(b) });
+                    added++;
+                }
+            }
+            if (rims && thickness != 0.0f)
+            {
+                std::sort(edges.begin(), edges.end());
+                for (size_t k = 0; k < sub.meshes.size(); k++)
+                {
+                    StudioMesh& mesh = sub.meshes[k];
+                    if (!chosen(mesh))
+                        continue;
+                    for (size_t i = 0; i + 2 < had[k]; i += 3)
+                    {
+                        const StudioTriVertex corners[3] = { mesh.triangles[i], mesh.triangles[i + 1], mesh.triangles[i + 2] };
+                        const aiVector3D middle = (sub.vertices[corners[0].vertex] + sub.vertices[corners[1].vertex] + sub.vertices[corners[2].vertex]) / 3.0f;
+                        for (int e = 0; e < 3; e++)
+                        {
+                            StudioTriVertex outerA = corners[e], outerB = corners[(e + 1) % 3];
+                            // open edge: no face uses it in reverse
+                            if (std::binary_search(edges.begin(), edges.end(), std::pair{ outerB.vertex, outerA.vertex }))
+                                continue;
+                            // rim normal points away from the face
+                            const aiVector3D& from = sub.vertices[outerA.vertex];
+                            const aiVector3D side = sub.vertices[outerB.vertex] - from;
+                            aiVector3D out = from + side * 0.5f - middle;
+                            if (side.SquareLength() > 0.0f)
+                                out -= side * ((out * side) / side.SquareLength());
+                            outerA.normal = outerB.normal = static_cast<int>(sub.normals.size());
+                            sub.normals.push_back(out.NormalizeSafe());
+                            sub.normalBones.push_back(sub.vertexBones[outerA.vertex]);
+                            StudioTriVertex innerA = outerA, innerB = outerB;
+                            innerA.vertex = inner[outerA.vertex];
+                            innerB.vertex = inner[outerB.vertex];
+                            mesh.triangles.insert(mesh.triangles.end(), { outerB, outerA, innerA, outerB, innerA, innerB });
+                            added += 2;
+                        }
+                    }
+                }
+            }
+            if (sub.vertices.size() > static_cast<size_t>(kStudioMaxVertices) || sub.normals.size() > static_cast<size_t>(kStudioMaxVertices))
+            {
+                error = "Submodel \"" + sub.name + "\" would have " + std::to_string(sub.vertices.size()) + " vertices and " +
+                        std::to_string(sub.normals.size()) + " normals; GoldSrc draws at most " + std::to_string(kStudioMaxVertices) + " of each";
+                added = 0;
+                return false;
+            }
+        }
+    bodyParts = std::move(made);
     return true;
 }
 
@@ -637,9 +1211,9 @@ void StudioModel::BoneValues(int sequence, int blendIndex, int frame, std::vecto
     if (sequence >= 0 && sequence < static_cast<int>(m_sequenceData.size()))
     {
         const SequenceData& data = m_sequenceData[sequence];
-        if (data.group >= 0 && data.group < static_cast<int>(m_groupFiles.size()) && !m_groupFiles[data.group].empty())
+        if (data.group >= 0 && data.group < static_cast<int>(m_groupFiles.size()) && m_groupFiles[data.group] && !m_groupFiles[data.group]->empty())
         {
-            file = &m_groupFiles[data.group];
+            file = m_groupFiles[data.group].get();
             animBase = data.offset + static_cast<size_t>(blendIndex) * bones.size() * kAnimSize;
             if (!inside(*file, animBase, bones.size(), kAnimSize))
             {
@@ -710,42 +1284,69 @@ std::vector<std::array<float, 6>> StudioModel::AnimationValues(int sequence, int
     return values;
 }
 
-std::vector<aiMatrix4x4> StudioModel::LocalBoneTransforms(int sequence, int frame, float blend) const
+std::vector<aiMatrix4x4> StudioModel::LocalBoneTransforms(int sequence, int frame, float blend,
+                                                         const std::vector<std::array<float, 6>>* adjust, float between) const
 {
-    const int blends = sequence >= 0 && sequence < static_cast<int>(sequences.size()) ? sequences[sequence].blends : 1;
+    const bool known = sequence >= 0 && sequence < static_cast<int>(sequences.size());
+    const int blends = known ? sequences[sequence].blends : 1;
     const float place = std::clamp(blend, 0.0f, 1.0f) * static_cast<float>(blends - 1);
     const int lower = std::min(static_cast<int>(place), blends - 1);
     const int upper = std::min(lower + 1, blends - 1);
     const float mix = place - static_cast<float>(lower);
-    std::vector<std::array<float, 6>> first;
-    BoneValues(sequence, lower, frame, first);
-    const bool blended = upper != lower && mix > 0.0f;
-    std::vector<std::array<float, 6>> second;
-    if (blended)
-        BoneValues(sequence, upper, frame, second);
+    const int next = known ? std::min(frame + 1, std::max(0, sequences[sequence].frames - 1)) : frame;
+    const float toward = next != frame ? std::clamp(between, 0.0f, 1.0f) : 0.0f;
+
+    // lerp positions, slerp angles
+    struct Pose
+    {
+        std::vector<aiVector3D> position;
+        std::vector<aiQuaternion> rotation;
+    };
+    auto pose = [&](int blendIndex, int at) {
+        std::vector<std::array<float, 6>> values;
+        BoneValues(sequence, blendIndex, at, values);
+        Pose made;
+        made.position.resize(bones.size());
+        made.rotation.resize(bones.size());
+        for (size_t i = 0; i < bones.size(); i++)
+        {
+            std::array<float, 6> value = values[i];
+            if (adjust && i < adjust->size())
+                for (int j = 0; j < 6; j++) value[j] += (*adjust)[i][j];
+            aiMatrix4x4 rotation;
+            rotation.FromEulerAnglesXYZ(value[3], value[4], value[5]);
+            made.position[i] = aiVector3D(value[0], value[1], value[2]);
+            made.rotation[i] = aiQuaternion(aiMatrix3x3(rotation));
+        }
+        return made;
+    };
+    auto mixInto = [this](Pose& into, const Pose& other, float amount) {
+        for (size_t i = 0; i < bones.size(); i++)
+        {
+            aiQuaternion mixed;
+            aiQuaternion::Interpolate(mixed, into.rotation[i], other.rotation[i], amount);
+            into.rotation[i] = mixed;
+            into.position[i] = into.position[i] + (other.position[i] - into.position[i]) * amount;
+        }
+    };
+    // this frame and the next, in both blends
+    auto framePose = [&](int blendIndex) {
+        Pose made = pose(blendIndex, frame);
+        if (toward > 0.0f)
+            mixInto(made, pose(blendIndex, next), toward);
+        return made;
+    };
+    Pose result = framePose(lower);
+    if (upper != lower && mix > 0.0f)
+        mixInto(result, framePose(upper), mix);
 
     std::vector<aiMatrix4x4> local(bones.size());
     for (size_t i = 0; i < bones.size(); i++)
     {
-        const std::array<float, 6>& value = first[i];
-        aiMatrix4x4 rotation;
-        rotation.FromEulerAnglesXYZ(value[3], value[4], value[5]);
-        aiVector3D position(value[0], value[1], value[2]);
-        if (blended)
-        {
-            // positions mixed straight, angles through quaternions
-            const std::array<float, 6>& other = second[i];
-            aiMatrix4x4 otherRotation;
-            otherRotation.FromEulerAnglesXYZ(other[3], other[4], other[5]);
-            aiQuaternion mixed;
-            aiQuaternion::Interpolate(mixed, aiQuaternion(aiMatrix3x3(rotation)), aiQuaternion(aiMatrix3x3(otherRotation)), mix);
-            rotation = aiMatrix4x4(mixed.GetMatrix());
-            position = position + (aiVector3D(other[0], other[1], other[2]) - position) * mix;
-        }
-        local[i] = rotation;
-        local[i].a4 = position.x;
-        local[i].b4 = position.y;
-        local[i].c4 = position.z;
+        local[i] = aiMatrix4x4(result.rotation[i].GetMatrix());
+        local[i].a4 = result.position[i].x;
+        local[i].b4 = result.position[i].y;
+        local[i].c4 = result.position[i].z;
     }
     return local;
 }

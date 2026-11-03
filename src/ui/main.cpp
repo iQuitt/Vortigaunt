@@ -42,6 +42,14 @@
 #include "core/extractors/xfs/XfsExtractor.h"
 #include "core/extractors/unity/UnityFsExtractor.h"
 
+#ifdef _WIN32
+extern "C"
+{
+__declspec(dllexport) unsigned long NvOptimusEnablement = 1;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
+
 int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);

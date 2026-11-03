@@ -26,73 +26,80 @@ constexpr int kWeaponLow = 70;      // weapon grey range
 constexpr int kWeaponHigh = 236;
 constexpr float kSelectedGain = 1.1f;
 constexpr int kGlow = 210;          // the selected one's halo at its brightest
-// the game's 640hud letters, upright: coverage 0-f in nine rows
+// 640hud glyph coverage (0-f), 8 rows; missing glyphs built from parts
 struct Letter
 {
     char ch;
-    float advance;
+    int advance;
     const char* rows;
 };
 constexpr Letter kLetters[] = {
-    { '-', 6.5f, "0000000 0000000 0000000 07bbbb4 09ffff6 0244442 0000000 0000000 0000000" },
-    { '.', 3.5f, "0000 0000 0000 0000 0000 0000 07b4 09f6 0242" },
-    { '0', 8.5f, "007bbbb40 07dffffd4 09f84bff6 09f67dff6 09fdd8bf6 09ff829f6 09ffdbdf6 02bffff82 002444420" },
-    { '1', 5.5f, "0007b4 007df6 07dff6 024bf6 0009f6 0009f6 0009f6 0009f6 000242" },
-    { '2', 8.5f, "07bbbbb40 09fffffd4 024444bf6 007bbbdf6 07dffff82 09f844420 09fdbbbb4 09ffffff6 024444442" },
-    { '3', 8.5f, "07bbbbb40 09fffffd4 024444bf6 0007bbd82 0009fffd4 000244bf6 07bbbbdf6 09fffff82 024444420" },
-    { '4', 8.5f, "07b407b40 09f609f60 09f609f60 09fdbdfd4 09ffffff6 02444bf82 000009f60 000009f60 000002420" },
-    { '5', 8.5f, "07bbbbbb4 09ffffff6 09f844442 09fdbbb40 02bffffd4 002444bf6 07bbbbdf6 09fffff82 024444420" },
-    { '6', 8.5f, "007bbbbb4 07dfffff6 09f844442 09fdbbb40 09fffffd4 09f844bf6 09fdbbdf6 02bffff82 002444420" },
-    { '7', 8.5f, "07bbbbbb4 09ffffff6 02444bf82 00007d820 0007d8200 0009f6000 0009f6000 0009f6000 000242000" },
-    { '8', 8.5f, "007bbbb40 07dffffd4 09f844bf6 02bdbbd82 07dffffd4 09f844bf6 09fdbbdf6 02bffff82 002444420" },
-    { '9', 8.5f, "007bbbb40 07dffffd4 09f844bf6 09fdbbdf6 02bfffff6 002444bf6 07bbbbdf6 09fffff82 024444420" },
-    { 'A', 8.33f, "008ba300 01cff810 05cffb40 04fffd60 08eebf80 09feeeb3 2affffe8 0ef808fb 03420133" },
-    { 'B', 8.5f, "07bbbbb40 09fffffd4 024444bf6 07b4009f6 09fdbbd82 09f844bd4 09fdbbdf6 09fffff82 024444420" },
-    { 'C', 9.0f, "02abbbbb5 17efffff7 06ea20000 04fc00000 03ec10000 05cc40000 13cea8886 20affffff 100344444" },
-    { 'D', 10.0f, "06bbbbb80 27efffff3 3375029f7 24fc018e9 13ec108e8 45cc407d9 53cea8afb 50dfffffb 203444441" },
-    { 'E', 8.5f, "4bbbbbb5 5dfffff8 13300000 2dea7300 0dfff500 2be84200 29eb8886 09ffffff 02344444" },
-    { 'F', 8.5f, "07bbbbbb4 09ffffff6 024444442 07bbb4000 09fff6000 09f842000 09f600000 09f600000 024200000" },
-    { 'G', 8.0f, "07bbbbb5 3dfffff8 3bb30000 29d66664 0ef9eff9 2ab535ca 28d867bc 05ffffff 00344444" },
-    { 'H', 8.5f, "07b4007b4 09f6009f6 09f6009f6 09fdbbdf6 09ffffff6 09f844bf6 09f6009f6 09f6009f6 024200242" },
-    { 'I', 5.0f, "4b8 6ea 6da 3ec 3ee 3bd 3ad 0bf 023" },
-    { 'J', 8.5f, "0000007b4 0000009f6 0000009f6 0000009f6 0000009f6 07b4009f6 09fdbbdf6 02bffff82 002444420" },
-    { 'K', 8.5f, "07b4007b4 09f607d82 09f67d820 09fdd8200 09fff6000 09f8bd400 09f62bd40 09f602bd4 024200242" },
-    { 'L', 7.0f, "1a80000 3dc2000 4bb3000 2cd3000 0df2000 2ae5000 29eb863 09ffff7 0234442" },
-    { 'M', 9.5f, "ba2009b80 df923dfb2 cfc56efb3 dfea8ffd3 dffedfff2 beeffefd5 9dbffecd7 9f7efbaf7 232232332" },
-    { 'N', 8.5f, "1bb405b80 1cfb26da2 2aff86da3 2affd8ec2 0afefefe1 09facffd4 06e94efd5 06fa09ff5 013200342" },
-    { 'O', 10.0f, "05bbbbb80 2cffffff3 2ae6029e7 2ad6018e8 0af6008e7 09f7008e8 26fd88afb 03ffffffa 102344441" },
-    { 'P', 8.0f, "4bbbbb92 5dfffff6 266208f9 2dd648fc 0efffffb 2bea8873 29d70000 09f70000 02320000" },
-    { 'Q', 8.5f, "007bbbb40 07dffffd4 09f844bf6 09f6009f6 09f6009f6 09f67bdf6 09fddfff6 02bfffff6 002444442" },
-    { 'R', 9.25f, "09bbbbb60 0bfffffc2 048404bd5 07ea45bd6 07efffff3 07dc89df6 04eb117e9 02fe007f9 003300132" },
-    { 'S', 9.0f, "05bbbbba0 1cfffffc2 2ae600000 29febba50 04dfffff1 000002be6 048888ce7 06ffffff5 013444420" },
-    { 'T', 8.5f, "07bbbbbb4 09ffffff6 024bf8442 0009f6000 0009f6000 0009f6000 0009f6000 0009f6000 000242000" },
-    { 'U', 8.5f, "07b4007b4 09f6009f6 09f6009f6 09f6009f6 09f6009f6 09f6009f6 09fdbbdf6 02bffff82 002444420" },
-    { 'V', 8.5f, "07b4007b4 09f6009f6 09f6009f6 09f6009f6 02bd47d82 009f69f60 002bdd820 0009ff600 000244200" },
-    { 'W', 10.5f, "07b400007b4 09f600009f6 09f600009f6 09f67b409f6 09f69f609f6 09fddfdbdf6 09ffffffff6 02bf84bff82 00242024420" },
-    { 'X', 8.5f, "07b4007b4 02bd47d82 002bdd820 0009ff600 0009ff600 007d8bd40 07d822bd4 09f6009f6 024200242" },
-    { 'Y', 8.0f, "09b72ab 05debed 019fff9 003efd6 0008ec1 0007d92 0004eb2 0002fe0 0000330" },
-    { 'Z', 8.5f, "07bbbbbb4 09ffffff6 02444bf82 00007d820 0007d8200 007d82000 07dfdbbb4 09ffffff6 024444442" },
+    { '-', 7, "0 0 0 03ffffb 07ffff8 0 0 0" },
+    { '.', 4, "0 0 0 0 0 0 0af6 0ef3" },
+    { '0', 9, "09fffffc 2fd889fd 7fa004fc 09f6007f9 0df000af6 0fd000df 05ff99afd 03ffffff7" },
+    { '1', 6, "006d7 07ff6 02adf2 000ff 005fe 007fb 000bf7 000ef4" },
+    { '2', 9, "09fffffc 08d889fd 000004fc 00086bff3 00dffff8 0fd4 05ff98886 03ffffff9" },
+    { '3', 9, "09fffffc 088889fd 000004fc 00488bfa 00cfffd 000000df 06888afd 07ffffff7" },
+    { '4', 9, "000bdd 00afff 05fffd 00ffffa 0efedf6 8ffeffe 0dfffffd 00008fd" },
+    { '5', 9, "07efffff 0df98988 2fc 06feccc9 00bdddff 000000ee 009999afc 03fffffe5" },
+    { '6', 9, "09fffffc 2fd88884 7fa 09f98883 0dffffd2 0fd000df 05ff99afd 03ffffff7" },
+    { '7', 9, "0cccccc9 0ffffffa 000005fc 000009f6 0003fa 0006f6 000af3 000df" },
+    { '8', 9, "09fffffc 2fd889fd 7fa004fc 08fd77ef3 0cfffffd 0fd000df 05ff99afd 03ffffff7" },
+    { '9', 9, "09fffffc 2fd889fd 7fa004fc 09f6007f9 07fffffff6 000000df 088888afd 09ffffff7" },
+    { 'A', 8, "002ddb 00affd 02ffff 009ffff 00ff9ff 08ffcff 00ffffff5 08fe00ff4" },
+    { 'B', 9, "0cccccc4 0ffffff8 48600cf8 08fd77ef3 0cfffffd 0ff005fb 02ff77cf9 06ffffff4" },
+    { 'C', 9, "03dfffff6 0af98888 0ff 00fc 06fa 00ff2 00cfb9999 00afffffd" },
+    { 'D', 9, "07fffffd 058888ee 0bd002fd 00fc006f9 06fa009f6 08f700cf 00cfb99ff 00efffff8" },
+    { 'E', 9, "09cccccc 0cfffffe 044 05fe88 08fffb 0bf743 00ff98886 02ffffff9" },
+    { 'F', 8, "0cccccc9 0ffffffa 243 08fc76 0cfff8 0ff54 02fd 06fa" },
+    { 'G', 9, "08ccccc6 6ffffff7 9f9 0bf77777 0ffdfffc 4fd349f8 06fd77df4 07ffffff" },
+    { 'H', 9, "0cc003c9 0fe007fa 6fc00af7 08fb77df4 0cffffff 0ff547fc 02fd007f9 06fa00af6" },
+    { 'I', 4, "06d7 09f6 0df2 00ff 05fe 07fb 00bf7 00ef4" },
+    { 'J', 9, "000003c9 000007fa 000004fc 0000007f9 000000af6 0fd000df 05ff99afd 03ffffff7" },
+    { 'K', 9, "00aa008 05fc0ae 07f7bed 00bfeec3 00ffed6 04fdcec4 006f907cc 00af8005d" },
+    { 'L', 8, "0bb 2fb 8f8 0bf4 0ff 4ff 07ff885 09ffff9" },
+    { 'M', 10, "03dd0008da 06ff602ff9 09ff80cff6 00cffa6fff2 00fffedfff 04fdfffefc 008f9fffbfa 00af7efbaf7" },
+    { 'N', 9, "09c800cc 0dfe03fc 0fff58fa 04fffaaf5 08ffffff3 0bf7ffff 00ef2bffc 00fe05ff7" },
+    { 'O', 9, "09fffffc 2fd889fd 7fa004fc 09f6007f9 0df000af6 0fd000df 05ff99afd 03ffffff7" },
+    { 'P', 9, "00dddddc4 03ffffff5 05a600ff4 00bf856ff 00ffffffa 02fd6664 006fb 009f7" },
+    { 'Q', 9, "09fffffc 2fd889fd 7fa004fc 09f6007f9 0df000af6 0fd04adf 05ff9cffd 03fffffff9" },
+    { 'R', 9, "06dddddb 08ffffff 09a002fe 00ff449fa 04ffffff4 08fb66ff2 00cf500ff 00ef003fd" },
+    { 'S', 9, "07efffff 0df98988 2fc 06feccc9 00bdddff 000000ee 009999afc 03fffffe5" },
+    { 'T', 8, "0cccccc9 0ffffffa 000bf8 0000ff 0002ff 0004fa 00006f5 0000bf5" },
+    { 'U', 9, "0cc003c9 0fe007fa 7fa004fc 09f6007f9 0df000af6 0fd000df 05ff99afd 03ffffff7" },
+    { 'V', 9, "0aa2006a6 2ff502ff8 0ff70eff3 00ffa4fff 00ffffff4 006ffff9 0000fff9 0000ffa4" },
+    { 'W', 9, "0c70009a 0fb002ef 5fd000ff 09f6005fb 0fd3bc9f8 0fcbfebf4 40fffbdff2 00ef808fb" },
+    { 'X', 9, "0df302ee5 09fa0cf8 01efcf8 00bfee3 00cfee3 05fdcec4 09f7007fa 0df2003ec" },
+    { 'Y', 8, "0df32ee5 09f8cf8 07fffb 000efe 000df5 000ed 0005fc 0007f9" },
+    { 'Z', 9, "09cccccc 0cfffffe 000005fe 00004fd2 0004fc2 004fc2 02ff98886 02ffffff9" },
 };
-constexpr float kSpace = 5.0f;
-constexpr float kLean = 0.3f;       // italic lean per row
-constexpr int kNameLeft = 10, kNameTop = 33, kNameRows = 9, kNameBaseRow = 7;
+// kerning pairs
+struct LetterPair
+{
+    const char* pair;
+    int change;
+};
+constexpr LetterPair kPairs[] = { { "AN", 1 }, { "C4", 1 }, { "DA", 1 }, { "EC", -1 }, { "EE", -1 }, { "HE", 1 }, { "LA", 1 }, { "LE", -1 }, { "MA", 1 }, { "RY", 1 }, { "SK", -1 } };
+constexpr int kSpace = 3;
+constexpr int kLean[] = { 2, 2, 2, 1, 1, 1, 0, 0 };  // italic lean per row
+constexpr int kNameLeft = 10, kNameTop = 33;
 
 // the name's coverage and its box
 std::vector<float> nameCover(const QString& label, QRect& box)
 {
     const int w = hudicon::kCellWidth;
-    std::vector<float> upright(kNameRows * w, 0.0f);
-    float pen = kNameLeft;
-    for (const QChar c : label)
+    std::vector<float> cover(w * hudicon::kCellHeight, 0.0f);
+    box = QRect();
+    int pen = kNameLeft;
+    for (qsizetype i = 0; i < label.size(); ++i)
     {
-        const char ch = c.toUpper().toLatin1();
+        const char ch = label[i].toUpper().toLatin1();
         const Letter* letter = std::find_if(std::begin(kLetters), std::end(kLetters), [ch](const Letter& l) { return l.ch == ch; });
         if (letter == std::end(kLetters))
         {
             pen += kSpace;
             continue;
         }
-        const int left = static_cast<int>(std::lround(pen)) - 1;
         int row = 0, column = 0;
         for (const char* p = letter->rows; *p; ++p)
         {
@@ -102,27 +109,19 @@ std::vector<float> nameCover(const QString& label, QRect& box)
                 column = 0;
                 continue;
             }
-            const int x = left + column++;
+            const int x = pen - 1 + kLean[row] + column++;
             const float v = (*p <= '9' ? *p - '0' : *p - 'a' + 10) / 15.0f;
-            if (x >= 0 && x < w) upright[row * w + x] = std::max(upright[row * w + x], v);
+            if (v <= 0 || x < 0 || x >= w) continue;
+            float& pixel = cover[(kNameTop + row) * w + x];
+            pixel = std::max(pixel, v);
+            box |= QRect(x, kNameTop + row, 1, 1);
         }
         pen += letter->advance;
-    }
-    std::vector<float> cover(w * hudicon::kCellHeight, 0.0f);
-    box = QRect();
-    for (int row = 0; row < kNameRows; ++row)
-    {
-        const float shift = (kNameBaseRow - row) * kLean;
-        for (int x = 0; x < w; ++x)
+        if (i + 1 < label.size())
         {
-            const float u = x - shift;
-            const int u0 = static_cast<int>(std::floor(u));
-            const float f = u - u0;
-            auto at = [&](int i) { return i >= 0 && i < w ? upright[row * w + i] : 0.0f; };
-            const float v = at(u0) * (1 - f) + at(u0 + 1) * f;
-            if (v <= 0) continue;
-            cover[(kNameTop + row) * w + x] = v;
-            box |= QRect(x, kNameTop + row, 1, 1);
+            const char next = label[i + 1].toUpper().toLatin1();
+            for (const LetterPair& pair : kPairs)
+                if (pair.pair[0] == ch && pair.pair[1] == next) pen += pair.change;
         }
     }
     return cover;

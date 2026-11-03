@@ -8,12 +8,15 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
 // from studio.h
 constexpr int STUDIO_NF_FLATSHADE = 0x0001;
 constexpr int STUDIO_NF_CHROME = 0x0002;
+constexpr int STUDIO_NF_FULLBRIGHT = 0x0004;
+constexpr int STUDIO_NF_MIPMAPS = 0x0008;
 constexpr int STUDIO_NF_ADDITIVE = 0x0020;
 constexpr int STUDIO_NF_MASKED = 0x0040;
 
@@ -46,6 +49,7 @@ struct StudioTriVertex
 struct StudioMesh
 {
     int texture = -1;                       
+    int skinRef = -1;  // index into skinFamilies
     std::vector<StudioTriVertex> triangles; 
 };
 
@@ -78,6 +82,7 @@ struct StudioEvent
     int frame = 0;
     int event = 0;
     std::string options;
+    int type = 0;
 };
 
 struct StudioHitbox
@@ -94,6 +99,7 @@ struct StudioBoneController
     float start = 0.0f;
     float end = 0.0f;
     int index = 0;  // 4 is the mouth
+    int rest = 0;
 };
 
 struct StudioSequence
@@ -110,26 +116,51 @@ struct StudioSequence
     int activityWeight = 0;
     int motionType = 0;       // the motion flags the sequence moves the model by
     aiVector3D linearMovement;
+    aiVector3D boundsMin, boundsMax;
     int entryNode = 0, exitNode = 0, nodeFlags = 0;
     std::vector<StudioEvent> events;
 };
+
+// engine limits
+constexpr int kStudioMaxVertices = 2048;  // per submodel, vertices and normals
+constexpr int kStudioMaxAttachments = 4;  // the engine uses only the first four
 
 class StudioModel
 {
 public:
     bool Load(const std::string& path);
     const std::string& GetError() const { return m_error; }
+    // writes the edits over the source file's layout; nameT.mdl and name01.mdl files go along
+    bool Save(const std::string& path, std::string& error) const;
+    const std::string& GetPath() const { return m_path; }
 
-    // blend runs over all the blends of the sequence, the first at 0 and the last at 1; two
-    // neighbours are mixed. 0.5 is an aim straight ahead
+    // rotates the root bones by degrees about X, Y, Z; animation follows
+    void Rotate(const aiVector3D& degrees);
+    // moves the root bones
+    void Move(const aiVector3D& offset);
+    enum ScaleParts
+    {
+        ScaleMeshes = 1,
+        ScaleHitboxes = 2,
+        ScaleSequenceBoxes = 4,
+        ScaleBones = 8,
+        ScaleEyePosition = 16,
+        ScaleAttachments = 32,
+        ScaleEverything = 63
+    };
+    void Scale(float factor, int parts);
+
+
+    bool MakeDoubleSided(float thickness, bool rims, int texture, int& added, std::string& error);
+
     std::vector<aiMatrix4x4> BoneTransforms(int sequence, int frame, float blend = 0.0f) const;
-    // each bone relative to its parent
-    std::vector<aiMatrix4x4> LocalBoneTransforms(int sequence, int frame, float blend = 0.0f) const;
+    
+
+    std::vector<aiMatrix4x4> LocalBoneTransforms(int sequence, int frame, float blend = 0.0f,
+                                                 const std::vector<std::array<float, 6>>* adjust = nullptr, float between = 0.0f) const;
     // position and angles of every bone as stored, in one blend of a sequence; sequence -1 for the rest pose
     std::vector<std::array<float, 6>> AnimationValues(int sequence, int blendIndex, int frame) const;
 
-    // writes the model with the vertices and normals of one bone moved by transform, given in that
-    // bone's space; textures kept in a separate nameT.mdl go along when the name changes
     static bool TransformBoneVertices(const std::string& inputPath, const std::string& outputPath, int bone,
                                       const aiMatrix4x4& transform, std::string& error);
     // adds flags to every texture of the file
@@ -163,6 +194,9 @@ private:
     bool ReadTextures(const std::vector<uint8_t>& file);
 
     std::string m_error;
+    std::string m_path;
     std::vector<SequenceData> m_sequenceData;
-    std::vector<std::vector<uint8_t>> m_groupFiles;  
+    // source file and its animation files, shared between edit copies
+    std::vector<std::shared_ptr<const std::vector<uint8_t>>> m_groupFiles;
+    std::shared_ptr<const std::vector<uint8_t>> m_textureFile;  // nameT.mdl
 };

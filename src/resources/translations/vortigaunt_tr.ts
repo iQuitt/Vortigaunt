@@ -344,338 +344,6 @@ Başarılı: %1 / %2</translation>
     </message>
 </context>
 <context>
-    <name>AutoRigDialog</name>
-    <message>
-        <source>GoldSrc Auto-Rig (Beta)</source>
-        <translation>GoldSrc Otomatik Rig</translation>
-    </message>
-    <message>
-        <source>Input Mesh (with skeleton)</source>
-        <translation>Girdi Mesh (iskelet ile)</translation>
-    </message>
-    <message>
-        <source>Select SMD</source>
-        <translation>SMD Seç</translation>
-    </message>
-    <message>
-        <source>Reference Model (optional)</source>
-        <translation>Referans Model (isteğe bağlı)</translation>
-    </message>
-    <message>
-        <source>An already rigged SMD to copy the rigging from</source>
-        <translation>Rig&apos;i kopyalanacak, önceden riglenmiş bir SMD</translation>
-    </message>
-    <message>
-        <source>Rig by example. Every vertex takes the bone of the closest point on this model&apos;s surface, so the result inherits how the original artist rigged it: which helper bones they deformed with, where they put the seams.
-
-Bones are matched by name, so the reference can be any model whose skeleton names agree - Half-Life, Counter-Strike and CSO all use Biped names.
-
-Whatever the reference does not cover - a cape, a backpack, hair it never had - falls back to Bone Heat Diffusion. Leave empty to rig from geometry alone.
-
-The mesh has to be sitting on the skeleton already: the closer the two models overlap, the more of the rigging carries over.</source>
-        <translation>Örnekle rigleme. Her vertex, bu modelin yüzeyindeki en yakın noktanın kemiğini alır; böylece sonuç, orijinal sanatçının nasıl riglediğini devralır: hangi yardımcı kemiklerle deforme ettiğini, dikişleri nereye koyduğunu.
-
-Kemikler adlarına göre eşleşir, bu yüzden referans, iskelet adları uyan herhangi bir model olabilir - Half-Life, Counter-Strike ve CSO hepsi Biped adlarını kullanır.
-
-Referansın kapsamadığı her şey - pelerin, sırt çantası, onda hiç olmayan saç - Bone Heat Diffusion&apos;a döner. Yalnızca geometriden riglemek için boş bırakın.
-
-Mesh zaten iskeletin üzerinde olmalı: iki model ne kadar çok örtüşürse, rig&apos;in o kadar çoğu aktarılır.</translation>
-    </message>
-    <message>
-        <source>Output SMD</source>
-        <translation>Çıktı SMD</translation>
-    </message>
-    <message>
-        <source>Output rigged SMD path</source>
-        <translation>Riglenmiş SMD çıktı yolu</translation>
-    </message>
-    <message>
-        <source>Options</source>
-        <translation>Seçenekler</translation>
-    </message>
-    <message>
-        <source>Manual Scale:</source>
-        <translation>Manuel Ölçek:</translation>
-    </message>
-    <message>
-        <source>Write the reference model&apos;s skeleton</source>
-        <translation>Referans modelin iskeletini yaz</translation>
-    </message>
-    <message>
-        <source>Give the output the skeleton of the reference model instead of the one the mesh came in with. This is what porting a model needs: the animations of the target game are built for the target game&apos;s skeleton, so a model carrying its old skeleton cannot play them - studiomdl refuses it with &quot;illegal parent bone replacement&quot;.
-
-Turn this off only when the mesh is already on the skeleton you want to keep and the reference is there just to improve the rigging.
-
-Has no effect without a reference model.</source>
-        <translation>Çıktıya, mesh&apos;in geldiği iskelet yerine referans modelin iskeletini ver. Model taşımak bunu gerektirir: hedef oyunun animasyonları o oyunun iskeleti için yapılmıştır, eski iskeletini taşıyan bir model onları oynatamaz - studiomdl &quot;illegal parent bone replacement&quot; hatasıyla reddeder.
-
-Bunu yalnızca mesh zaten korumak istediğiniz iskeletin üzerindeyse ve referans sadece rig&apos;i iyileştirmek için varsa kapatın.
-
-Referans model olmadan etkisi yoktur.</translation>
-    </message>
-    <message>
-        <source>Enable if mesh is oriented differently (e.g., from Blender)</source>
-        <translation>Mesh farklı yönlendirilmişse etkinleştirin (örn. Blender&apos;dan)</translation>
-    </message>
-    <message>
-        <source>Bone Heat Diffusion (recommended)</source>
-        <translation>Bone Heat Diffusion (önerilen)</translation>
-    </message>
-    <message>
-        <source>Solves smooth weights across the mesh surface and collapses them to one bone per vertex, which is what Blender does with Automatic Weights followed by Limit Total 1. It knows which bones a vertex can actually see, so weights cannot leak between limbs. Uncheck to use the older nearest-bone matching.</source>
-        <translation>Mesh yüzeyi boyunca yumuşak ağırlıkları çözer ve her vertex için tek kemiğe indirger; Blender&apos;da Automatic Weights ardından Limit Total 1 yapmakla aynıdır. Bir vertex&apos;in hangi kemikleri gerçekten görebildiğini bildiği için ağırlıklar uzuvlar arasında sızamaz. Eski en yakın kemik eşleştirmesi için işareti kaldırın.</translation>
-    </message>
-    <message>
-        <source>Snap seams to joints</source>
-        <translation>Dikişleri eklemlere hizala</translation>
-    </message>
-    <message>
-        <source>Cuts the boundary between two bones on the plane through the joint they share. GoldSrc binds every vertex to a single bone, so a crease at the joint is unavoidable; it is smallest when the cut sits on the pivot.</source>
-        <translation>İki kemik arasındaki sınırı, paylaştıkları eklemden geçen düzlemde keser. GoldSrc her vertex&apos;i tek bir kemiğe bağlar, bu yüzden eklemde bir kırışık kaçınılmazdır; kesim pivotta olduğunda en küçük olur.</translation>
-    </message>
-    <message>
-        <source>Use Hierarchy Depth Penalty (Enable for Player Models)</source>
-        <translation>Hiyerarşi Derinlik Cezası Kullan (Oyuncu Modelleri için Etkinleştirin)</translation>
-    </message>
-    <message>
-        <source>Prevents helper bones from stealing vertices. Uncheck this for Hand/Viewmodel meshes.</source>
-        <translation>Yardımcı kemiklerin vertexleri çalmasını önler. El/Viewmodel meshleri için bu seçeneğin işaretini kaldırın.</translation>
-    </message>
-    <message>
-        <source>Log</source>
-        <translation>Günlük</translation>
-    </message>
-    <message>
-        <source>Bones Configuration</source>
-        <translation>Kemik Yapılandırması</translation>
-    </message>
-    <message>
-        <source>Search bone...</source>
-        <translation>Kemik ara...</translation>
-    </message>
-    <message>
-        <source>Skeleton Hierarchy</source>
-        <translation>İskelet Hiyerarşisi</translation>
-    </message>
-    <message>
-        <source>Select All</source>
-        <translation>Tümünü Seç</translation>
-    </message>
-    <message>
-        <source>Deselect All</source>
-        <translation>Tüm Seçimi Kaldır</translation>
-    </message>
-    <message>
-        <source>No skeleton loaded</source>
-        <translation>İskelet yüklenmedi</translation>
-    </message>
-    <message>
-        <source>Tip</source>
-        <translation>İpucu</translation>
-    </message>
-    <message>
-        <source>Click to view full size</source>
-        <translation>Tam boyutta görmek için tıklayın</translation>
-    </message>
-    <message>
-        <source>Make sure your mesh is properly fitted to the bone like this image. Since Auto Rig is in beta, errors may occur.</source>
-        <translation>Meshinizin bu görseldeki gibi kemiğe düzgün oturduğundan emin olun. Otomatik Rig beta aşamasında olduğundan hatalar oluşabilir.</translation>
-    </message>
-    <message>
-        <source>Select Reference Model</source>
-        <translation>Referans Model Seç</translation>
-    </message>
-    <message>
-        <source>SMD Files (*.smd);;All Files (*)</source>
-        <translation>SMD Dosyaları (*.smd);;Tüm Dosyalar (*)</translation>
-    </message>
-    <message>
-        <source>Auto-Rig Tip - Full Preview</source>
-        <translation>Otomatik Rig İpucu - Tam Önizleme</translation>
-    </message>
-    <message>
-        <source>Excluded automatically: %1</source>
-        <translation>Otomatik hariç tutuldu: %1</translation>
-    </message>
-    <message>
-        <source>%1 / %2 bones active</source>
-        <translation>%1 / %2 kemik aktif</translation>
-    </message>
-    <message>
-        <source>Flip Y/Z axes</source>
-        <translation>Y/Z eksenlerini çevir</translation>
-    </message>
-    <message>
-        <source>Rig Mesh</source>
-        <translation>Meshi Rigla</translation>
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation>Gözat...</translation>
-    </message>
-</context>
-<context>
-    <name>HandsWorkspace</name>
-    <message>
-        <source>Open v_ model</source>
-        <translation>v_ modeli aç</translation>
-    </message>
-    <message>
-        <source>Open the view model whose hands are replaced</source>
-        <translation>Elleri değiştirilecek görünüm modelini aç</translation>
-    </message>
-    <message>
-        <source>New hands</source>
-        <translation>Yeni eller</translation>
-    </message>
-    <message>
-        <source>Build</source>
-        <translation>Derle</translation>
-    </message>
-    <message>
-        <source>Put the new hands in the model, compile it with studiomdl and show it</source>
-        <translation>Yeni elleri modele koy, studiomdl ile derle ve göster</translation>
-    </message>
-    <message>
-        <source>Save as</source>
-        <translation>Farklı kaydet</translation>
-    </message>
-    <message>
-        <source>Write the model with the new hands</source>
-        <translation>Modeli yeni elleriyle kaydet</translation>
-    </message>
-    <message>
-        <source>View model</source>
-        <translation>Görünüm modeli</translation>
-    </message>
-    <message>
-        <source>Open v_ model...</source>
-        <translation>v_ modeli aç...</translation>
-    </message>
-    <message>
-        <source>The parts whose hands are replaced; a part with no hands found is replaced whole</source>
-        <translation>Elleri değiştirilecek parçalar; el bulunamayan bir parça tümüyle değiştirilir</translation>
-    </message>
-    <message>
-        <source>Replace the hands in:</source>
-        <translation>Ellerin değiştirileceği yer:</translation>
-    </message>
-    <message>
-        <source>Build and show</source>
-        <translation>Derle ve göster</translation>
-    </message>
-    <message>
-        <source>Show</source>
-        <translation>Göster</translation>
-    </message>
-    <message>
-        <source>Original</source>
-        <translation>Orijinal</translation>
-    </message>
-    <message>
-        <source>Play</source>
-        <translation>Oynat</translation>
-    </message>
-    <message>
-        <source>Animation:</source>
-        <translation>Animasyon:</translation>
-    </message>
-    <message>
-        <source>v_ model</source>
-        <translation>v_ modeli</translation>
-    </message>
-    <message>
-        <source>GoldSrc model (*.mdl)</source>
-        <translation>GoldSrc modeli (*.mdl)</translation>
-    </message>
-    <message>
-        <source>Choose the new hands, an SMD or a view model to take them from; they are remembered</source>
-        <translation>Yeni elleri seç: bir SMD ya da ellerinin alınacağı bir görünüm modeli; hatırlanır</translation>
-    </message>
-    <message>
-        <source>Choose new hands...</source>
-        <translation>Yeni elleri seç...</translation>
-    </message>
-    <message>
-        <source>A reference SMD with its textures next to it, or a v_ model whose hands are taken. Any GoldSrc rig works: the arms are matched by their shape and the hands fitted joint by joint.</source>
-        <translation>Dokuları yanında olan bir referans SMD ya da elleri alınacak bir v_ modeli. Her GoldSrc iskeleti olur: kollar şekillerine göre eşleştirilir, eller eklem eklem oturtulur.</translation>
-    </message>
-    <message>
-        <source>Open a v_ model from the ribbon, choose the new hands and build.</source>
-        <translation>Şeritten bir v_ modeli açın, yeni elleri seçin ve derleyin.</translation>
-    </message>
-    <message>
-        <source>Choose new hands</source>
-        <translation>Yeni elleri seç</translation>
-    </message>
-    <message>
-        <source>Hands (*.smd *.mdl);;SMD model (*.smd);;GoldSrc model (*.mdl)</source>
-        <translation>Eller (*.smd *.mdl);;SMD modeli (*.smd);;GoldSrc modeli (*.mdl)</translation>
-    </message>
-    <message>
-        <source>%1 (%2 of %3 triangles are hands)</source>
-        <translation>%1 (%3 üçgenin %2 tanesi el)</translation>
-    </message>
-    <message>
-        <source>%1 (%2 triangles, no hands)</source>
-        <translation>%1 (%2 üçgen, el yok)</translation>
-    </message>
-    <message>
-        <source>The model has to be compiled with studiomdl. Set the location of studiomdl in Settings.</source>
-        <translation>Modelin studiomdl ile derlenmesi gerekir. studiomdl&apos;nin yerini Ayarlar&apos;dan belirtin.</translation>
-    </message>
-    <message>
-        <source>Could not make a folder to build in.</source>
-        <translation>Derleme için klasör oluşturulamadı.</translation>
-    </message>
-    <message>
-        <source>studiomdl could not compile the model:
-
-%1</source>
-        <translation>studiomdl modeli derleyemedi:
-
-%1</translation>
-    </message>
-    <message numerus="yes">
-        <source>%n triangle(s) of the old hands out</source>
-        <translation>
-            <numerusform>Eski ellerden %n üçgen çıkarıldı</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n triangle(s) of the new hands in</source>
-        <translation>
-            <numerusform>Yeni ellerden %n üçgen eklendi</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Fitted onto the model&apos;s arms by their shape: %1 bones.</source>
-        <translation>Modelin kollarına şekline göre oturtuldu: %1 kemik.</translation>
-    </message>
-    <message>
-        <source>The bone names did not match: each vertex took the bone of the old hands where it lies.</source>
-        <translation>Kemik adları eşleşmedi: her köşe, bulunduğu yerdeki eski elin kemiğini aldı.</translation>
-    </message>
-    <message>
-        <source>%1 of %2 bones matched by name.</source>
-        <translation>%2 kemiğin %1 tanesi adla eşleşti.</translation>
-    </message>
-    <message numerus="yes">
-        <source>%n warning(s) in the console</source>
-        <translation>
-            <numerusform>Konsolda %n uyarı</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Save v_ model</source>
-        <translation>v_ modeli kaydet</translation>
-    </message>
-    <message>
-        <source>Could not write %1.</source>
-        <translation>%1 yazılamadı.</translation>
-    </message>
-</context>
-<context>
     <name>HudSpriteDialog</name>
     <message>
         <source>Side</source>
@@ -1518,6 +1186,16 @@ dönüştür</translation>
         <translation>Hareketleri bir GoldSrc modelinin iskeletine retarget et...</translation>
     </message>
     <message>
+        <source>Look through GoldSrc models: sequences, parts, textures, skeleton...</source>
+        <translation>GoldSrc modellerini incele: sequence&apos;lar, parçalar, dokular, iskelet...</translation>
+    </message>
+    <message>
+        <source>Model
+viewer</source>
+        <translation>Model
+görüntüleyici</translation>
+    </message>
+    <message>
         <source>Animation Retargeting</source>
         <translation>Animasyon Retargeting</translation>
     </message>
@@ -2174,6 +1852,10 @@ The operation is picked from the file type.</source>
 </translation>
     </message>
     <message>
+        <source>Model Viewer</source>
+        <translation>Model Görüntüleyici</translation>
+    </message>
+    <message>
         <source>HUD Sprite</source>
         <translation>HUD Sprite</translation>
     </message>
@@ -2269,16 +1951,1044 @@ The operation is picked from the file type.</source>
 <context>
     <name>ModelViewerWindow</name>
     <message>
-        <source>Sequence:</source>
-        <translation>Sequence:</translation>
+        <source>Open a model.</source>
+        <translation>Bir model açın.</translation>
     </message>
     <message>
-        <source>Play</source>
-        <translation>Oynat</translation>
+        <source>Sequences</source>
+        <translation>Sequence&apos;lar</translation>
     </message>
     <message>
-        <source>Could not read %1</source>
-        <translation>%1 okunamadı</translation>
+        <source>Textures</source>
+        <translation>Dokular</translation>
+    </message>
+    <message>
+        <source>Scene</source>
+        <translation>Sahne</translation>
+    </message>
+    <message>
+        <source>Bones</source>
+        <translation>Kemikler</translation>
+    </message>
+    <message>
+        <source>Attachments</source>
+        <translation>Attachment&apos;lar</translation>
+    </message>
+    <message>
+        <source>Hitboxes</source>
+        <translation>Hitbox&apos;lar</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>Dosya</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Kapat</translation>
+    </message>
+    <message>
+        <source>Skeleton</source>
+        <translation>İskelet</translation>
+    </message>
+    <message>
+        <source>Wireframe</source>
+        <translation>Tel kafes</translation>
+    </message>
+    <message>
+        <source>Ground</source>
+        <translation>Zemin</translation>
+    </message>
+    <message>
+        <source>Background colour...</source>
+        <translation>Arka plan rengi...</translation>
+    </message>
+    <message>
+        <source>Console</source>
+        <translation>Konsol</translation>
+    </message>
+    <message>
+        <source>Rocket Trail</source>
+        <translation>Roket İzi</translation>
+    </message>
+    <message>
+        <source>Grenade Smoke</source>
+        <translation>Bomba Dumanı</translation>
+    </message>
+    <message>
+        <source>Gib Blood</source>
+        <translation>Parça Kanı</translation>
+    </message>
+    <message>
+        <source>Model Rotate</source>
+        <translation>Model Dönsün</translation>
+    </message>
+    <message>
+        <source>Green Trail</source>
+        <translation>Yeşil İz</translation>
+    </message>
+    <message>
+        <source>Zombie Blood</source>
+        <translation>Zombi Kanı</translation>
+    </message>
+    <message>
+        <source>Orange Trail</source>
+        <translation>Turuncu İz</translation>
+    </message>
+    <message>
+        <source>Purple Trail</source>
+        <translation>Mor İz</translation>
+    </message>
+    <message>
+        <source>No Shade Light</source>
+        <translation>Gölgesiz Işık</translation>
+    </message>
+    <message>
+        <source>Hitbox Collision</source>
+        <translation>Hitbox Çarpışması</translation>
+    </message>
+    <message>
+        <source>Force Skylight</source>
+        <translation>Gökyüzü Işığını Zorla</translation>
+    </message>
+    <message>
+        <source>Cameras</source>
+        <translation>Kameralar</translation>
+    </message>
+    <message>
+        <source>Model Display</source>
+        <translation>Model Görünümü</translation>
+    </message>
+    <message>
+        <source>Body Parts</source>
+        <translation>Vücut Parçaları</translation>
+    </message>
+    <message>
+        <source>Model Data</source>
+        <translation>Model Verisi</translation>
+    </message>
+    <message>
+        <source>Bone Controllers</source>
+        <translation>Kemik Kontrolcüleri</translation>
+    </message>
+    <message>
+        <source>FPS:</source>
+        <translation>FPS:</translation>
+    </message>
+    <message>
+        <source>Drawn Polygons:</source>
+        <translation>Çizilen Poligonlar:</translation>
+    </message>
+    <message>
+        <source>Texture</source>
+        <translation>Doku</translation>
+    </message>
+    <message>
+        <source>Pose</source>
+        <translation>Poz</translation>
+    </message>
+    <message>
+        <source>Frame</source>
+        <translation>Kare</translation>
+    </message>
+    <message>
+        <source>Restart Sequence</source>
+        <translation>Sequence&apos;ı Baştan Başlat</translation>
+    </message>
+    <message>
+        <source>Previous Frame</source>
+        <translation>Önceki Kare</translation>
+    </message>
+    <message>
+        <source>Skip 5 Frames Earlier</source>
+        <translation>5 Kare Geri</translation>
+    </message>
+    <message>
+        <source>Play/Pause</source>
+        <translation>Oynat/Duraklat</translation>
+    </message>
+    <message>
+        <source>Skip 5 Frames Later</source>
+        <translation>5 Kare İleri</translation>
+    </message>
+    <message>
+        <source>Next Frame</source>
+        <translation>Sonraki Kare</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>Hız</translation>
+    </message>
+    <message>
+        <source>Load...</source>
+        <translation>Yükle...</translation>
+    </message>
+    <message>
+        <source>Close All</source>
+        <translation>Tümünü Kapat</translation>
+    </message>
+    <message>
+        <source>Take Screenshot...</source>
+        <translation>Ekran Görüntüsü Al...</translation>
+    </message>
+    <message>
+        <source>Asset</source>
+        <translation>Varlık</translation>
+    </message>
+    <message>
+        <source>Dock Widgets</source>
+        <translation>Paneller</translation>
+    </message>
+    <message>
+        <source>Reset Dock Widgets</source>
+        <translation>Panelleri Sıfırla</translation>
+    </message>
+    <message>
+        <source>Show Controls Bar</source>
+        <translation>Kontrol Çubuğunu Göster</translation>
+    </message>
+    <message>
+        <source>Show Timeline</source>
+        <translation>Zaman Çizelgesini Göster</translation>
+    </message>
+    <message>
+        <source>Previous Camera</source>
+        <translation>Önceki Kamera</translation>
+    </message>
+    <message>
+        <source>Next Camera</source>
+        <translation>Sonraki Kamera</translation>
+    </message>
+    <message>
+        <source>Center View</source>
+        <translation>Görünümü Ortala</translation>
+    </message>
+    <message>
+        <source>Center On Positive X</source>
+        <translation>Pozitif X&apos;e Ortala</translation>
+    </message>
+    <message>
+        <source>Center On Negative X</source>
+        <translation>Negatif X&apos;e Ortala</translation>
+    </message>
+    <message>
+        <source>Center On Positive Y</source>
+        <translation>Pozitif Y&apos;ye Ortala</translation>
+    </message>
+    <message>
+        <source>Center On Negative Y</source>
+        <translation>Negatif Y&apos;ye Ortala</translation>
+    </message>
+    <message>
+        <source>Center On Positive Z</source>
+        <translation>Pozitif Z&apos;ye Ortala</translation>
+    </message>
+    <message>
+        <source>Center On Negative Z</source>
+        <translation>Negatif Z&apos;ye Ortala</translation>
+    </message>
+    <message>
+        <source>Save View</source>
+        <translation>Görünümü Kaydet</translation>
+    </message>
+    <message>
+        <source>Restore View</source>
+        <translation>Görünümü Geri Yükle</translation>
+    </message>
+    <message>
+        <source>Dump Model Info...</source>
+        <translation>Model Bilgisini Kaydet...</translation>
+    </message>
+    <message>
+        <source>Arc Ball</source>
+        <translation>Yörünge</translation>
+    </message>
+    <message>
+        <source>First Person</source>
+        <translation>Birinci Şahıs</translation>
+    </message>
+    <message>
+        <source>Free Look</source>
+        <translation>Serbest Bakış</translation>
+    </message>
+    <message>
+        <source>Previous</source>
+        <translation>Önceki</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Sonraki</translation>
+    </message>
+    <message>
+        <source>Field Of View</source>
+        <translation>Görüş Açısı</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Varsayılan</translation>
+    </message>
+    <message>
+        <source>Pitch</source>
+        <translation>Eğim</translation>
+    </message>
+    <message>
+        <source>Yaw</source>
+        <translation>Sapma</translation>
+    </message>
+    <message>
+        <source>Center</source>
+        <translation>Merkez</translation>
+    </message>
+    <message>
+        <source>Distance</source>
+        <translation>Uzaklık</translation>
+    </message>
+    <message>
+        <source>Projection Mode</source>
+        <translation>İzdüşüm Modu</translation>
+    </message>
+    <message>
+        <source>Perspective</source>
+        <translation>Perspektif</translation>
+    </message>
+    <message>
+        <source>Origin</source>
+        <translation>Orijin</translation>
+    </message>
+    <message>
+        <source>Model</source>
+        <translation>Model</translation>
+    </message>
+    <message>
+        <source>Background</source>
+        <translation>Arka Plan</translation>
+    </message>
+    <message>
+        <source>Center On World Origin</source>
+        <translation>Dünya Orijinine Ortala</translation>
+    </message>
+    <message>
+        <source>Align On Ground</source>
+        <translation>Zemine Hizala</translation>
+    </message>
+    <message>
+        <source>Show Ground</source>
+        <translation>Zemini Göster</translation>
+    </message>
+    <message>
+        <source>Enable Texture</source>
+        <translation>Dokuyu Aç</translation>
+    </message>
+    <message>
+        <source>Mirror Model</source>
+        <translation>Modeli Yansıt</translation>
+    </message>
+    <message>
+        <source>Enable Tiling</source>
+        <translation>Döşemeyi Aç</translation>
+    </message>
+    <message>
+        <source>Tile Size</source>
+        <translation>Döşeme Boyutu</translation>
+    </message>
+    <message>
+        <source>Show Background</source>
+        <translation>Arka Planı Göster</translation>
+    </message>
+    <message>
+        <source>Background colour</source>
+        <translation>Arka plan rengi</translation>
+    </message>
+    <message>
+        <source>Orthographic</source>
+        <translation>Ortografik</translation>
+    </message>
+    <message>
+        <source>Model Viewer</source>
+        <translation>Model Görüntüleyici</translation>
+    </message>
+    <message>
+        <source>Skin %1</source>
+        <translation>Skin %1</translation>
+    </message>
+    <message>
+        <source>Mouth</source>
+        <translation>Ağız</translation>
+    </message>
+    <message>
+        <source>Controller %1</source>
+        <translation>Kontrolcü %1</translation>
+    </message>
+    <message>
+        <source>Transformation</source>
+        <translation>Dönüştürme</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Kaydet</translation>
+    </message>
+    <message>
+        <source>Save As...</source>
+        <translation>Farklı Kaydet...</translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation>Düzen</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>Geri Al</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>Yinele</translation>
+    </message>
+    <message>
+        <source>First Person Camera For View Models</source>
+        <translation>View Modellerde Birinci Şahıs Kamera</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Ses</translation>
+    </message>
+    <message>
+        <source>Play Sounds</source>
+        <translation>Sesleri Çal</translation>
+    </message>
+    <message>
+        <source>Ground Length</source>
+        <translation>Zemin Uzunluğu</translation>
+    </message>
+    <message>
+        <source>Open an image</source>
+        <translation>Bir resim aç</translation>
+    </message>
+    <message>
+        <source>Images (*.png *.bmp *.jpg *.tga)</source>
+        <translation>Resimler (*.png *.bmp *.jpg *.tga)</translation>
+    </message>
+    <message>
+        <source>Render Mode</source>
+        <translation>Çizim Modu</translation>
+    </message>
+    <message>
+        <source>Flat Shaded</source>
+        <translation>Düz Gölgeli</translation>
+    </message>
+    <message>
+        <source>Smooth Shaded</source>
+        <translation>Yumuşak Gölgeli</translation>
+    </message>
+    <message>
+        <source>Texture Shaded</source>
+        <translation>Dokulu</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation>Opaklık</translation>
+    </message>
+    <message>
+        <source>Backface Culling</source>
+        <translation>Arka Yüzleri Gizle</translation>
+    </message>
+    <message>
+        <source>Wireframe Overlay</source>
+        <translation>Tel Kafes Kaplama</translation>
+    </message>
+    <message>
+        <source>Draw Shadows</source>
+        <translation>Gölgeleri Çiz</translation>
+    </message>
+    <message>
+        <source>Fix Shadow Z Fighting</source>
+        <translation>Gölge Titremesini Düzelt</translation>
+    </message>
+    <message>
+        <source>Show Hitboxes</source>
+        <translation>Hitbox&apos;ları Göster</translation>
+    </message>
+    <message>
+        <source>Show Bones</source>
+        <translation>Kemikleri Göster</translation>
+    </message>
+    <message>
+        <source>Show Attachments</source>
+        <translation>Attachment&apos;ları Göster</translation>
+    </message>
+    <message>
+        <source>Show Eye Position</source>
+        <translation>Göz Konumunu Göster</translation>
+    </message>
+    <message>
+        <source>Show Bounding Box</source>
+        <translation>Sınır Kutusunu Göster</translation>
+    </message>
+    <message>
+        <source>Show Clipping Box</source>
+        <translation>Kırpma Kutusunu Göster</translation>
+    </message>
+    <message>
+        <source>Show Normals</source>
+        <translation>Normalleri Göster</translation>
+    </message>
+    <message>
+        <source>Show Axes</source>
+        <translation>Eksenleri Göster</translation>
+    </message>
+    <message>
+        <source>Show Player Hitbox</source>
+        <translation>Oyuncu Hitbox&apos;ını Göster</translation>
+    </message>
+    <message>
+        <source>Mirror On X Axis</source>
+        <translation>X Ekseninde Yansıt</translation>
+    </message>
+    <message>
+        <source>Mirror On Y Axis</source>
+        <translation>Y Ekseninde Yansıt</translation>
+    </message>
+    <message>
+        <source>Mirror On Z Axis</source>
+        <translation>Z Ekseninde Yansıt</translation>
+    </message>
+    <message>
+        <source>Show Crosshair</source>
+        <translation>Nişangahı Göster</translation>
+    </message>
+    <message>
+        <source>Show Guidelines</source>
+        <translation>Kılavuz Çizgileri Göster</translation>
+    </message>
+    <message>
+        <source>Show Off-screen Areas</source>
+        <translation>Ekran Dışı Alanları Göster</translation>
+    </message>
+    <message>
+        <source>Aspect Ratio</source>
+        <translation>En Boy Oranı</translation>
+    </message>
+    <message>
+        <source>Looping Mode</source>
+        <translation>Döngü Modu</translation>
+    </message>
+    <message>
+        <source>Always Loop</source>
+        <translation>Hep Döngüde</translation>
+    </message>
+    <message>
+        <source>Never Loop</source>
+        <translation>Hiç Döngü Yok</translation>
+    </message>
+    <message>
+        <source>Controls the viewer&apos;s looping mode. Default uses the sequence setting.</source>
+        <translation>Görüntüleyicinin döngü modu. Varsayılan, sequence&apos;ın kendi ayarını kullanır.</translation>
+    </message>
+    <message>
+        <source>Blends</source>
+        <translation>Blend&apos;ler</translation>
+    </message>
+    <message>
+        <source>Duration</source>
+        <translation>Süre</translation>
+    </message>
+    <message>
+        <source>Frames</source>
+        <translation>Kareler</translation>
+    </message>
+    <message>
+        <source>Standard</source>
+        <translation>Standart</translation>
+    </message>
+    <message>
+        <source>Counter-Strike</source>
+        <translation>Counter-Strike</translation>
+    </message>
+    <message>
+        <source>Properties</source>
+        <translation>Özellikler</translation>
+    </message>
+    <message>
+        <source>Is Looping</source>
+        <translation>Döngüde</translation>
+    </message>
+    <message>
+        <source>FPS</source>
+        <translation>FPS</translation>
+    </message>
+    <message>
+        <source>Activity</source>
+        <translation>Aktivite</translation>
+    </message>
+    <message>
+        <source>Activity Weight</source>
+        <translation>Aktivite Ağırlığı</translation>
+    </message>
+    <message>
+        <source>Linear Movement</source>
+        <translation>Doğrusal Hareket</translation>
+    </message>
+    <message>
+        <source>Events</source>
+        <translation>Olaylar</translation>
+    </message>
+    <message>
+        <source>Add New Event</source>
+        <translation>Yeni Olay Ekle</translation>
+    </message>
+    <message>
+        <source>Remove Current Event</source>
+        <translation>Bu Olayı Sil</translation>
+    </message>
+    <message>
+        <source>Id</source>
+        <translation>Id</translation>
+    </message>
+    <message>
+        <source>Options</source>
+        <translation>Seçenekler</translation>
+    </message>
+    <message>
+        <source>Part</source>
+        <translation>Parça</translation>
+    </message>
+    <message>
+        <source>Submodel</source>
+        <translation>Alt Model</translation>
+    </message>
+    <message>
+        <source>Skin</source>
+        <translation>Skin</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Ad</translation>
+    </message>
+    <message>
+        <source># Meshes</source>
+        <translation>Mesh Sayısı</translation>
+    </message>
+    <message>
+        <source># Vertices</source>
+        <translation>Köşe Sayısı</translation>
+    </message>
+    <message>
+        <source># Normals</source>
+        <translation>Normal Sayısı</translation>
+    </message>
+    <message>
+        <source>Body Value</source>
+        <translation>Body Değeri</translation>
+    </message>
+    <message>
+        <source>Texture Scale</source>
+        <translation>Doku Ölçeği</translation>
+    </message>
+    <message>
+        <source>Mesh</source>
+        <translation>Mesh</translation>
+    </message>
+    <message>
+        <source>Show UV Map</source>
+        <translation>UV Haritasını Göster</translation>
+    </message>
+    <message>
+        <source>Overlay UV Map</source>
+        <translation>UV Haritasını Üstüne Çiz</translation>
+    </message>
+    <message>
+        <source>Anti-Alias Lines</source>
+        <translation>Çizgileri Yumuşat</translation>
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation>Bayraklar</translation>
+    </message>
+    <message>
+        <source>Chrome</source>
+        <translation>Krom</translation>
+    </message>
+    <message>
+        <source>Additive</source>
+        <translation>Toplamalı</translation>
+    </message>
+    <message>
+        <source>Transparent</source>
+        <translation>Saydam</translation>
+    </message>
+    <message>
+        <source>Flat Shade</source>
+        <translation>Düz Gölge</translation>
+    </message>
+    <message>
+        <source>Fullbright</source>
+        <translation>Tam Parlak</translation>
+    </message>
+    <message>
+        <source>Mipmaps</source>
+        <translation>Mipmap&apos;ler</translation>
+    </message>
+    <message>
+        <source>Import Texture</source>
+        <translation>Doku İçe Aktar</translation>
+    </message>
+    <message>
+        <source>Export Texture</source>
+        <translation>Dokuyu Dışa Aktar</translation>
+    </message>
+    <message>
+        <source>Export UV Map</source>
+        <translation>UV Haritasını Dışa Aktar</translation>
+    </message>
+    <message>
+        <source>Import All Textures</source>
+        <translation>Tüm Dokuları İçe Aktar</translation>
+    </message>
+    <message>
+        <source>Export All Textures</source>
+        <translation>Tüm Dokuları Dışa Aktar</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Kapalı</translation>
+    </message>
+    <message>
+        <source>Top Color</source>
+        <translation>Üst Renk</translation>
+    </message>
+    <message>
+        <source>Bottom Color</source>
+        <translation>Alt Renk</translation>
+    </message>
+    <message>
+        <source>Colormap value</source>
+        <translation>Renk haritası değeri</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation>Tümü</translation>
+    </message>
+    <message>
+        <source>Mesh %1</source>
+        <translation>Mesh %1</translation>
+    </message>
+    <message>
+        <source>Eye Position</source>
+        <translation>Göz Konumu</translation>
+    </message>
+    <message>
+        <source>Min</source>
+        <translation>Min</translation>
+    </message>
+    <message>
+        <source>Max</source>
+        <translation>Maks</translation>
+    </message>
+    <message>
+        <source>Bounding Box</source>
+        <translation>Sınır Kutusu</translation>
+    </message>
+    <message>
+        <source>Clipping Box</source>
+        <translation>Kırpma Kutusu</translation>
+    </message>
+    <message>
+        <source>Highlight Bone</source>
+        <translation>Kemiği Vurgula</translation>
+    </message>
+    <message>
+        <source># Root Bones</source>
+        <translation>Kök Kemik Sayısı</translation>
+    </message>
+    <message>
+        <source>Bone Name</source>
+        <translation>Kemik Adı</translation>
+    </message>
+    <message>
+        <source>Parent Bone</source>
+        <translation>Üst Kemik</translation>
+    </message>
+    <message>
+        <source>Position</source>
+        <translation>Konum</translation>
+    </message>
+    <message>
+        <source>Position Scale</source>
+        <translation>Konum Ölçeği</translation>
+    </message>
+    <message>
+        <source>Rotation</source>
+        <translation>Dönüş</translation>
+    </message>
+    <message>
+        <source>Rotation Scale</source>
+        <translation>Dönüş Ölçeği</translation>
+    </message>
+    <message>
+        <source>Controller</source>
+        <translation>Kontrolcü</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Değer</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation>Başlangıç</translation>
+    </message>
+    <message>
+        <source>End</source>
+        <translation>Bitiş</translation>
+    </message>
+    <message>
+        <source>Bone</source>
+        <translation>Kemik</translation>
+    </message>
+    <message>
+        <source>Rest</source>
+        <translation>Dinlenme</translation>
+    </message>
+    <message>
+        <source>Index</source>
+        <translation>İndeks</translation>
+    </message>
+    <message>
+        <source>Mouth %1</source>
+        <translation>Ağız %1</translation>
+    </message>
+    <message>
+        <source>Axis</source>
+        <translation>Eksen</translation>
+    </message>
+    <message>
+        <source>Add New Attachment</source>
+        <translation>Yeni Attachment Ekle</translation>
+    </message>
+    <message>
+        <source>Remove Current Attachment</source>
+        <translation>Seçili Attachment&apos;ı Kaldır</translation>
+    </message>
+    <message>
+        <source>Place on Model</source>
+        <translation>Modele Yerleştir</translation>
+    </message>
+    <message>
+        <source>Click the model to put the current attachment there; dragging still turns the view</source>
+        <translation>Seçili attachment&apos;ı oraya koymak için modele tıklayın; sürüklemek görünümü yine döndürür</translation>
+    </message>
+    <message>
+        <source>Highlight Attachment</source>
+        <translation>Attachment&apos;ı Vurgula</translation>
+    </message>
+    <message>
+        <source>QC String</source>
+        <translation>QC Satırı</translation>
+    </message>
+    <message>
+        <source>Highlight Hitbox</source>
+        <translation>Hitbox&apos;ı Vurgula</translation>
+    </message>
+    <message>
+        <source>Hitgroup</source>
+        <translation>Vuruş Grubu</translation>
+    </message>
+    <message>
+        <source>Minimum</source>
+        <translation>En Küçük</translation>
+    </message>
+    <message>
+        <source>Maximum</source>
+        <translation>En Büyük</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Temizle</translation>
+    </message>
+    <message>
+        <source>Mode</source>
+        <translation>Mod</translation>
+    </message>
+    <message>
+        <source>Rotate</source>
+        <translation>Döndür</translation>
+    </message>
+    <message>
+        <source>Scale</source>
+        <translation>Ölçekle</translation>
+    </message>
+    <message>
+        <source>Move</source>
+        <translation>Taşı</translation>
+    </message>
+    <message>
+        <source>Values</source>
+        <translation>Değerler</translation>
+    </message>
+    <message>
+        <source>Scale Meshes</source>
+        <translation>Mesh&apos;leri Ölçekle</translation>
+    </message>
+    <message>
+        <source>Scale Hitboxes</source>
+        <translation>Hitbox&apos;ları Ölçekle</translation>
+    </message>
+    <message>
+        <source>Scale Sequence BBoxes</source>
+        <translation>Sequence Kutularını Ölçekle</translation>
+    </message>
+    <message>
+        <source>Scale Bones</source>
+        <translation>Kemikleri Ölçekle</translation>
+    </message>
+    <message>
+        <source>Scale Eye Position</source>
+        <translation>Göz Konumunu Ölçekle</translation>
+    </message>
+    <message>
+        <source>Scale Attachments</source>
+        <translation>Attachment&apos;ları Ölçekle</translation>
+    </message>
+    <message>
+        <source>Thickness</source>
+        <translation>Kalınlık</translation>
+    </message>
+    <message>
+        <source>0 shows the same faces from behind; more pushes the back side inward and gives the model depth</source>
+        <translation>0 aynı yüzleri arkadan da gösterir; daha fazlası arka yüzü içeri iter ve modele derinlik verir</translation>
+    </message>
+    <message>
+        <source>Faces</source>
+        <translation>Yüzler</translation>
+    </message>
+    <message>
+        <source>All Textures</source>
+        <translation>Tüm Dokular</translation>
+    </message>
+    <message>
+        <source>Current Texture</source>
+        <translation>Seçili Doku</translation>
+    </message>
+    <message>
+        <source>Fill Rims</source>
+        <translation>Kenarları Kapat</translation>
+    </message>
+    <message>
+        <source>Closes the open edges between the two sides when there is a thickness</source>
+        <translation>Kalınlık varken iki yüz arasındaki açık kenarları kapatır</translation>
+    </message>
+    <message>
+        <source>Reset values on apply</source>
+        <translation>Uygulayınca değerleri sıfırla</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Uygula</translation>
+    </message>
+    <message>
+        <source>The model would pass the engine&apos;s limits; see the console.</source>
+        <translation>Model motorun sınırlarını aşacak; ayrıntılar konsolda.</translation>
+    </message>
+    <message>
+        <source>Images (*.bmp *.png *.tga *.jpg)</source>
+        <translation>Resimler (*.bmp *.png *.tga *.jpg)</translation>
+    </message>
+    <message>
+        <source>Could not read %1 as a picture of 256 colours or fewer.</source>
+        <translation>%1, 256 veya daha az renkli bir resim olarak okunamadı.</translation>
+    </message>
+    <message>
+        <source>Attachment %1</source>
+        <translation>Attachment %1</translation>
+    </message>
+    <message>
+        <source>Hitbox %1</source>
+        <translation>Hitbox %1</translation>
+    </message>
+    <message>
+        <source>None (0)</source>
+        <translation>Yok (0)</translation>
+    </message>
+    <message>
+        <source>Double-Side Face</source>
+        <translation>Çift Taraflı Yüz</translation>
+    </message>
+    <message>
+        <source>Adds a reversed face behind the faces the engine hides from behind (backface culling); a thickness gives them depth, as Blender&apos;s Solidify does</source>
+        <translation>Motorun arkadan gizlediği yüzlerin (backface culling) arkasına ters bir yüz ekler; kalınlık verilirse Blender&apos;ın Solidify&apos;ı gibi derinlik kazandırır</translation>
+    </message>
+    <message>
+        <source>Could not save %1.</source>
+        <translation>%1 kaydedilemedi.</translation>
+    </message>
+    <message>
+        <source>Save As</source>
+        <translation>Farklı Kaydet</translation>
+    </message>
+    <message>
+        <source>Studio models (*.mdl)</source>
+        <translation>Studio modelleri (*.mdl)</translation>
+    </message>
+    <message>
+        <source>Unsaved changes</source>
+        <translation>Kaydedilmemiş değişiklikler</translation>
+    </message>
+    <message>
+        <source>%1 has changes that are not saved. Save them?</source>
+        <translation>%1 dosyasında kaydedilmemiş değişiklikler var. Kaydedilsin mi?</translation>
+    </message>
+    <message>
+        <source>Event %1</source>
+        <translation>Olay %1</translation>
+    </message>
+    <message>
+        <source>Submodel %1</source>
+        <translation>Alt Model %1</translation>
+    </message>
+    <message>
+        <source>None (-1)</source>
+        <translation>Yok (-1)</translation>
+    </message>
+    <message>
+        <source>GoldSrc supports at most %1 attachments; this model has %2. Please decrease to 4 attachments. otherwise the engine will crash.</source>
+        <translation>GoldSrc en fazla %1 attachment destekler; bu modelde %2 var. Motor fazlasını yok sayar.</translation>
+    </message>
+    <message>
+        <source>Open a model</source>
+        <translation>Model aç</translation>
+    </message>
+    <message>
+        <source>Studio models (*.mdl);;All files (*.*)</source>
+        <translation>Studio modelleri (*.mdl);;Tüm dosyalar (*.*)</translation>
+    </message>
+    <message>
+        <source>Save screenshot</source>
+        <translation>Ekran görüntüsünü kaydet</translation>
+    </message>
+    <message>
+        <source>Images (*.png *.jpg *.bmp)</source>
+        <translation>Görseller (*.png *.jpg *.bmp)</translation>
+    </message>
+    <message>
+        <source>Save model info</source>
+        <translation>Model bilgilerini kaydet</translation>
+    </message>
+    <message>
+        <source>Text files (*.txt)</source>
+        <translation>Metin dosyaları (*.txt)</translation>
+    </message>
+    <message>
+        <source>Export the texture</source>
+        <translation>Dokuyu dışa aktar</translation>
+    </message>
+    <message>
+        <source>Images (*.bmp *.png)</source>
+        <translation>Görseller (*.bmp *.png)</translation>
+    </message>
+    <message>
+        <source>Images (*.png *.bmp)</source>
+        <translation>Görüntüler (*.png *.bmp)</translation>
+    </message>
+    <message>
+        <source>Export the textures to</source>
+        <translation>Dokuların aktarılacağı klasör</translation>
     </message>
 </context>
 <context>

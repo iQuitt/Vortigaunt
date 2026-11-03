@@ -116,6 +116,7 @@
 #include "WadMaker.h"
 #include "AudioConvertDialog.h"
 #include "dialogs/HudSpriteDialog.h"
+#include "windows/ModelViewerWindow.h"
 #include "dialogs/RetargetDialog.h"
 #ifdef ENABLE_AUTORIG
 #include "dialogs/MapPortDialog.h"
@@ -266,6 +267,15 @@ MainWindow::MainWindow(QWidget* parent)
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
+    // ask before dropping unsaved model viewer changes
+    for (ModelViewerWindow* viewer : findChildren<ModelViewerWindow*>())
+    {
+        if (!viewer->closeAll())
+        {
+            event->ignore();
+            return;
+        }
+    }
     m_workspaces->setCurrentIndex(0);
     QSettings settings("Vortigaunt", "VortigauntTool");
     settings.setValue("MainWindow/geometry", saveGeometry());
@@ -406,6 +416,9 @@ void MainWindow::setupRibbon()
     m_hudSpriteAction = new QAction(tr("Make a weapon's 640hud sprite from its model..."), this);
     tool(m_hudSpriteAction, tr("HUD\nsprite"), kIconSprite);
     connect(m_hudSpriteAction, &QAction::triggered, this, &MainWindow::onOpenHudSprite);
+    m_modelViewerAction = new QAction(tr("Look through GoldSrc models: sequences, parts, textures, skeleton..."), this);
+    tool(m_modelViewerAction, tr("Model\nviewer"), kIconView);
+    connect(m_modelViewerAction, &QAction::triggered, this, &MainWindow::onOpenModelViewer);
     m_lolModelAction = new QAction(tr("League of Legends Models..."), this);
     tool(m_lolModelAction, tr("LoL\nmodels"), kIconDownload);
     connect(m_lolModelAction, &QAction::triggered, this, &MainWindow::onOpenLoLModelDownloader);
@@ -528,6 +541,8 @@ void MainWindow::setupRibbon()
 #endif
     QWidget* animationGroup = m_ribbon->addGroup(toolsTab, tr("Animation"));
     m_ribbon->addButton(animationGroup, m_retargetAction);
+    QWidget* viewerGroup = m_ribbon->addGroup(toolsTab, tr("Model"));
+    m_ribbon->addButton(viewerGroup, m_modelViewerAction);
     QWidget* weaponGroup = m_ribbon->addGroup(toolsTab, tr("Weapon"));
     m_ribbon->addButton(weaponGroup, m_hudSpriteAction);
     QWidget* downloadGroup = m_ribbon->addGroup(toolsTab, tr("Download"));
@@ -921,19 +936,8 @@ void MainWindow::setupPreview()
     m_previewHint->setFont(hintFont);
     m_preview->addWidget(m_previewHint);
 
-    m_modelPreview = new GLBViewer(m_preview);
-    // its loading steps are only of use when developing
-    m_modelPreview->setLogCallback([](const QString& message) {
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("DEBUG: [Preview] %1").arg(message));
-    });
-    m_preview->addWidget(m_modelPreview);
-    connect(m_modelPreview, &GLBViewer::modelLoaded, this, [this](bool ok) {
-        if (ok || m_preview->currentWidget() != m_modelPreview)
-            return;
-        m_previewInfo->setText(QStringLiteral("<b>%1</b><br><br>%2")
-                                   .arg(QFileInfo(m_previewPath).fileName().toHtmlEscaped(), tr("This model could not be previewed.")));
-        m_preview->setCurrentIndex(3);
-    });
+    // created lazily: any GL widget forces GPU composition of the whole window
+    m_preview->addWidget(new QWidget(m_preview));
 
     m_imagePreview = new QLabel(m_preview);
     m_imagePreview->setAlignment(Qt::AlignCenter);
@@ -1044,6 +1048,8 @@ void MainWindow::closeToolTab(QWidget* tool)
     const int index = m_workspaces->indexOf(tool);
     if (index <= 0)
         return;
+    if (auto* viewer = qobject_cast<ModelViewerWindow*>(tool); viewer && !viewer->closeAll())
+        return;
     if ((tool == m_archiveWorkspace && m_archiveWorkspace->isBusy()) || (tool == m_textureWorkspace && m_textureWorkspace->isBusy()) ||
         tool->property("vortigauntBusy").toBool())//lol
         return;
@@ -1120,6 +1126,30 @@ void MainWindow::openWeaponFit(const QString& path)
     m_weaponFitWorkspace->openWeapon(path);
 }
 
+GLBViewer* MainWindow::modelPreview()
+{
+    if (m_modelPreview)
+        return m_modelPreview;
+    m_modelPreview = new GLBViewer(m_preview);
+    // loading steps: developer mode only
+    m_modelPreview->setLogCallback([](const QString& message) {
+        VortigauntLog::Vortigaunt_Printf(QStringLiteral("DEBUG: [Preview] %1").arg(message));
+    });
+    // replaces its placeholder page so page indices stay
+    QWidget* held = m_preview->widget(1);
+    m_preview->insertWidget(1, m_modelPreview);
+    m_preview->removeWidget(held);
+    held->deleteLater();
+    connect(m_modelPreview, &GLBViewer::modelLoaded, this, [this](bool ok) {
+        if (ok || m_preview->currentWidget() != m_modelPreview)
+            return;
+        m_previewInfo->setText(QStringLiteral("<b>%1</b><br><br>%2")
+                                   .arg(QFileInfo(m_previewPath).fileName().toHtmlEscaped(), tr("This model could not be previewed.")));
+        m_preview->setCurrentIndex(3);
+    });
+    return m_modelPreview;
+}
+
 void MainWindow::openPaths(const QStringList& paths)
 {
     QStringList textures;
@@ -1166,6 +1196,21 @@ void MainWindow::onWorkspaceChanged(int index)
         m_filesDock->setVisible(m_filesDockWasVisible);
         m_propertiesDock->setVisible(m_propertiesDockWasVisible);
         m_convertDocksShown = true;
+    }
+
+    // the viewer has its own log tab
+    QWidget* page = m_workspaces->widget(index);
+    const bool ownLog = page && page->property("vortigauntToolKey").toByteArray() == "modelviewer";
+    if (ownLog && m_logDockShown)
+    {
+        m_logDockWasVisible = m_logDock->isVisible();
+        m_logDock->hide();
+        m_logDockShown = false;
+    }
+    else if (!ownLog && !m_logDockShown)
+    {
+        m_logDock->setVisible(m_logDockWasVisible);
+        m_logDockShown = true;
     }
 
     if (convert)
@@ -1376,8 +1421,9 @@ void MainWindow::showPreview(const QString& path, FileOp op)
             return;
         }
         // the viewer loads on its first paint, so it has to be on screen first
-        m_preview->setCurrentWidget(m_modelPreview);
-        m_modelPreview->loadGLB(path);
+        GLBViewer* viewer = modelPreview();
+        m_preview->setCurrentWidget(viewer);
+        viewer->loadGLB(path);
         return;
     }
 
@@ -1901,6 +1947,15 @@ void MainWindow::onOpenMapPorter()
 void MainWindow::onOpenRetargetDialog()
 {
     openToolOnce("retarget", tr("Animation Retargeting"), []() { return new RetargetDialog(); });
+}
+
+void MainWindow::onOpenModelViewer()
+{
+    openToolOnce("modelviewer", tr("Model Viewer"), []() {
+        auto* viewer = new ModelViewerWindow();
+        viewer->setWindowFlags(Qt::Widget);
+        return viewer;
+    });
 }
 
 void MainWindow::onOpenHudSprite()
@@ -2754,6 +2809,20 @@ void MainWindow::dropEvent(QDropEvent* event)
     if (m_workspaces->currentIndex() == 0)
     {
         addPaths(paths);
+    }
+    else if (auto* viewer = qobject_cast<ModelViewerWindow*>(m_workspaces->currentWidget()))
+    {
+        // mdl files go to the viewer
+        QStringList others;
+        for (const QString& p : paths)
+        {
+            if (QFileInfo(p).suffix().compare(QLatin1String("mdl"), Qt::CaseInsensitive) == 0)
+                viewer->load(p);
+            else
+                others << p;
+        }
+        if (!others.isEmpty())
+            openPaths(others);
     }
     else if (m_workspaces->currentWidget() == m_textureWorkspace)
     {

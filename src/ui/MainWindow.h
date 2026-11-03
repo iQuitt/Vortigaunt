@@ -119,6 +119,7 @@ private slots:
     void onOpenAudioConverter();
 
     void onOpenHudSprite();
+    void onOpenModelViewer();
     void onOpenRetargetDialog();
 
     void onLogFilterChanged(int index);
@@ -169,6 +170,8 @@ private:
 
     // one tab for the tool; opening it again shows that tab
     void openToolOnce(const char* key, const QString& title, const std::function<QWidget*()>& create);
+    // GLB/FBX preview, created on first use
+    GLBViewer* modelPreview();
 
     // a tab of the centre that is kept when it is closed, with the ribbon tab that belongs to it
     struct Workspace
@@ -259,6 +262,8 @@ private:
     bool           m_convertDocksShown = true;
     bool           m_filesDockWasVisible = true;
     bool           m_propertiesDockWasVisible = true;
+    bool           m_logDockShown = true;
+    bool           m_logDockWasVisible = true;
     QDockWidget*   m_filesDock = nullptr;
     QDockWidget*   m_propertiesDock = nullptr;
     QDockWidget*   m_logDock = nullptr;
@@ -293,7 +298,7 @@ private:
     // Preview
     QStackedWidget* m_preview = nullptr;
     QLabel*        m_previewHint = nullptr;
-    GLBViewer*     m_modelPreview = nullptr;
+    GLBViewer*     m_modelPreview = nullptr;  // created by modelPreview()
     QLabel*        m_imagePreview = nullptr;
     StudioModelView* m_studioPreview = nullptr;  // GoldSrc .mdl
     QLabel*        m_previewInfo = nullptr;
@@ -333,6 +338,7 @@ private:
 #endif
     QAction*       m_audioConvertAction = nullptr;
     QAction*       m_hudSpriteAction = nullptr;
+    QAction*       m_modelViewerAction = nullptr;
     QAction*       m_retargetAction = nullptr;
     QAction*       m_steamWorkshopAction = nullptr;
     QAction*       m_settingsAction = nullptr;
