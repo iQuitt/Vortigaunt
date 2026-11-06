@@ -107,6 +107,7 @@ AboutDialog::AboutDialog(QWidget* parent)
         "<li>Facepunch for GMA (Garry's Mod Addon)"
         "<li>nolith for Lithtech REZ</li>"
 		"<li>SamVanheer for HLAM (Half-Life Asset Manager)</li>"
+		"<li>Khada for League of Legends Model Viewer</li>"
         "</ul>"
     ).arg(tr("3rd Party Libraries"), tr("Special Thanks")));
     tabs->addTab(creditsBrowser, tr("Credits"));

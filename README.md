@@ -109,6 +109,7 @@ Special Thanks To:
 - YoungFine0825 for LTB2FBX and DTX to TGA (https://github.com/YoungFine0825/LTB2FBX)
 - nolith for Lithtech REZ (https://github.com/no-lith/RezExtract)
 - SamVanheer for HLAM (https://github.com/SamVanheer/HalfLifeAssetManager)
+	- Khada for League of Legends Model Viewer (https://modelviewer.lol/)
 
 ## License
 
