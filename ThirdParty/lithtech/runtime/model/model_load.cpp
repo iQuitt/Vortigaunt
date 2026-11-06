@@ -526,6 +526,10 @@ bool ModelPiece::Load(ILTStream &file, LTB_Header& LTBHeader, uint32 nFileVersio
     // ALLOCATING PIECES's  MESHES.
 	m_pRenderObjects = LNew_Array(m_pModel->GetAlloc(), CDIModelDrawable*, m_nLODs, false);
 	
+	// Term deletes these, so the ones a failed load never reaches stay NULL
+	if (m_pRenderObjects)
+		memset(m_pRenderObjects, 0, sizeof(CDIModelDrawable*) * m_nLODs);
+
 	if (!m_pRenderObjects)
 	{
 		Term();

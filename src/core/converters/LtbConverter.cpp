@@ -15,6 +15,7 @@
 #include "core/QCFile.h"
 
 #include <algorithm>
+#include <set>
 
 // from https://github.com/YoungFine0825/LTB2FBX/blob/main/Source/Converter.cpp
 // Use system temp directory to avoid permission issues in Program Files
@@ -36,19 +37,54 @@ typedef map<string, vector<unsigned int>> BoneName2MeshIndices;
 
 ltbConverter::ltbConverter()
 {
-	m_lzmaDecoder = new LzmaDecoder();
 	m_smdWriter = new SmdWriter();
 }
 
 ltbConverter::~ltbConverter()
 {
-	m_lzmaDecoder->Destroy();
 	delete m_smdWriter;
 	releaseGrabbedData();
 }
 
-void ltbConverter::releaseGrabbedData()
+void ltbConverter::releaseGrabbedData(ExportScene* scene)
 {
+	// the scene and the meshes hold the arrays of these lists, so they let go of them before they are deleted
+	for (Mesh* mesh : m_meshesPtrVec)
+	{
+		mesh->mBones = nullptr;
+		mesh->mNumBones = 0;
+		delete mesh;
+	}
+	std::set<Bone*> bones;  // a socket bone can sit in several meshes
+	for (const BonesPtrVec& list : m_bonesPtrArrPerMeshVec)
+		bones.insert(list.begin(), list.end());
+	for (Bone* bone : bones)
+		delete bone;
+	for (Animation* anim : m_animPtrVec)
+	{
+		anim->mChannels = nullptr;
+		anim->mNumChannels = 0;
+		delete anim;
+	}
+	for (const NodeAnimationsPtrVec& list : m_nodeAnimPtrVecList)
+		for (NodeAnimation* channel : list)
+			delete channel;
+	for (Material* material : m_materialsPtrList)
+		delete material;
+	// nodes hung on the scene go with it, the others go here
+	for (Node* node : m_skeletonNodes)
+		if (!node->mParent)
+			delete node;
+	if (scene)
+	{
+		scene->mMeshes = nullptr;
+		scene->mNumMeshes = 0;
+		scene->mMaterials = nullptr;
+		scene->mNumMaterials = 0;
+		scene->mAnimations = nullptr;
+		scene->mNumAnimations = 0;
+		delete scene;
+	}
 	m_meshesPtrVec.clear();
 	m_skeletonNodes.clear();
 	m_name2SkeNode.clear();
@@ -230,7 +266,7 @@ bool ltbConverter::doConvertLTB(LTBModelPtr ltbModel, std::string outFilePath)
 	std::string refPath = basePath + "_reference.smd";
 	VortigauntLog::LogF("Exporting reference SMD: %s", refPath.c_str());
 	if (!m_smdWriter->ExportMeshSMD(exportScene, refPath)) {
-		releaseGrabbedData();
+		releaseGrabbedData(exportScene);
 		return false;
 	}
 
@@ -238,7 +274,7 @@ bool ltbConverter::doConvertLTB(LTBModelPtr ltbModel, std::string outFilePath)
 	if (numAnim > 0) {
 		VortigauntLog::LogF("^3Exporting %d animations...", numAnim);
 		if (!m_smdWriter->ExportAllAnimationsSMD(exportScene, basePath + "_anim")) {
-			releaseGrabbedData();
+			releaseGrabbedData(exportScene);
 			return false;
 		}
 	}
@@ -247,7 +283,7 @@ bool ltbConverter::doConvertLTB(LTBModelPtr ltbModel, std::string outFilePath)
 	VortigauntLog::LogF("^2Output path: ^4%s^7\n", basePath.c_str());
 	
 	//
-	releaseGrabbedData();
+	releaseGrabbedData(exportScene);
 	//
 	return true;
 }
@@ -769,7 +805,7 @@ bool ltbConverter::decodingLTBFile(const std::string& ltbFilePath, DosFileStream
 	{
 		fclose(f);
 	}
-	int ret = m_lzmaDecoder->Decode(ltbFilePath.c_str(), DECODING_TEMP_FILE_PATH);
+	int ret = m_lzmaDecoder.Decode(ltbFilePath.c_str(), DECODING_TEMP_FILE_PATH);
 	if (ret != DEC_RET_SUCCESSFUL)
 	{
 		return false;

@@ -49,12 +49,9 @@ public:
     // Decode a DTX directly from memory (data already decompressed, e.g. from REZ).
     bool DecodeDTXBufferToRGBA(const uint8_t* data, size_t dataSize, std::vector<unsigned int>& outPixels, int& width, int& height);
 private:
-    bool DecodeStreamToRGBA(ILTStream* stream,
-                            std::vector<unsigned int>& outPixels,
-                            int& width,
-                            int& height);
+    bool DecodeStreamToRGBA(ILTStream* stream, std::vector<unsigned int>& outPixels, int& width, int& height);
 
-	LzmaDecoder* m_lzmaDecoder;
+	LzmaDecoder m_lzmaDecoder;
 };
 
 #else 

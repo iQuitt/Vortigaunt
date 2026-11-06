@@ -111,6 +111,8 @@ private slots:
 #ifdef ENABLE_AUTORIG
     void onOpenAutoRigDialog();
     void onOpenPhysicsLabDialog();
+#endif
+#ifdef ENABLE_MAPPORT
     void onOpenMapPorter();
 #endif
 
@@ -334,6 +336,8 @@ private:
 #ifdef ENABLE_AUTORIG
     QAction*       m_autoRigAction = nullptr; // Auto-Rig (Beta)
     QAction*       m_physicsLabAction = nullptr;
+#endif
+#ifdef ENABLE_MAPPORT
     QAction*       m_mapPortAction = nullptr;
 #endif
     QAction*       m_audioConvertAction = nullptr;

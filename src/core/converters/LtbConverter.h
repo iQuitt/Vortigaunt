@@ -103,13 +103,14 @@ private:
 
 	aiMatrix4x4 recursCalcuMat(Node* sceneNode);
 
-	void releaseGrabbedData();
+	// frees what the grab functions made, and the scene that borrows it
+	void releaseGrabbedData(ExportScene* scene = nullptr);
 
 	aiNode* getSkeletonNodeByName(const std::string& name);
 
 	void printExportOverview(ExportScene* exportScene,LTBModelPtr ltbModel);
 	//
-	LzmaDecoder* m_lzmaDecoder;
+	LzmaDecoder m_lzmaDecoder;
 	SmdWriter* m_smdWriter;
 	//
 	std::vector<Mesh*> m_meshesPtrVec;

@@ -2345,6 +2345,26 @@ void Gr2Converter::clearData()
         m_grannyBuffer.clear();
     }
 
+    // the scene borrows the arrays of m_meshes and m_animations, so it lets go of them before it is deleted
+    if (m_assimpScene)
+    {
+        if (m_assimpScene->mAnimations != m_animations.data())
+            delete[] m_assimpScene->mAnimations;  // the one-animation list of ConvertGr2Animation
+        m_assimpScene->mMeshes = nullptr;
+        m_assimpScene->mNumMeshes = 0;
+        m_assimpScene->mAnimations = nullptr;
+        m_assimpScene->mNumAnimations = 0;
+    }
+    for (aiMesh* mesh : m_meshes)
+        delete mesh;
+    for (aiAnimation* animation : m_animations)
+        delete animation;
+    // bones hung on the scene go with it, the others go here
+    for (aiNode* node : m_skeletonNodes)
+        if (!node->mParent)
+            delete node;
+    delete m_assimpScene;
+
     m_meshes.clear();
     m_skeletonNodes.clear();
     m_animations.clear();

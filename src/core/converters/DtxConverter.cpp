@@ -23,15 +23,9 @@ static std::string getUniqueTempPath() {
 // from https://github.com/YoungFine0825/LTB2FBX
 FormatMgr g_FormatMgr;
 
-DtxConverter::DtxConverter() 
-{
-	m_lzmaDecoder = new LzmaDecoder();
-}
+DtxConverter::DtxConverter() = default;
 
-DtxConverter::~DtxConverter() 
-{
-	m_lzmaDecoder->Destroy();
-}
+DtxConverter::~DtxConverter() = default;
 
 
 ConvertResult DtxConverter::ConvertFile(const std::string& inputPath, const std::string& outputDir)
@@ -58,7 +52,7 @@ int DtxConverter::ConvertSingleDTXFile(const std::string& format, const std::str
 		fclose(f);
 	}
 
-	int ret = m_lzmaDecoder->Decode(inputFilePath.c_str(), tempFilePath.c_str());
+	int ret = m_lzmaDecoder.Decode(inputFilePath.c_str(), tempFilePath.c_str());
 	std::string realInputFilePath;
     bool isTemp = false;
 	if (ret == DEC_RET_SUCCESSFUL)
@@ -114,7 +108,7 @@ bool DtxConverter::DecodeDTXToRGBA(const std::string& inputFilePath, std::vector
         fclose(f);
     }
 
-    int decRet = m_lzmaDecoder->Decode(inputFilePath.c_str(), tempFilePath.c_str());
+    int decRet = m_lzmaDecoder.Decode(inputFilePath.c_str(), tempFilePath.c_str());
     std::string realInputFilePath;
     bool isTemp = false;
     if (decRet == DEC_RET_SUCCESSFUL)

@@ -118,7 +118,7 @@
 #include "dialogs/HudSpriteDialog.h"
 #include "windows/ModelViewerWindow.h"
 #include "dialogs/RetargetDialog.h"
-#ifdef ENABLE_AUTORIG
+#ifdef ENABLE_MAPPORT
 #include "dialogs/MapPortDialog.h"
 #endif
 #include "QCFile.h"
@@ -188,7 +188,7 @@ constexpr const char* kIconHands = "M6 21l-2-8 M6 21h9l3-8 M8 13V4 M11 12V3 M14 
 constexpr const char* kIconReset =  "M4 4v6h6 M4 10l4-4h8v12H8";
 constexpr const char* kIconSprite = "M3 5h7v14H3z M14 5h7v14h-7z";
 constexpr const char* kIconWad = "M4 4h16v16H4z M4 12h16 M12 4v16";
-#ifdef ENABLE_AUTORIG
+#ifdef ENABLE_MAPPORT
 constexpr const char* kIconMap = "M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15";
 #endif
 constexpr const char* kIconAudio = "M4 10v4 M8 7v10 M12 4v16 M16 8v8 M20 11v2";
@@ -405,7 +405,7 @@ void MainWindow::setupRibbon()
     m_audioConvertAction = new QAction(tr("Convert WAV for Goldsrc..."), this);
     tool(m_audioConvertAction, tr("Convert\nWAV"), kIconAudio);
     connect(m_audioConvertAction, &QAction::triggered, this, &MainWindow::onOpenAudioConverter);
-#ifdef ENABLE_AUTORIG
+#ifdef ENABLE_MAPPORT
     m_mapPortAction = new QAction(QStringLiteral("Port a GR2 room to a GoldSrc map of brushes..."), this);
     tool(m_mapPortAction, QStringLiteral("GR2 to\nmap"), kIconMap);
     connect(m_mapPortAction, &QAction::triggered, this, &MainWindow::onOpenMapPorter);
@@ -535,7 +535,7 @@ void MainWindow::setupRibbon()
     m_toolsRibbonTab = toolsTab;
     QWidget* soundGroup = m_ribbon->addGroup(toolsTab, tr("Sound"));
     m_ribbon->addButton(soundGroup, m_audioConvertAction);
-#ifdef ENABLE_AUTORIG
+#ifdef ENABLE_MAPPORT
     QWidget* mapGroup = m_ribbon->addGroup(toolsTab, QStringLiteral("Map"));
     m_ribbon->addButton(mapGroup, m_mapPortAction);
 #endif
@@ -1937,7 +1937,7 @@ void MainWindow::onOpenAudioConverter()
     openToolOnce("audio", tr("WAV Converter"), []() { return new AudioConvertDialog(); });
 }
 
-#ifdef ENABLE_AUTORIG
+#ifdef ENABLE_MAPPORT
 void MainWindow::onOpenMapPorter()
 {
     openToolOnce("map", QStringLiteral("GR2 to Map"), []() { return new MapPortDialog(); });

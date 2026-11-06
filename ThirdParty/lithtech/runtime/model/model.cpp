@@ -492,6 +492,11 @@ void ModelPiece::Term()
 				m_pRenderObjects[i] = NULL;
 			}
 #endif
+#if !defined(DE_CLIENT_COMPILE) && !defined(DE_RENDER_COMPILE) && !defined(DE_SERVER_COMPILE)
+			// outside the engine CreateModelRenderObject makes plain drawables with new
+			delete m_pRenderObjects[i];
+			m_pRenderObjects[i] = NULL;
+#endif
 		}
 	}
 
@@ -503,7 +508,7 @@ void ModelPiece::Term()
 	}
 
 	//now release the render object array
-	if (m_pLODDists != NULL )
+	if (m_pRenderObjects != NULL )
 	{
 		LDelete_Array(m_pModel->GetAlloc(), m_pRenderObjects, m_nLODs);
 		m_pRenderObjects = NULL;

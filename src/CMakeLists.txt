@@ -1,12 +1,16 @@
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# MSE (Metin2 Script Effect) - disabled by default, enable with -DMETIN2_SCRIPT_EFFECT=ON
+# MSE (Metin2 Script Effect) 
+# RMEOVE THIS SHIT
 option(METIN2_SCRIPT_EFFECT "Enable Metin2 Script Effect support" OFF)
 
 # GoldSrc Auto-Rig - kept in the tree but out of the build and out of the
 # menus unless asked for: -DVORTIGAUNT_AUTORIG=ON
 option(VORTIGAUNT_AUTORIG "Enable the GoldSrc Auto-Rig tool" OFF)
+
+# Not ready to release
+option(VORTIGAUNT_MAPPORT "Enable the GR2 to map port tool" OFF)
 
 set(VORTIGAUNT_CORE_HEADERS
     core/converters/Gr2Converter.h
@@ -308,13 +312,19 @@ if(BUILD_GUI)
         core/autorig/WeightTransfer.h core/autorig/WeightTransfer.cpp
         ui/dialogs/AutoRigDialog.h ui/dialogs/AutoRigDialog.cpp
         ui/dialogs/PhysicsLabDialog.h ui/dialogs/PhysicsLabDialog.cpp
-        core/map/MapPorter.h core/map/MapPorter.cpp
-        core/map/Metin2Map.h core/map/Metin2Map.cpp
-        ui/dialogs/MapPortDialog.h ui/dialogs/MapPortDialog.cpp
         core/mdl/HandSwap.h core/mdl/HandSwap.cpp
         ui/workspaces/HandsWorkspace.h ui/workspaces/HandsWorkspace.cpp
         )
         target_compile_definitions(VortigauntTool_gui PRIVATE ENABLE_AUTORIG)
+    endif()
+
+    if(VORTIGAUNT_MAPPORT)
+        target_sources(VortigauntTool_gui PRIVATE
+        core/map/MapPorter.h core/map/MapPorter.cpp
+        core/map/Metin2Map.h core/map/Metin2Map.cpp
+        ui/dialogs/MapPortDialog.h ui/dialogs/MapPortDialog.cpp
+        )
+        target_compile_definitions(VortigauntTool_gui PRIVATE ENABLE_MAPPORT)
     endif()
 
     # Qt Translation files
