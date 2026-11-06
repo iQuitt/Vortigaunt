@@ -28,6 +28,14 @@
         <translation>Built:</translation>
     </message>
     <message>
+        <source>Version:</source>
+        <translation>Version:</translation>
+    </message>
+    <message>
+        <source>Lines of Code</source>
+        <translation>Lines of Code</translation>
+    </message>
+    <message>
         <source>Info</source>
         <translation>Info</translation>
     </message>
@@ -2324,6 +2332,10 @@ The operation is picked from the file type.</translation>
         <translation>UV Map</translation>
     </message>
     <message>
+        <source>Polygon Reduction</source>
+        <translation>Polygon Reduction</translation>
+    </message>
+    <message>
         <source>Transformation</source>
         <translation>Transformation</translation>
     </message>
@@ -2748,12 +2760,64 @@ The operation is picked from the file type.</translation>
         <translation>Selected points: %1</translation>
     </message>
     <message>
-        <source>Nothing selected</source>
-        <translation>Nothing selected</translation>
-    </message>
-    <message>
         <source>Edit UV Map</source>
         <translation>Edit UV Map</translation>
+    </message>
+    <message>
+        <source>Body Part</source>
+        <translation>Body Part</translation>
+    </message>
+    <message>
+        <source>Keep</source>
+        <translation>Keep</translation>
+    </message>
+    <message>
+        <source>Triangles</source>
+        <translation>Triangles</translation>
+    </message>
+    <message>
+        <source>Smooth Normals</source>
+        <translation>Smooth Normals</translation>
+    </message>
+    <message>
+        <source>Recomputes the normals of the faces left, so the shading follows the new shape</source>
+        <translation>Recomputes the normals of the faces left, so the shading follows the new shape</translation>
+    </message>
+    <message>
+        <source>Keep Joints</source>
+        <translation>Keep Joints</translation>
+    </message>
+    <message>
+        <source>Keeps the edges where two bones meet, so the model bends as before. Off, more triangles go and the vertex left keeps its own bone.</source>
+        <translation>Keeps the edges where two bones meet, so the model bends as before. Off, more triangles go and the vertex left keeps its own bone.</translation>
+    </message>
+    <message>
+        <source>Show Wireframe</source>
+        <translation>Show Wireframe</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Reset</translation>
+    </message>
+    <message>
+        <source>Back to the triangles this reduction started from</source>
+        <translation>Back to the triangles this reduction started from</translation>
+    </message>
+    <message>
+        <source>UV seams, the borders of the chosen faces and other textures are kept.</source>
+        <translation>UV seams, the borders of the chosen faces and other textures are kept.</translation>
+    </message>
+    <message>
+        <source>Chosen: %1 triangles, model: %2</source>
+        <translation>Chosen: %1 triangles, model: %2</translation>
+    </message>
+    <message>
+        <source>Reduce Polygons</source>
+        <translation>Reduce Polygons</translation>
+    </message>
+    <message>
+        <source>%1 → %2 triangles</source>
+        <translation>%1 → %2 triangles</translation>
     </message>
     <message>
         <source>Eye Position</source>
@@ -2902,6 +2966,10 @@ The operation is picked from the file type.</translation>
     <message>
         <source>Move</source>
         <translation>Move</translation>
+    </message>
+    <message>
+        <source>Nothing selected: edits move everything</source>
+        <translation>Nothing selected: edits move everything</translation>
     </message>
     <message>
         <source>Values</source>

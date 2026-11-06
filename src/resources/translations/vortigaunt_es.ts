@@ -28,6 +28,14 @@
         <translation>Compilado:</translation>
     </message>
     <message>
+        <source>Version:</source>
+        <translation>Versión:</translation>
+    </message>
+    <message>
+        <source>Lines of Code</source>
+        <translation>Líneas de código</translation>
+    </message>
+    <message>
         <source>Info</source>
         <translation>Información</translation>
     </message>
@@ -2324,6 +2332,10 @@ La operación se elige según el tipo de archivo.</translation>
         <translation>Mapa UV</translation>
     </message>
     <message>
+        <source>Polygon Reduction</source>
+        <translation>Reducción de polígonos</translation>
+    </message>
+    <message>
         <source>Transformation</source>
         <translation>Transformación</translation>
     </message>
@@ -2748,12 +2760,64 @@ La operación se elige según el tipo de archivo.</translation>
         <translation>Puntos seleccionados: %1</translation>
     </message>
     <message>
-        <source>Nothing selected</source>
-        <translation>Nada seleccionado</translation>
-    </message>
-    <message>
         <source>Edit UV Map</source>
         <translation>Editar mapa UV</translation>
+    </message>
+    <message>
+        <source>Body Part</source>
+        <translation>Parte del cuerpo</translation>
+    </message>
+    <message>
+        <source>Keep</source>
+        <translation>Conservar</translation>
+    </message>
+    <message>
+        <source>Triangles</source>
+        <translation>Triángulos</translation>
+    </message>
+    <message>
+        <source>Smooth Normals</source>
+        <translation>Suavizar normales</translation>
+    </message>
+    <message>
+        <source>Recomputes the normals of the faces left, so the shading follows the new shape</source>
+        <translation>Vuelve a calcular las normales de las caras que quedan, para que el sombreado siga la nueva forma</translation>
+    </message>
+    <message>
+        <source>Keep Joints</source>
+        <translation>Conservar articulaciones</translation>
+    </message>
+    <message>
+        <source>Keeps the edges where two bones meet, so the model bends as before. Off, more triangles go and the vertex left keeps its own bone.</source>
+        <translation>Conserva las aristas donde se unen dos huesos, para que el modelo se doble como antes. Desactivado, se quitan más triángulos y el vértice que queda conserva su propio hueso.</translation>
+    </message>
+    <message>
+        <source>Show Wireframe</source>
+        <translation>Mostrar malla de alambre</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Restablecer</translation>
+    </message>
+    <message>
+        <source>Back to the triangles this reduction started from</source>
+        <translation>Vuelve a los triángulos desde los que empezó esta reducción</translation>
+    </message>
+    <message>
+        <source>UV seams, the borders of the chosen faces and other textures are kept.</source>
+        <translation>Se conservan las costuras UV, los bordes de las caras elegidas y las demás texturas.</translation>
+    </message>
+    <message>
+        <source>Chosen: %1 triangles, model: %2</source>
+        <translation>Elegidos: %1 triángulos, modelo: %2</translation>
+    </message>
+    <message>
+        <source>Reduce Polygons</source>
+        <translation>Reducir polígonos</translation>
+    </message>
+    <message>
+        <source>%1 → %2 triangles</source>
+        <translation>%1 → %2 triángulos</translation>
     </message>
     <message>
         <source>Eye Position</source>
@@ -2902,6 +2966,10 @@ La operación se elige según el tipo de archivo.</translation>
     <message>
         <source>Move</source>
         <translation>Mover</translation>
+    </message>
+    <message>
+        <source>Nothing selected: edits move everything</source>
+        <translation>Nada seleccionado: las ediciones mueven todo</translation>
     </message>
     <message>
         <source>Values</source>

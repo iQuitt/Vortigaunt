@@ -5,6 +5,7 @@
 
 #include "core/VortigauntLog.h"
 #include "core/mdl/StudioModel.h"
+#include "core/mdl/StudioSimplify.h"
 #include "ui/widgets/UvMapEditor.h"
 
 #include <QApplication>
@@ -42,9 +43,12 @@
 #include <QSettings>
 #include <QSlider>
 #include <QSpinBox>
+#include <QDataStream>
 #include <QSplitter>
 #include <QStackedWidget>
+#include <QProxyStyle>
 #include <QStyle>
+#include <QStyleFactory>
 #include <QTabBar>
 #include <QTimer>
 #include <QUndoCommand>
@@ -62,6 +66,12 @@ namespace
 constexpr int kPanelHeight = 200;
 constexpr int kLayoutVersion = 1;
 const char* const kLayoutKey = "ModelViewer/layout";
+constexpr quint32 kLayoutMagic = 0x564C4159;  // "VLAY": docks, split, window
+constexpr int kLayoutSaveMs = 1000;
+constexpr int kReduceDelayMs = 120;
+// MAXSTUDIOVERTS and MAXSTUDIOTRIANGLES of studiomdl
+constexpr int kMaxStudioVertices = 2048;
+constexpr int kMaxStudioTriangles = 20000;
 constexpr int kBlendSteps = 100;
 constexpr int kControllerSteps = 200;
 constexpr int kSpeedSteps = 100;  // slider steps for 1x
@@ -181,6 +191,18 @@ bool ModelViewerWindow::textureFromImage(const QImage& source, StudioTexture& te
 
 namespace
 {
+// the panel tabs as the style draws them, with less room beside the name
+class TightTabStyle : public QProxyStyle
+{
+public:
+    explicit TightTabStyle(QStyle* base) : QProxyStyle(base) {}
+    int pixelMetric(PixelMetric metric, const QStyleOption* option, const QWidget* widget) const override
+    {
+        const int value = QProxyStyle::pixelMetric(metric, option, widget);
+        return metric == PM_TabBarTabHSpace ? value / 2 : value;
+    }
+};
+
 QString textureLabel(const StudioTexture& texture)
 {
     return QStringLiteral("%1 (%2 x %3)").arg(QString::fromStdString(texture.name)).arg(texture.width).arg(texture.height);
@@ -291,6 +313,7 @@ ModelViewerWindow::ModelViewerWindow(QWidget* parent)
     addPanel(QT_TR_NOOP("Body Parts"), buildBody(), first);
     m_texturesDock = addPanel(QT_TR_NOOP("Textures"), buildTextures(), first);
     m_uvDock = addPanel(QT_TR_NOOP("UV Map"), buildUvMap(), first);
+    addPanel(QT_TR_NOOP("Polygon Reduction"), buildReduce(), first);
     addPanel(QT_TR_NOOP("Model Data"), buildModelData(), first);
     addPanel(QT_TR_NOOP("Bones"), buildBones(), first);
     addPanel(QT_TR_NOOP("Bone Controllers"), buildControllers(), first);
@@ -300,7 +323,23 @@ ModelViewerWindow::ModelViewerWindow(QWidget* parent)
     addPanel(QT_TR_NOOP("Console"), buildConsole(), first, true);
     m_displayDock->raise();
     m_edit->resizeDocks({ first }, { kPanelHeight }, Qt::Vertical);
+    fitPanelTabs();
     m_defaultLayout = m_edit->saveState(kLayoutVersion);
+    // a layout change is written a moment later, so it is kept however the program ends
+    m_layoutSave = new QTimer(this);
+    m_layoutSave->setSingleShot(true);
+    m_layoutSave->setInterval(kLayoutSaveMs);
+    connect(m_layoutSave, &QTimer::timeout, this, &ModelViewerWindow::saveLayout);
+    connect(m_viewSplit, &QSplitter::splitterMoved, m_layoutSave, qOverload<>(&QTimer::start));
+    for (QDockWidget* dock : m_edit->findChildren<QDockWidget*>())
+    {
+        connect(dock, &QDockWidget::dockLocationChanged, m_layoutSave, qOverload<>(&QTimer::start));
+        connect(dock, &QDockWidget::topLevelChanged, m_layoutSave, qOverload<>(&QTimer::start));
+        // a new group of tabs gets a tab bar of its own once the move is done
+        connect(dock, &QDockWidget::dockLocationChanged, this, [this]() { QTimer::singleShot(0, this, &ModelViewerWindow::fitPanelTabs); });
+        connect(dock, &QDockWidget::topLevelChanged, this, [this]() { QTimer::singleShot(0, this, &ModelViewerWindow::fitPanelTabs); });
+        connect(dock, &QDockWidget::visibilityChanged, m_layoutSave, qOverload<>(&QTimer::start));
+    }
     connect(m_texturesDock, &QDockWidget::visibilityChanged, this, [this](bool visible) { m_sceneTabs->setCurrentIndex(visible ? 1 : 0); });
     connect(m_uvDock, &QDockWidget::visibilityChanged, this, [this](bool visible) {
         m_uvEditor->setVisible(visible);
@@ -326,9 +365,73 @@ ModelViewerWindow::ModelViewerWindow(QWidget* parent)
 
 ModelViewerWindow::~ModelViewerWindow()
 {
-    // save the layout only if it was loaded
-    if (m_layoutRestored)
-        QSettings(QStringLiteral("Vortigaunt"), QStringLiteral("VortigauntTool")).setValue(QLatin1String(kLayoutKey), m_edit->saveState(kLayoutVersion));
+    saveLayout();
+}
+
+void ModelViewerWindow::saveLayout()
+{
+    // only a layout that was loaded is written back
+    if (m_layoutRestored && !m_restoringLayout)
+        QSettings(QStringLiteral("Vortigaunt"), QStringLiteral("VortigauntTool")).setValue(QLatin1String(kLayoutKey), layoutState());
+}
+
+QByteArray ModelViewerWindow::layoutState() const
+{
+    QByteArray state;
+    QDataStream out(&state, QIODevice::WriteOnly);
+    out << kLayoutMagic << m_edit->saveState(kLayoutVersion) << m_viewSplit->saveState() << (isWindow() ? saveGeometry() : QByteArray());
+    return state;
+}
+
+bool ModelViewerWindow::restoreLayout(const QByteArray& state)
+{
+    QDataStream in(state);
+    quint32 magic = 0;
+    QByteArray docks, split, geometry;
+    in >> magic;
+    // a layout saved before the split and the window were kept is the dock state alone
+    if (magic == kLayoutMagic)
+        in >> docks >> split >> geometry;
+    else
+        docks = state;
+    if (in.status() != QDataStream::Ok && magic == kLayoutMagic)
+        return false;
+    m_restoringLayout = true;
+    const bool restored = m_edit->restoreState(docks, kLayoutVersion);
+    if (!split.isEmpty())
+        m_viewSplit->restoreState(split);
+    if (!geometry.isEmpty() && isWindow())
+        restoreGeometry(geometry);
+    m_restoringLayout = false;
+    fitPanelTabs();
+    return restored;
+}
+
+void ModelViewerWindow::fitPanelTabs()
+{
+    // the program's own style draws them, with half the room beside the name; made again when the theme changes it
+    const QString name = QApplication::style()->name();
+    QStyle* old = nullptr;
+    if (!m_tabStyle || m_tabStyle->property("vortigauntBase").toString() != name)
+    {
+        old = m_tabStyle;
+        m_tabStyle = new TightTabStyle(QStyleFactory::create(name));
+        m_tabStyle->setParent(this);
+        m_tabStyle->setProperty("vortigauntBase", name);
+    }
+    for (QTabBar* bar : m_edit->findChildren<QTabBar*>(Qt::FindDirectChildrenOnly))
+    {
+        if (bar->style() != m_tabStyle) bar->setStyle(m_tabStyle);
+        bar->setElideMode(Qt::ElideNone);
+        bar->setUsesScrollButtons(true);
+    }
+    delete old;
+}
+
+void ModelViewerWindow::changeEvent(QEvent* event)
+{
+    QMainWindow::changeEvent(event);
+    if (event->type() == QEvent::StyleChange && m_edit) fitPanelTabs();
 }
 
 void ModelViewerWindow::resetLayout()
@@ -346,7 +449,7 @@ void ModelViewerWindow::showEvent(QShowEvent* event)
     m_layoutRestored = true;
     const QByteArray kept = QSettings(QStringLiteral("Vortigaunt"), QStringLiteral("VortigauntTool")).value(QLatin1String(kLayoutKey)).toByteArray();
     if (!kept.isEmpty())
-        m_edit->restoreState(kept, kLayoutVersion);
+        restoreLayout(kept);
 }
 
 QDockWidget* ModelViewerWindow::addPanel(const char* title, QWidget* panel, QDockWidget* tabWith, bool fill)
@@ -354,9 +457,9 @@ QDockWidget* ModelViewerWindow::addPanel(const char* title, QWidget* panel, QDoc
     auto* dock = new QDockWidget(tr(title), m_edit);
     dock->setObjectName(QLatin1String(title));
     tighten(panel);
-    if (tabWith && !fill)
+    if (!fill)
     {
-        // sized to its controls
+        // sized to its controls, filling downward
         auto* packed = new QWidget();
         auto* row = new QHBoxLayout(packed);
         row->setContentsMargins(0, 0, 0, 0);
@@ -376,6 +479,9 @@ QDockWidget* ModelViewerWindow::addPanel(const char* title, QWidget* panel, QDoc
         for (QWidget* widget : { dock->widget(), inner })
             if (auto* box = widget ? qobject_cast<QBoxLayout*>(widget->layout()) : nullptr)
                 box->setDirection(column ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+        // a restored layout keeps its sizes
+        if (m_restoringLayout)
+            return;
         if (area == Qt::LeftDockWidgetArea || area == Qt::RightDockWidgetArea)
             m_edit->resizeDocks({ dock }, { 1 }, Qt::Horizontal);
         else if (area != Qt::NoDockWidgetArea)
@@ -397,6 +503,7 @@ QWidget* ModelViewerWindow::buildView()
     m_view->setHoldUnlooped(true);
     // the UV editor sits beside the 3D view while the UV Map panel is open
     auto* split = new QSplitter(Qt::Horizontal);
+    m_viewSplit = split;
     m_uvEditor = new UvMapEditor();
     m_uvEditor->setObjectName(QStringLiteral("uvEditor"));
     m_uvEditor->hide();
@@ -1368,6 +1475,203 @@ void ModelViewerWindow::showUvMap()
                                : QImage());
 }
 
+QWidget* ModelViewerWindow::buildReduce()
+{
+    auto* panel = new QWidget();
+    auto* row = new QHBoxLayout(panel);
+    auto* grid = new QGridLayout();
+    grid->addWidget(new QLabel(tr("Body Part")), 0, 0);
+    m_reducePart = new QComboBox();
+    m_reducePart->setObjectName(QStringLiteral("reducePart"));
+    grid->addWidget(m_reducePart, 0, 1);
+    grid->addWidget(new QLabel(tr("Submodel")), 1, 0);
+    m_reduceSubModel = new QComboBox();
+    m_reduceSubModel->setObjectName(QStringLiteral("reduceSubModel"));
+    grid->addWidget(m_reduceSubModel, 1, 1);
+    grid->addWidget(new QLabel(tr("Texture")), 2, 0);
+    m_reduceTexture = new QComboBox();
+    m_reduceTexture->setObjectName(QStringLiteral("reduceTexture"));
+    grid->addWidget(m_reduceTexture, 2, 1);
+    m_reduceCount = new QLabel();
+    m_reduceCount->setObjectName(QStringLiteral("reduceCount"));
+    grid->addWidget(m_reduceCount, 3, 0, 1, 2);
+    grid->setRowStretch(4, 1);
+    row->addLayout(grid);
+
+    grid = new QGridLayout();
+    grid->addWidget(new QLabel(tr("Keep")), 0, 0);
+    m_reduceSlider = new QSlider(Qt::Horizontal);
+    m_reduceSlider->setObjectName(QStringLiteral("reduceSlider"));
+    m_reduceSlider->setRange(1, 100);
+    m_reduceSlider->setValue(100);
+    m_reduceSlider->setMinimumWidth(220);
+    grid->addWidget(m_reduceSlider, 0, 1);
+    auto* percent = new QLabel(QStringLiteral("100%"));
+    percent->setFixedWidth(percent->fontMetrics().horizontalAdvance(QStringLiteral("000%")));
+    grid->addWidget(percent, 0, 2);
+    grid->addWidget(new QLabel(tr("Triangles")), 1, 0);
+    m_reduceTarget = new QSpinBox();
+    m_reduceTarget->setObjectName(QStringLiteral("reduceTarget"));
+    m_reduceTarget->setKeyboardTracking(false);
+    grid->addWidget(m_reduceTarget, 1, 1, 1, 2);
+    m_reduceResult = new QLabel();
+    m_reduceResult->setObjectName(QStringLiteral("reduceResult"));
+    grid->addWidget(m_reduceResult, 2, 0, 1, 3);
+    grid->setRowStretch(3, 1);
+    row->addLayout(grid);
+
+    auto* column = new QVBoxLayout();
+    m_reduceNormals = new QCheckBox(tr("Smooth Normals"));
+    m_reduceNormals->setToolTip(tr("Recomputes the normals of the faces left, so the shading follows the new shape"));
+    m_reduceNormals->setChecked(true);
+    m_reduceJoints = new QCheckBox(tr("Keep Joints"));
+    m_reduceJoints->setToolTip(tr("Keeps the edges where two bones meet, so the model bends as before. "
+                                  "Off, more triangles go and the vertex left keeps its own bone."));
+    m_reduceJoints->setChecked(true);
+    m_reduceWireframe = new QCheckBox(tr("Show Wireframe"));
+    auto* reset = new QPushButton(tr("Reset"));
+    reset->setToolTip(tr("Back to the triangles this reduction started from"));
+    for (QWidget* widget : std::initializer_list<QWidget*>{ m_reduceNormals, m_reduceJoints, m_reduceWireframe, reset }) column->addWidget(widget);
+    auto* help = new QLabel(tr("UV seams, the borders of the chosen faces and other textures are kept."));
+    help->setWordWrap(true);
+    help->setMaximumWidth(240);
+    column->addWidget(help);
+    column->addStretch(1);
+    row->addLayout(column);
+
+    // a drag is reduced once it rests for a moment
+    m_reduceTimer = new QTimer(this);
+    m_reduceTimer->setSingleShot(true);
+    m_reduceTimer->setInterval(kReduceDelayMs);
+    connect(m_reduceTimer, &QTimer::timeout, this, &ModelViewerWindow::applyReduce);
+    // another choice starts a new reduction from the model as it is
+    auto newChoice = [this]() {
+        m_reduceBase.reset();
+        m_reduceMade.reset();
+        showReduce();
+    };
+    connect(m_reducePart, &QComboBox::currentIndexChanged, this, [this, newChoice]() {
+        fillReduceSubModels();
+        newChoice();
+    });
+    connect(m_reduceSubModel, &QComboBox::currentIndexChanged, this, newChoice);
+    connect(m_reduceTexture, &QComboBox::currentIndexChanged, this, newChoice);
+    connect(m_reduceSlider, &QSlider::valueChanged, this, [this, percent](int value) {
+        percent->setText(QStringLiteral("%1%").arg(value));
+        m_reduceKeep = value / 100.0f;
+        const QSignalBlocker block(m_reduceTarget);
+        m_reduceTarget->setValue(std::max(1, static_cast<int>(std::lround(m_reduceTarget->maximum() * m_reduceKeep))));
+        m_reduceTimer->start();
+    });
+    connect(m_reduceTarget, &QSpinBox::valueChanged, this, [this, percent](int value) {
+        m_reduceKeep = static_cast<float>(value) / std::max(1, m_reduceTarget->maximum());
+        const QSignalBlocker block(m_reduceSlider);
+        m_reduceSlider->setValue(std::max(1, static_cast<int>(std::lround(m_reduceKeep * 100.0f))));
+        percent->setText(QStringLiteral("%1%").arg(m_reduceSlider->value()));
+        m_reduceTimer->start();
+    });
+    for (QCheckBox* check : { m_reduceNormals, m_reduceJoints })
+        connect(check, &QCheckBox::toggled, this, [this]() {
+            if (m_reduceBase) m_reduceTimer->start();
+        });
+    connect(reset, &QPushButton::clicked, this, [this]() { m_reduceSlider->setValue(100); });
+    // the same switch as Model Display's
+    for (const auto& [check, member] : m_displayChecks)
+        if (member == &StudioModelView::Display::wireframeOverlay)
+        {
+            connect(m_reduceWireframe, &QCheckBox::toggled, check, &QCheckBox::setChecked);
+            connect(check, &QCheckBox::toggled, m_reduceWireframe, &QCheckBox::setChecked);
+        }
+    return panel;
+}
+
+void ModelViewerWindow::fillReduceSubModels()
+{
+    const QSignalBlocker block(m_reduceSubModel);
+    m_reduceSubModel->clear();
+    const Asset* shown = asset();
+    const int part = m_reducePart->currentIndex() - 1;
+    m_reduceSubModel->addItem(tr("All"));
+    if (shown && part >= 0 && part < static_cast<int>(shown->model->bodyParts.size()))
+    {
+        const std::vector<StudioSubModel>& models = shown->model->bodyParts[part].models;
+        for (size_t i = 0; i < models.size(); ++i)
+            m_reduceSubModel->addItem(models[i].name.empty() ? tr("Submodel %1").arg(i + 1) : QString::fromStdString(models[i].name));
+    }
+    m_reduceSubModel->setEnabled(part >= 0);
+}
+
+void ModelViewerWindow::showReduce()
+{
+    const Asset* shown = asset();
+    if (!shown) return;
+    // undone, or edited in another panel: what is shown now is where the next reduction starts
+    if (!m_reducing && m_reduceBase && shown->model != m_reduceMade)
+    {
+        m_reduceBase.reset();
+        m_reduceMade.reset();
+    }
+    const StudioModel& from = m_reduceBase ? *m_reduceBase : *shown->model;
+    const int part = m_reducePart->currentIndex() - 1;
+    const int subModel = part >= 0 ? m_reduceSubModel->currentIndex() - 1 : -1;
+    const int texture = m_reduceTexture->currentIndex() - 1;
+    const int before = CountStudioTriangles(from, part, subModel, texture);
+    m_reduceCount->setText(tr("Chosen: %1 triangles, model: %2").arg(before).arg(CountStudioTriangles(*shown->model, -1, -1, -1)));
+    if (!m_reduceBase)
+    {
+        {
+            const QSignalBlocker block(m_reduceTarget);
+            m_reduceTarget->setRange(1, std::max(1, before));
+            m_reduceTarget->setValue(std::max(1, before));
+        }
+        // back at full size; with nothing to start from this reduces nothing
+        m_reduceKeep = 1.0f;
+        m_reduceSlider->setValue(100);
+        m_reduceResult->clear();
+    }
+    // studiomdl and the engine stop at these per submodel; over them the count turns red
+    int vertices = 0, triangles = 0;
+    for (int p = 0; p < static_cast<int>(shown->model->bodyParts.size()); ++p)
+        for (const StudioSubModel& sub : shown->model->bodyParts[p].models)
+        {
+            vertices = std::max(vertices, static_cast<int>(sub.vertices.size()));
+            int count = 0;
+            for (const StudioMesh& mesh : sub.meshes) count += static_cast<int>(mesh.triangles.size() / 3);
+            triangles = std::max(triangles, count);
+        }
+    const bool over = vertices > kMaxStudioVertices || triangles > kMaxStudioTriangles;
+    m_reduceCount->setStyleSheet(over ? QStringLiteral("color: #d04040;") : QString());
+}
+
+void ModelViewerWindow::applyReduce()
+{
+    Asset* shown = asset();
+    if (m_filling || !shown) return;
+    // nothing to undo at full size before anything was reduced
+    if (!m_reduceBase && m_reduceKeep >= 1.0f) return;
+    if (!m_reduceBase)
+    {
+        m_reduceBase = shown->model;
+        ++m_reduceStep;
+    }
+    const std::shared_ptr<StudioModel> base = m_reduceBase;
+    const int part = m_reducePart->currentIndex() - 1;
+    const int subModel = part >= 0 ? m_reduceSubModel->currentIndex() - 1 : -1;
+    const int texture = m_reduceTexture->currentIndex() - 1;
+    const float keep = m_reduceKeep;
+    const bool normals = m_reduceNormals->isChecked(), joints = m_reduceJoints->isChecked();
+    SimplifyResult result;
+    m_reducing = true;
+    editModel(tr("Reduce Polygons"), QStringLiteral("reduce %1").arg(m_reduceStep), [&](StudioModel& model) {
+        model = *base;
+        result = SimplifyStudioModel(model, part, subModel, texture, keep, normals && keep < 1.0f, joints);
+    });
+    m_reducing = false;
+    m_reduceMade = asset() ? asset()->model : nullptr;
+    m_reduceResult->setText(tr("%1 -> %2 triangles").arg(result.before).arg(result.after));
+    showReduce();
+}
+
 QWidget* ModelViewerWindow::buildModelData()
 {
     auto* panel = new QWidget();
@@ -2041,7 +2345,7 @@ void ModelViewerWindow::showAsset(int index)
     m_undoGroup->setActiveStack(shown ? shown->undo : nullptr);
     QComboBox* combos[] = { m_sequenceCombo, m_eventCombo,      m_partCombo,      m_subModelCombo, m_skinCombo,      m_textureCombo, m_meshCombo,
                             m_boneCombo,     m_controllerCombo, m_controllerBone, m_attachmentCombo, m_attachmentBone, m_hitboxCombo,  m_hitboxBone,
-                            m_uvTexture,     m_uvMesh };
+                            m_uvTexture,     m_uvMesh,          m_reducePart,    m_reduceSubModel, m_reduceTexture };
     {
         std::vector<std::unique_ptr<QSignalBlocker>> blocks;
         for (QComboBox* combo : combos)
@@ -2075,6 +2379,13 @@ void ModelViewerWindow::showAsset(int index)
         fillCombo(m_skinCombo, data.skinFamilies, [&](size_t i) { return tr("Skin %1").arg(i + 1); });
         fillCombo(m_textureCombo, data.textures, [&](size_t i) { return textureLabel(data.textures[i]); });
         fillCombo(m_uvTexture, data.textures, [&](size_t i) { return textureLabel(data.textures[i]); });
+        m_reducePart->addItem(tr("All"));
+        fillCombo(m_reducePart, data.bodyParts, [&](size_t i) { return QString::fromStdString(data.bodyParts[i].name); });
+        m_reduceTexture->addItem(tr("All"));
+        fillCombo(m_reduceTexture, data.textures, [&](size_t i) { return textureLabel(data.textures[i]); });
+        fillReduceSubModels();
+        m_reduceBase.reset();
+        m_reduceMade.reset();
         for (QComboBox* bones : { m_boneCombo, m_controllerBone, m_attachmentBone, m_hitboxBone })
             fillCombo(bones, data.bones, [&](size_t i) { return indexed(data.bones[i].name, static_cast<int>(i)); });
         fillCombo(m_controllerCombo, data.controllers, [&](size_t i) {
@@ -2101,6 +2412,7 @@ void ModelViewerWindow::showAsset(int index)
     m_uvEditor->setMeshes(data, -1, -1);
     m_uvTexture->setCurrentIndex(-1);
     m_uvTexture->setCurrentIndex(data.textures.empty() ? -1 : 0);
+    showReduce();
     for (QComboBox* combo : { m_boneCombo, m_controllerCombo, m_attachmentCombo, m_hitboxCombo })
         if (combo->count()) combo->setCurrentIndex(0);
     showBone(m_boneCombo->currentIndex());
@@ -2331,6 +2643,8 @@ void ModelViewerWindow::refreshPanels()
     showSubModel(m_subModelCombo->currentIndex());
     showTexture();
     showUvMap();
+    rename(m_reduceTexture, [&](int i) { return i == 0 ? tr("All") : textureLabel(data.textures[i - 1]); });
+    showReduce();
     showBone(m_boneCombo->currentIndex());
     showController(m_controllerCombo->currentIndex());
     showAttachment(m_attachmentCombo->currentIndex());
@@ -2393,15 +2707,15 @@ bool ModelViewerWindow::confirmClose(int index)
 
 bool ModelViewerWindow::closeAll()
 {
+    // with no model open there is nothing to warn about
     const Asset* shown = asset();
-    const StudioModel& data = *shown->model;
-
-	if (data.attachments.size() > static_cast<size_t>(kStudioMaxAttachments))
-	{
+    if (shown && shown->model->attachments.size() > static_cast<size_t>(kStudioMaxAttachments))
+    {
         const QMessageBox::StandardButton answer = QMessageBox::question(
             this, tr("Warning"), tr("The model has more than %1 attachments. Maximum allowed is 4. Are you sure you want to continue?").arg(kStudioMaxAttachments),
             QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
-	}
+        if (answer == QMessageBox::Cancel) return false;
+    }
     for (int i = 0; i < static_cast<int>(m_assets.size()); ++i)
         if (!confirmClose(i)) return false;
     // discarded changes are not asked about again
@@ -2417,6 +2731,8 @@ void ModelViewerWindow::closeEvent(QCloseEvent* event)
         event->ignore();
         return;
     }
+    // opened from Explorer, the program can end before this window is deleted
+    saveLayout();
     QMainWindow::closeEvent(event);
 }
 

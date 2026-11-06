@@ -698,22 +698,48 @@ const StudioSubModel* StudioModelView::shownSubModel(const Model& model, size_t 
 
 void StudioModelView::buildVertices(const Model& model, std::vector<float>& out) const
 {
-    out.clear();
+    size_t corners = 0;
+    for (size_t part = 0; part < model.data->bodyParts.size(); ++part)
+        if (const StudioSubModel* shown = shownSubModel(model, part))
+            for (const StudioMesh& mesh : shown->meshes) corners += mesh.triangles.size();
+    out.resize(corners * kFloatsPerVertex);
+    float* write = out.data();
+    // each vertex and normal moved once, then copied to the corners that share it
+    static thread_local std::vector<aiVector3D> placed, turned;
+    const aiMatrix4x4* bones = model.bones.data();
     for (size_t part = 0; part < model.data->bodyParts.size(); ++part)
     {
         const StudioSubModel* shown = shownSubModel(model, part);
         if (!shown)
             continue;
         const StudioSubModel& sub = *shown;
+        placed.resize(sub.vertices.size());
+        turned.resize(sub.normals.size());
+        const aiVector3D* vertices = sub.vertices.data();
+        const int* vertexBones = sub.vertexBones.data();
+        for (size_t v = 0; v < placed.size(); ++v)
+            placed[v] = bones[vertexBones[v]] * vertices[v];
+        const aiVector3D* normals = sub.normals.data();
+        const int* normalBones = sub.normalBones.data();
+        for (size_t n = 0; n < turned.size(); ++n)
+            turned[n] = (aiMatrix3x3(bones[normalBones[n]]) * normals[n]).NormalizeSafe();
+        const aiVector3D* positions = placed.data();
+        const aiVector3D* directions = turned.data();
         for (const StudioMesh& mesh : sub.meshes)
         {
-            for (const StudioTriVertex& corner : mesh.triangles)
+            const StudioTriVertex* corner = mesh.triangles.data();
+            for (const StudioTriVertex* end = corner + mesh.triangles.size(); corner != end; ++corner, write += kFloatsPerVertex)
             {
-                const aiMatrix4x4& bone = model.bones[sub.vertexBones[corner.vertex]];
-                const aiVector3D position = bone * sub.vertices[corner.vertex];
-                const aiMatrix4x4& normalBone = model.bones[sub.normalBones[corner.normal]];
-                const aiVector3D normal = (aiMatrix3x3(normalBone) * sub.normals[corner.normal]).NormalizeSafe();
-                out.insert(out.end(), { position.x, position.y, position.z, normal.x, normal.y, normal.z, corner.u, corner.v });
+                const aiVector3D& position = positions[corner->vertex];
+                const aiVector3D& normal = directions[corner->normal];
+                write[0] = position.x;
+                write[1] = position.y;
+                write[2] = position.z;
+                write[3] = normal.x;
+                write[4] = normal.y;
+                write[5] = normal.z;
+                write[6] = corner->u;
+                write[7] = corner->v;
             }
         }
     }

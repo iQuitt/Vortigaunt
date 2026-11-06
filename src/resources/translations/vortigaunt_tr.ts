@@ -28,6 +28,14 @@
         <translation>Derlenme Tarihi:</translation>
     </message>
     <message>
+        <source>Version:</source>
+        <translation>Sürüm:</translation>
+    </message>
+    <message>
+        <source>Lines of Code</source>
+        <translation>Kod Satırı</translation>
+    </message>
+    <message>
         <source>Info</source>
         <translation>Bilgi</translation>
     </message>
@@ -2323,6 +2331,10 @@ The operation is picked from the file type.</source>
         <translation>UV Haritası</translation>
     </message>
     <message>
+        <source>Polygon Reduction</source>
+        <translation>Polygon Azaltma</translation>
+    </message>
+    <message>
         <source>Transformation</source>
         <translation>Dönüştürme</translation>
     </message>
@@ -2747,12 +2759,64 @@ The operation is picked from the file type.</source>
         <translation>Seçili nokta: %1</translation>
     </message>
     <message>
-        <source>Nothing selected</source>
-        <translation>Seçim yok</translation>
-    </message>
-    <message>
         <source>Edit UV Map</source>
         <translation>UV Haritasını Düzenle</translation>
+    </message>
+    <message>
+        <source>Body Part</source>
+        <translation>Gövde Parçası</translation>
+    </message>
+    <message>
+        <source>Keep</source>
+        <translation>Koru</translation>
+    </message>
+    <message>
+        <source>Triangles</source>
+        <translation>Üçgenler</translation>
+    </message>
+    <message>
+        <source>Smooth Normals</source>
+        <translation>Normalleri Yumuşat</translation>
+    </message>
+    <message>
+        <source>Recomputes the normals of the faces left, so the shading follows the new shape</source>
+        <translation>Kalan yüzlerin normallerini yeniden hesaplar, böylece gölgelendirme yeni şekli izler</translation>
+    </message>
+    <message>
+        <source>Keep Joints</source>
+        <translation>Eklemleri Koru</translation>
+    </message>
+    <message>
+        <source>Keeps the edges where two bones meet, so the model bends as before. Off, more triangles go and the vertex left keeps its own bone.</source>
+        <translation>İki kemiğin buluştuğu kenarları korur, böylece model önceki gibi bükülür. Kapalıyken daha çok üçgen gider ve kalan vertex kendi kemiğinde kalır.</translation>
+    </message>
+    <message>
+        <source>Show Wireframe</source>
+        <translation>Tel Kafesi Göster</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Sıfırla</translation>
+    </message>
+    <message>
+        <source>Back to the triangles this reduction started from</source>
+        <translation>Bu azaltmanın başladığı üçgenlere geri döner</translation>
+    </message>
+    <message>
+        <source>UV seams, the borders of the chosen faces and other textures are kept.</source>
+        <translation>UV dikişleri, seçilen yüzlerin sınırları ve diğer dokular korunur.</translation>
+    </message>
+    <message>
+        <source>Chosen: %1 triangles, model: %2</source>
+        <translation>Seçili: %1 üçgen, model: %2</translation>
+    </message>
+    <message>
+        <source>Reduce Polygons</source>
+        <translation>Polygonları Azalt</translation>
+    </message>
+    <message>
+        <source>%1 → %2 triangles</source>
+        <translation>%1 → %2 üçgen</translation>
     </message>
     <message>
         <source>Eye Position</source>
@@ -2901,6 +2965,10 @@ The operation is picked from the file type.</source>
     <message>
         <source>Move</source>
         <translation>Taşı</translation>
+    </message>
+    <message>
+        <source>Nothing selected: edits move everything</source>
+        <translation>Seçim yok: düzenlemeler her şeyi taşır</translation>
     </message>
     <message>
         <source>Values</source>

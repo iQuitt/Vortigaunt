@@ -18,6 +18,7 @@ set(VORTIGAUNT_CORE_HEADERS
     core/converters/FbxGlbConverter.h
     core/converters/WeaponModelConverter.h
     core/mdl/StudioModel.h
+    core/mdl/StudioSimplify.h
     core/mdl/StudioDecompiler.h
     core/autorig/SkeletonMath.h
     core/autorig/Retarget.h
@@ -106,6 +107,7 @@ set(VORTIGAUNT_CORE
     core/converters/FbxGlbConverter.cpp
     core/converters/WeaponModelConverter.cpp
     core/mdl/StudioModel.cpp
+    core/mdl/StudioSimplify.cpp
     core/mdl/StudioDecompiler.cpp
     core/autorig/SkeletonMath.cpp
     core/autorig/Retarget.cpp
@@ -338,6 +340,21 @@ if(BUILD_GUI)
     # Create translations directory if it doesn't exist
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources/translations)
 
+    # the private tools stay out of the translation files, even when they are built; the command line
+    # program has no UI text and builds some of them too
+    set_property(TARGET VortigauntTool PROPERTY QT_EXCLUDE_FROM_TRANSLATION ON)
+    set_property(TARGET VortigauntTool_gui PROPERTY QT_EXCLUDE_SOURCES_FROM_TRANSLATION
+        "${CMAKE_CURRENT_SOURCE_DIR}/core/autorig/AutoRig.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/core/autorig/HeatRig.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/core/autorig/MeshBvh.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/core/autorig/WeightTransfer.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/core/map/*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/core/mdl/HandSwap.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ui/dialogs/AutoRigDialog.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ui/dialogs/PhysicsLabDialog.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ui/dialogs/MapPortDialog.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ui/workspaces/HandsWorkspace.*"
+    )
     # Add translations - this will create lupdate and lrelease targets
     qt_add_translations(VortigauntTool_gui
         TS_FILES ${TS_FILES}

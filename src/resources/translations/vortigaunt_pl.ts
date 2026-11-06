@@ -28,6 +28,14 @@
         <translation>Zbudowano:</translation>
     </message>
     <message>
+        <source>Version:</source>
+        <translation>Wersja:</translation>
+    </message>
+    <message>
+        <source>Lines of Code</source>
+        <translation>Wiersze kodu</translation>
+    </message>
+    <message>
         <source>Info</source>
         <translation>Informacje</translation>
     </message>
@@ -2325,6 +2333,10 @@ Operacja jest wybierana według typu pliku.</translation>
         <translation>Mapa UV</translation>
     </message>
     <message>
+        <source>Polygon Reduction</source>
+        <translation>Redukcja wielokątów</translation>
+    </message>
+    <message>
         <source>Transformation</source>
         <translation>Przekształcenie</translation>
     </message>
@@ -2755,6 +2767,62 @@ Operacja jest wybierana według typu pliku.</translation>
     <message>
         <source>Edit UV Map</source>
         <translation>Edytuj mapę UV</translation>
+    </message>
+    <message>
+        <source>Body Part</source>
+        <translation>Część ciała</translation>
+    </message>
+    <message>
+        <source>Keep</source>
+        <translation>Zachowaj</translation>
+    </message>
+    <message>
+        <source>Triangles</source>
+        <translation>Trójkąty</translation>
+    </message>
+    <message>
+        <source>Smooth Normals</source>
+        <translation>Wygładź normalne</translation>
+    </message>
+    <message>
+        <source>Recomputes the normals of the faces left, so the shading follows the new shape</source>
+        <translation>Ponownie oblicza normalne pozostałych ścian, aby cieniowanie odpowiadało nowemu kształtowi</translation>
+    </message>
+    <message>
+        <source>Keep Joints</source>
+        <translation>Zachowaj stawy</translation>
+    </message>
+    <message>
+        <source>Keeps the edges where two bones meet, so the model bends as before. Off, more triangles go and the vertex left keeps its own bone.</source>
+        <translation>Zachowuje krawędzie, w których spotykają się dwie kości, więc model zgina się jak wcześniej. Po wyłączeniu znika więcej trójkątów, a pozostały wierzchołek zachowuje swoją kość.</translation>
+    </message>
+    <message>
+        <source>Show Wireframe</source>
+        <translation>Pokaż siatkę</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Resetuj</translation>
+    </message>
+    <message>
+        <source>Back to the triangles this reduction started from</source>
+        <translation>Wraca do trójkątów, od których zaczęła się ta redukcja</translation>
+    </message>
+    <message>
+        <source>UV seams, the borders of the chosen faces and other textures are kept.</source>
+        <translation>Szwy UV, granice wybranych ścian i inne tekstury pozostają bez zmian.</translation>
+    </message>
+    <message>
+        <source>Chosen: %1 triangles, model: %2</source>
+        <translation>Wybrane: %1 trójkątów, model: %2</translation>
+    </message>
+    <message>
+        <source>Reduce Polygons</source>
+        <translation>Zmniejsz liczbę wielokątów</translation>
+    </message>
+    <message>
+        <source>%1 → %2 triangles</source>
+        <translation>%1 → %2 trójkątów</translation>
     </message>
     <message>
         <source>Eye Position</source>

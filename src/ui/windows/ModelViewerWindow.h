@@ -27,6 +27,9 @@ class QListWidget;
 class QPlainTextEdit;
 class QPushButton;
 class QSlider;
+class QStyle;
+class QSplitter;
+class QTimer;
 class QSpinBox;
 class QStackedWidget;
 class QTabBar;
@@ -58,9 +61,12 @@ public:
     static bool textureFromImage(const QImage& source, StudioTexture& texture);
     StudioModelView* view() const { return m_view; }
     QMainWindow* editWindow() const { return m_edit; }
-    // remember the panel layout (read on first show, saved on close)
     // restore the default layout
     void resetLayout();
+    // the panels, the UV editor's split and, as a window of its own, its place on screen
+    QByteArray layoutState() const;
+    bool restoreLayout(const QByteArray& state);
+    // remember the layout: read on first show, written as it changes and on close
     void setRemembersLayout(bool remembers)
     {
         m_remembersLayout = remembers;
@@ -72,6 +78,7 @@ protected:
     void dropEvent(QDropEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
+    void changeEvent(QEvent* event) override;
 
 private:
     friend class ModelEdit;
@@ -116,6 +123,11 @@ private:
     QWidget* buildTransform();
     QWidget* buildUvMap();
     void showUvMap();
+    QWidget* buildReduce();
+    // counts of the chosen faces; a model changed elsewhere starts a new reduction
+    void showReduce();
+    void fillReduceSubModels();
+    void applyReduce();
     void applyTransform();
     void applyScene();
     void importTexture();
@@ -188,6 +200,13 @@ private:
     QByteArray m_defaultLayout;
     bool m_remembersLayout = true;
     bool m_layoutRestored = false;
+    bool m_restoringLayout = false;
+    QSplitter* m_viewSplit = nullptr;
+    QTimer* m_layoutSave = nullptr;
+    void saveLayout();
+    // whole names on the panel tabs: tight tabs, and arrows rather than "..." when still too long
+    void fitPanelTabs();
+    QStyle* m_tabStyle = nullptr;
     QString m_modelInfo;
 
     QWidget* m_controlsBar = nullptr;
@@ -303,6 +322,23 @@ private:
     QDoubleSpinBox* m_uvScaleU = nullptr;
     QDoubleSpinBox* m_uvScaleV = nullptr;
     int m_uvStep = 0;  // one undo step per drag or button
+
+    QComboBox* m_reducePart = nullptr;
+    QComboBox* m_reduceSubModel = nullptr;
+    QComboBox* m_reduceTexture = nullptr;
+    QLabel* m_reduceCount = nullptr;
+    QLabel* m_reduceResult = nullptr;
+    QSlider* m_reduceSlider = nullptr;
+    QSpinBox* m_reduceTarget = nullptr;
+    QCheckBox* m_reduceNormals = nullptr;
+    QCheckBox* m_reduceJoints = nullptr;
+    QCheckBox* m_reduceWireframe = nullptr;
+    QTimer* m_reduceTimer = nullptr;
+    // the model a reduction starts from, and the one it made last
+    std::shared_ptr<StudioModel> m_reduceBase, m_reduceMade;
+    float m_reduceKeep = 1.0f;
+    bool m_reducing = false;
+    int m_reduceStep = 0;
 
     VectorEdit m_eyePosition, m_boundsMin, m_boundsMax, m_clipMin, m_clipMax;
     std::vector<std::pair<QCheckBox*, int>> m_modelFlags;
