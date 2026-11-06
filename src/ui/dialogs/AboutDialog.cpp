@@ -76,6 +76,8 @@ AboutDialog::AboutDialog(QWidget* parent)
     addInfo(tr("Branch:"), VORTIGAUNT_GIT_BRANCH);
     addInfo(tr("Qt:"), QT_VERSION_STR);
     addInfo(tr("Built:"), QString("%1 %2").arg(__DATE__).arg(__TIME__));
+	addInfo(tr("Version:"), QString("%1.%2.%3").arg(VORTIGAUNT_VERSION_MAJOR).arg(VORTIGAUNT_VERSION_MINOR).arg(VORTIGAUNT_VERSION_PATCH));
+	addInfo(tr("Lines of Code"), QString::number(VORTIGAUNT_LINES_OF_CODE));
 
     infoLayout->addStretch();
     tabs->addTab(infoTab, tr("Info"));
