@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <vector>
 #include <cstdio>
 
 #ifdef _WIN32
@@ -95,6 +96,43 @@ inline bool isRegularFile(const std::string& utf8Path)
 {
     std::error_code ec;
     return std::filesystem::is_regular_file(toPath(utf8Path), ec);
+}
+
+// a whole file's bytes, into a vector of any one-byte type; false (and out empty) when it is missing or empty
+template <typename Byte>
+inline bool readBytes(const std::filesystem::path& path, std::vector<Byte>& out)
+{
+    static_assert(sizeof(Byte) == 1, "bytes only");
+    out.clear();
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
+    const std::streamsize size = file ? static_cast<std::streamsize>(file.tellg()) : 0;
+    if (size <= 0)
+        return false;
+    out.resize(static_cast<size_t>(size));
+    file.seekg(0);
+    if (!file.read(reinterpret_cast<char*>(out.data()), size))
+    {
+        out.clear();
+        return false;
+    }
+    return true;
+}
+
+template <typename Byte>
+inline bool readBytes(const std::string& utf8Path, std::vector<Byte>& out)
+{
+    return readBytes(toPath(utf8Path), out);
+}
+
+// a whole text file as it is; false when it cannot be opened
+inline bool readText(const std::string& utf8Path, std::string& out)
+{
+    out.clear();
+    std::ifstream file(toPath(utf8Path), std::ios::binary);
+    if (!file.is_open())
+        return false;
+    out.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    return true;
 }
 
 // ".fbx" for "Model.FBX"

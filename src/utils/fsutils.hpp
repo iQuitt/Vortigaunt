@@ -15,9 +15,6 @@
 
 namespace fs = std::filesystem;
 
-std::pair<bool, std::vector<uint8_t>> ReadFileToBuffer(
-    std::string_view filename, uint64_t readLength = 0);
-
 bool WriteBufferToFile(std::span<uint8_t> buff, std::string_view filename);
 
 std::string FormatSize(uint64_t bytes);

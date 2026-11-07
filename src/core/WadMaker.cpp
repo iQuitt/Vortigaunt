@@ -74,7 +74,7 @@ std::string WadArchive::sanitizeTextureName(const std::string& name) const
     
     // i just need delete this shit
     if (result.rfind("SKY", 0) == 0)
-        for (char& c : result) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        result = String_ToLower(result);
 
     if (result.empty())
     {

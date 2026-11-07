@@ -67,24 +67,6 @@ int32_t intAt(const std::vector<uint8_t>& file, size_t offset)
     return value;
 }
 
-bool readFile(const std::filesystem::path& path, std::vector<uint8_t>& out)
-{
-    std::ifstream f(path, std::ios::binary | std::ios::ate);
-    if (!f)
-    {
-        return false;
-    }
-    const std::streamsize size = f.tellg();
-    if (size <= 0)
-    {
-        return false;
-    }
-    out.resize(static_cast<size_t>(size));
-    f.seekg(0);
-    f.read(reinterpret_cast<char*>(out.data()), size);
-    return f.good();
-}
-
 // a mesh's strips and fans as triangles; UVs divided by width and height
 void readTricmds(const std::vector<uint8_t>& file, size_t at, float width, float height, int numVertices, int numNormals,
                  std::vector<StudioTriVertex>& triangles)
@@ -152,7 +134,7 @@ bool StudioModel::Load(const std::string& path)
 
     const std::filesystem::path modelPath = FileIO::toPath(path);
     std::vector<uint8_t> file;
-    if (!readFile(modelPath, file))
+    if (!FileIO::readBytes(modelPath, file))
     {
         return Fail("Could not read " + path);
     }
@@ -270,7 +252,7 @@ bool StudioModel::Load(const std::string& path)
         char suffix[8];
         std::snprintf(suffix, sizeof(suffix), "%02d", g);
         auto group = std::make_shared<std::vector<uint8_t>>();
-        if (readFile(sibling(modelPath, suffix), *group))
+        if (FileIO::readBytes(sibling(modelPath, suffix), *group))
             m_groupFiles[g] = std::move(group);
     }
 
@@ -332,7 +314,7 @@ bool StudioModel::Load(const std::string& path)
     const std::vector<uint8_t>* textureSource = &file;
     if (intAt(file, 180) == 0)
     {
-        if (readFile(sibling(modelPath, "T"), textureFile) || readFile(sibling(modelPath, "t"), textureFile))
+        if (FileIO::readBytes(sibling(modelPath, "T"), textureFile) || FileIO::readBytes(sibling(modelPath, "t"), textureFile))
         {
             if (textureFile.size() >= 244 && std::memcmp(textureFile.data(), "IDST", 4) == 0)
             {
@@ -1099,7 +1081,7 @@ bool StudioModel::TransformBoneVertices(const std::string& inputPath, const std:
 {
     std::vector<uint8_t> file;
     const std::filesystem::path input = FileIO::toPath(inputPath);
-    if (!readFile(input, file) || file.size() < 244 || std::memcmp(file.data(), "IDST", 4) != 0 || intAt(file, 4) != 10)
+    if (!FileIO::readBytes(input, file) || file.size() < 244 || std::memcmp(file.data(), "IDST", 4) != 0 || intAt(file, 4) != 10)
     {
         error = "Not a GoldSrc studio model: " + inputPath;
         return false;
@@ -1193,7 +1175,7 @@ bool StudioModel::TransformBoneVertices(const std::string& inputPath, const std:
 bool StudioModel::AddTextureFlags(const std::string& path, int flags, std::string& error)
 {
     std::vector<uint8_t> file;
-    if (!readFile(FileIO::toPath(path), file) || file.size() < 244 || std::memcmp(file.data(), "IDST", 4) != 0 || intAt(file, 4) != 10)
+    if (!FileIO::readBytes(FileIO::toPath(path), file) || file.size() < 244 || std::memcmp(file.data(), "IDST", 4) != 0 || intAt(file, 4) != 10)
     {
         error = "Not a GoldSrc studio model: " + path;
         return false;

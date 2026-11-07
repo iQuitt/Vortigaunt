@@ -126,27 +126,6 @@ int Gr2Converter::ConvertSingleGr2File(const std::string& inputFilePath, const s
     return GR2_CONVERT_RET_OK;
 }
 
-static bool ReadFileToBuffer(const std::string& inputFilePath, std::vector<char>& buffer)
-{
-    std::ifstream file(FileIO::toPath(inputFilePath), std::ios::binary | std::ios::ate);
-    if (!file)
-        return false;
-        
-    std::streamsize size = file.tellg();
-    if (size <= 0)
-        return false;
-        
-    file.seekg(0, std::ios::beg);
-    buffer.resize(static_cast<size_t>(size));
-    
-    if (!file.read(buffer.data(), size))
-    {
-        buffer.clear();
-        return false;
-    }
-        
-    return true;
-}
 
 static aiVector3D CrossProduct(const aiVector3D& a, const aiVector3D& b)
 {
@@ -194,7 +173,7 @@ std::vector<std::string> Gr2Converter::GetAnimationNames(const std::string& inpu
     std::vector<std::string> names;
     
     std::vector<char> buffer;
-    if (!ReadFileToBuffer(inputFilePath, buffer))
+    if (!FileIO::readBytes(inputFilePath, buffer))
         return names;
         
     granny_file* file = GrannyReadEntireFileFromMemory(static_cast<granny_int32x>(buffer.size()), buffer.data());
@@ -225,7 +204,7 @@ std::vector<std::string> Gr2Converter::GetAnimationNames(const std::string& inpu
 int Gr2Converter::GetPolygonCount(const std::string& inputFilePath)
 {
     std::vector<char> buffer;
-    if (!ReadFileToBuffer(inputFilePath, buffer))
+    if (!FileIO::readBytes(inputFilePath, buffer))
         return 0;
 
     granny_file* file = GrannyReadEntireFileFromMemory(static_cast<granny_int32x>(buffer.size()), buffer.data());
@@ -412,7 +391,7 @@ int Gr2Converter::ConvertGr2Animation(const std::string& inputFilePath, const st
     
     if (!skeletonSourceFile.empty() && std::filesystem::exists(FileIO::toPath(skeletonSourceFile)))
     {
-        if (ReadFileToBuffer(skeletonSourceFile, skeletonBuffer))
+        if (FileIO::readBytes(skeletonSourceFile, skeletonBuffer))
         {
             skeletonFile = GrannyReadEntireFileFromMemory(static_cast<granny_int32x>(skeletonBuffer.size()), skeletonBuffer.data());
             if (skeletonFile)
@@ -557,7 +536,7 @@ bool Gr2Converter::loadGr2File(const std::string& inputFilePath)
 {
     clearData();
 
-    if (!ReadFileToBuffer(inputFilePath, m_grannyBuffer))
+    if (!FileIO::readBytes(inputFilePath, m_grannyBuffer))
     {
         Vortigaunt_Printf("ERROR: Failed to read GR2 file to buffer");
         return false;

@@ -38,6 +38,7 @@ set(VORTIGAUNT_CORE_HEADERS
     core/extractors/pak/PakFile.h
     core/extractors/pak/PakExtractor.h
     utils/util.hpp
+    utils/AssimpUtils.h
     utils/Dds.h
     core/VortigauntLog.h
     utils/Platform.h

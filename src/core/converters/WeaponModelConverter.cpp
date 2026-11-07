@@ -202,7 +202,7 @@ HoldPose leftHandHold(const HoldPose& right)
 
 WeaponType kindFromName(std::string name)
 {
-    for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    name = String_ToLower(name);
     for (const char* word : { "knife", "sword", "katana", "crowbar", "wrench", "machete", "dagger", "blade", "hammer", "sabre", "saber",
                               "scythe", "sickle", "spear", "mace" })
     {

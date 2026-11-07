@@ -2,6 +2,7 @@
 // Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
 
 #include "HudSpriteDialog.h"
+#include "ui/UiUtils.h"
 #include "SettingsDialog.h"
 #include "core/SpriteLoader.h"
 #include "core/VortigauntLog.h"
@@ -50,14 +51,6 @@ struct Look
 const Look kLooks[] = { { QT_TRANSLATE_NOOP("HudSpriteDialog", "Side"), 90.0f, 0.0f },
                         { QT_TRANSLATE_NOOP("HudSpriteDialog", "Front"), 0.0f, 0.0f },
                         { QT_TRANSLATE_NOOP("HudSpriteDialog", "Top"), 90.0f, 89.0f } };
-
-QHBoxLayout* browseRow(QLineEdit* edit, QPushButton* button)
-{
-    auto* row = new QHBoxLayout();
-    row->addWidget(edit, 1);
-    row->addWidget(button);
-    return row;
-}
 
 QDoubleSpinBox* angleSpin()
 {
@@ -116,7 +109,7 @@ HudSpriteDialog::HudSpriteDialog(QWidget* parent)
     m_modelEdit->setObjectName(QStringLiteral("model"));
     m_modelEdit->setPlaceholderText(tr("The weapon's model: a w_ or a p_ model shows it whole"));
     auto* modelBrowse = new QPushButton(tr("Browse..."));
-    modelForm->addRow(tr("Model:"), browseRow(m_modelEdit, modelBrowse));
+    modelForm->addRow(tr("Model:"), UiUtils::browseRow(m_modelEdit, modelBrowse));
     m_handsCheck = new QCheckBox(tr("Hide the hands"));
     m_handsCheck->setObjectName(QStringLiteral("hands"));
     m_handsCheck->setToolTip(tr("Leaves a v_ model's hands out of the icon"));
@@ -184,7 +177,7 @@ HudSpriteDialog::HudSpriteDialog(QWidget* parent)
     m_sheetEdit->setPlaceholderText(tr("A sheet of its own"));
     m_sheetEdit->setToolTip(tr("An existing 640hud sheet to put the weapon in, in two of its cells; empty for a sheet of its own"));
     auto* sheetBrowse = new QPushButton(tr("Browse..."));
-    outputForm->addRow(tr("Into sheet:"), browseRow(m_sheetEdit, sheetBrowse));
+    outputForm->addRow(tr("Into sheet:"), UiUtils::browseRow(m_sheetEdit, sheetBrowse));
     m_cellsCombo = new QComboBox();
     m_cellsCombo->setObjectName(QStringLiteral("cells"));
     m_cellsCombo->setToolTip(tr("The sheet's cells the weapon takes: as it looks, and as it looks selected under it"));
@@ -202,7 +195,7 @@ HudSpriteDialog::HudSpriteDialog(QWidget* parent)
     m_outputEdit->setObjectName(QStringLiteral("output"));
     m_outputEdit->setPlaceholderText(QDir::toNativeSeparators(QDir(SettingsDialog::getOutputRootDir()).filePath(QStringLiteral("HudSprites"))));
     auto* outputBrowse = new QPushButton(tr("Browse..."));
-    outputForm->addRow(tr("Folder:"), browseRow(m_outputEdit, outputBrowse));
+    outputForm->addRow(tr("Folder:"), UiUtils::browseRow(m_outputEdit, outputBrowse));
     layout->addWidget(outputGroup);
     layout->addStretch(1);
     auto* buttons = new QHBoxLayout();

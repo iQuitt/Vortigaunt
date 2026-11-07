@@ -202,13 +202,6 @@ aiMatrix3x3 bodyFrame(const Skeleton& skeleton, const std::vector<aiMatrix4x4>& 
     return aiMatrix3x3(x.x, -x.y, 0.0f, x.y, x.x, 0.0f, 0.0f, 0.0f, 1.0f);
 }
 
-std::string lowerExtension(const std::string& path)
-{
-    std::string ext = FileIO::fromPath(FileIO::toPath(path).extension());
-    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return ext;
-}
-
 bool isFbxGlb(const std::string& ext)
 {
     return ext == ".fbx" || ext == ".glb" || ext == ".gltf";
@@ -247,8 +240,9 @@ void smdEuler(const aiMatrix3x3& m, float& rx, float& ry, float& rz)
 
 std::string readQc(const std::string& qcPath)
 {
-    std::ifstream in(FileIO::toPath(qcPath), std::ios::binary);
-    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    std::string qc;
+    FileIO::readText(qcPath, qc);
+    return qc;
 }
 
 void readOptions(const std::string& options, retarget::QcSequence& sequence)
@@ -442,7 +436,7 @@ RetargetResult Retarget(const std::string& sourceRest, const std::string& source
 
 std::string SourceSkeleton(const std::string& path, const std::string& workFolder, std::string& error)
 {
-    const std::string ext = lowerExtension(path);
+    const std::string ext = FileIO::lowerExtension(path);
     const fs::path work = FileIO::toPath(workFolder), file = FileIO::toPath(path);
     std::error_code ec;
     fs::create_directories(work, ec);
@@ -479,7 +473,7 @@ std::string SourceSkeleton(const std::string& path, const std::string& workFolde
 std::vector<QcSequence> SourceMotions(const std::string& path, const std::string& character, const std::string& workFolder, std::string& error)
 {
     std::vector<QcSequence> motions;
-    const std::string ext = lowerExtension(path);
+    const std::string ext = FileIO::lowerExtension(path);
     const fs::path work = FileIO::toPath(workFolder), file = FileIO::toPath(path);
     const std::string stem = FileIO::fromPath(file.stem());
     std::error_code ec;
@@ -493,7 +487,7 @@ std::vector<QcSequence> SourceMotions(const std::string& path, const std::string
     }
     else if (ext == ".gr2")
     {
-        if (lowerExtension(character) != ".gr2")
+        if (FileIO::lowerExtension(character) != ".gr2")
         {
             error = "A .gr2 motion needs a .gr2 character";
             return {};
@@ -523,7 +517,7 @@ std::vector<QcSequence> SourceMotions(const std::string& path, const std::string
         if (decompiled.ok)
             for (QcSequence sequence : QcSequences(decompiled.qcPath))
             {
-                if (lowerExtension(sequence.path) != ".smd") sequence.path += ".smd";
+                if (FileIO::lowerExtension(sequence.path) != ".smd") sequence.path += ".smd";
                 sequence.path = FileIO::fromPath(FileIO::toPath(decompiled.qcPath).parent_path() / FileIO::toPath(sequence.path));
                 motions.push_back(sequence);
             }
@@ -539,14 +533,12 @@ std::vector<QcSequence> SourceMotions(const std::string& path, const std::string
 
 bool AddSequence(const std::string& qcPath, const std::string& name, const std::string& animPath, int fps, bool loop, std::string& error, const std::string& activity, int weight)
 {
-    std::ifstream in(FileIO::toPath(qcPath), std::ios::binary);
-    if (!in)
+    std::string qc;
+    if (!FileIO::readText(qcPath, qc))
     {
         error = "Could not open " + qcPath;
         return false;
     }
-    std::string qc((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-    in.close();
     std::string block = "$sequence \"" + name + "\" {\n\t\"" + animPath + "\"\n\tfps " + std::to_string(fps) + "\n";
     if (loop) block += "\tloop\n";
     if (!activity.empty()) block += "\t" + activity + " " + std::to_string(std::max(weight, 1)) + "\n";

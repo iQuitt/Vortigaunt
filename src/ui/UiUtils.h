@@ -6,6 +6,9 @@
 #include <QIcon>
 #include <QString>
 
+class QHBoxLayout;
+class QLineEdit;
+class QPushButton;
 class QTableWidget;
 class QWidget;
 
@@ -32,4 +35,7 @@ namespace UiUtils
     // A line icon drawn from SVG path data on a 24x24 grid (M, L, H, V, Z, absolute or relative),
     // in the palette's button text colour
     QIcon lineIcon(const QString& pathData, int size = 26);
+
+    // a path field that takes the width, its Browse button beside it
+    QHBoxLayout* browseRow(QLineEdit* edit, QPushButton* button);
 }

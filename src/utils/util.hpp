@@ -38,6 +38,18 @@ inline std::string String_ToLower(std::string str)
     return str;
 }
 
+inline bool String_EqualsNoCase(std::string_view a, std::string_view b)
+{
+    return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](char x, char y) {
+        return std::tolower(static_cast<unsigned char>(x)) == std::tolower(static_cast<unsigned char>(y));
+    });
+}
+
+inline bool String_StartsWithNoCase(std::string_view text, std::string_view start)
+{
+    return text.size() >= start.size() && String_EqualsNoCase(text.substr(0, start.size()), start);
+}
+
 // base cut to maxLength, with _1, _2 ... until no name in taken matches it without case; the result is added to taken
 inline std::string String_UniqueName(std::string base, size_t maxLength, std::set<std::string>& taken)
 {

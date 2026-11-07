@@ -3,6 +3,7 @@
 
 #include "StudioModelView.h"
 
+#include "utils/util.hpp"
 #include "core/mdl/StudioModel.h"
 #include "core/VortigauntLog.h"
 
@@ -174,13 +175,6 @@ QSurfaceFormat viewFormat()
     // vsync
     format.setSwapInterval(1);
     return format;
-}
-
-bool sameName(const std::string& a, const std::string& b)
-{
-    return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](char x, char y) {
-        return std::tolower(static_cast<unsigned char>(x)) == std::tolower(static_cast<unsigned char>(y));
-    });
 }
 
 } // namespace
@@ -387,7 +381,7 @@ int StudioModelView::addModel(std::shared_ptr<const StudioModel> model, int merg
             int match = -1;
             for (size_t j = 0; j < parent.bones.size() && match < 0; ++j)
             {
-                if (sameName(bone.name, parent.bones[j].name))
+                if (String_EqualsNoCase(bone.name, parent.bones[j].name))
                     match = static_cast<int>(j);
             }
             entry.mergeBones.push_back(match);
@@ -657,7 +651,7 @@ void StudioModelView::updateBones()
             float gaitBetween = 0.0f;
             playing(data, model.gaitSequence, model.aimPitch, gaitFrame, gaitBlend, gaitBetween);
             const std::vector<aiMatrix4x4> gait = data.LocalBoneTransforms(model.gaitSequence, gaitFrame, gaitBlend, nullptr, gaitBetween);
-            for (size_t i = 0; i < data.bones.size() && !sameName(data.bones[i].name, "Bip01 Spine"); ++i)
+            for (size_t i = 0; i < data.bones.size() && !String_EqualsNoCase(data.bones[i].name, "Bip01 Spine"); ++i)
                 local[i] = gait[i];
         }
 

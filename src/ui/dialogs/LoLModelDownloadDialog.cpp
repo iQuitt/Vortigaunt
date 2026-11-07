@@ -7,6 +7,7 @@
 #include "SettingsDialog.h"
 #include "smd/SmdWriter.h"
 #include "GLBViewer.h"
+#include "utils/AssimpUtils.h"
 #include "utils/Bmp.h"
 #include "utils/Platform.h"
 #include "QCFile.h"
@@ -1593,38 +1594,7 @@ void LoLModelDownloadDialog::onDownloadClicked()
                 }
                 smdWriter.SetHiddenMeshIndices(hideForThisExport);
                 
-                aiMesh* mesh = scene->mMeshes[meshIdx];
-                QString meshNameStr;
-                
-                if (mesh->mMaterialIndex < scene->mNumMaterials) {
-                    aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-                    aiString materialName;
-                    if (material->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS) {
-                        QString matName = QString::fromUtf8(materialName.C_Str());
-                        if (!matName.isEmpty() && matName != "DefaultMaterial" && !matName.startsWith("Material", Qt::CaseInsensitive)) {
-                            meshNameStr = matName;
-                        }
-                    }
-                }
-                if (meshNameStr.isEmpty()) meshNameStr = QString::fromStdString(mesh->mName.C_Str());
-                
-                if (meshNameStr.isEmpty() || meshNameStr.startsWith("Mesh", Qt::CaseInsensitive) || meshNameStr.startsWith("meshes", Qt::CaseInsensitive)) {
-                    std::function<const aiNode*(const aiNode*, unsigned int)> findNode = [&](const aiNode* node, unsigned int idx) -> const aiNode* {
-                        for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
-                            if (node->mMeshes[i] == idx) return node;
-                        }
-                        for (unsigned int i = 0; i < node->mNumChildren; ++i) {
-                            const aiNode* found = findNode(node->mChildren[i], idx);
-                            if (found) return found;
-                        }
-                        return nullptr;
-                    };
-                    const aiNode* node = findNode(scene->mRootNode, meshIdx);
-                    if (node) {
-                        QString nodeName = QString::fromStdString(node->mName.C_Str());
-                        if (!nodeName.isEmpty()) meshNameStr = nodeName;
-                    }
-                }
+                QString meshNameStr = QString::fromStdString(AssimpUtils::MeshDisplayName(scene, meshIdx));
                 if (meshNameStr.isEmpty()) meshNameStr = "default";
                 
                 std::string baseName = meshNameStr.toStdString();
@@ -1740,46 +1710,7 @@ void LoLModelDownloadDialog::onDownloadClicked()
             if (!mesh) continue;
             
             // Get mesh name for texture filename
-            QString meshNameStr;
-            
-            if (mesh->mMaterialIndex < scene->mNumMaterials) {
-                aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-                aiString materialName;
-                if (material->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS) {
-                    QString matName = QString::fromUtf8(materialName.C_Str());
-                    if (!matName.isEmpty() && matName != "DefaultMaterial" && !matName.startsWith("Material", Qt::CaseInsensitive)) {
-                        meshNameStr = matName;
-                    }
-                }
-            }
-            
-            // If no material name, try mesh name
-            if (meshNameStr.isEmpty()) {
-                meshNameStr = QString::fromStdString(mesh->mName.C_Str());
-            }
-            
-            // Try node name if failed.
-            if (meshNameStr.isEmpty() || meshNameStr.startsWith("Mesh", Qt::CaseInsensitive) || meshNameStr.startsWith("meshes", Qt::CaseInsensitive)) {
-                // Helper to find node
-                std::function<const aiNode*(const aiNode*, unsigned int)> findNode = [&](const aiNode* node, unsigned int idx) -> const aiNode* {
-                    for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
-                        if (node->mMeshes[i] == idx) return node;
-                    }
-                    for (unsigned int i = 0; i < node->mNumChildren; ++i) {
-                        const aiNode* found = findNode(node->mChildren[i], idx);
-                        if (found) return found;
-                    }
-                    return nullptr;
-                };
-                const aiNode* node = findNode(scene->mRootNode, meshIdx);
-                if (node) {
-                    QString nodeName = QString::fromStdString(node->mName.C_Str());
-                    if (!nodeName.isEmpty()) {
-                        meshNameStr = nodeName;
-                    }
-                }
-            }
-            
+            QString meshNameStr = QString::fromStdString(AssimpUtils::MeshDisplayName(scene, meshIdx));
             if (meshNameStr.isEmpty()) {
                 meshNameStr = "default";
             }

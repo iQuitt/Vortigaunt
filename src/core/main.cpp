@@ -288,10 +288,8 @@ bool ExtractPAK(const std::string& pakPath, const std::string& outDir)
     printf("Extracting PAK: %s\n", pakPath.c_str());
 
     fs::path sourceFile = pakPath;
-    auto [bFileRead, vDataBuf] =
-        ReadFileToBuffer(sourceFile.generic_string());
-
-    if (bFileRead == false)
+    std::vector<uint8_t> vDataBuf;
+    if (!FileIO::readBytes(pakPath, vDataBuf))
     {
         printf("  Error: failed to read PAK file '%s'.\n",
                     sourceFile.string().c_str());

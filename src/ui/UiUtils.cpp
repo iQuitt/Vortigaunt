@@ -2,10 +2,14 @@
 // Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
 
 #include "UiUtils.h"
+#include "utils/fsutils.hpp"
 
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QGuiApplication>
+#include <QHBoxLayout>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPalette>
@@ -125,16 +129,17 @@ QIcon lineIcon(const QString& pathData, int size)
     return icon;
 }
 
+QHBoxLayout* browseRow(QLineEdit* edit, QPushButton* button)
+{
+    auto* row = new QHBoxLayout();
+    row->addWidget(edit, 1);
+    row->addWidget(button);
+    return row;
+}
+
 QString formatSize(quint64 size)
 {
-    if (size < 1024ull)
-        return QString::number(size) + " B";
-    else if (size < 1024ull * 1024)
-        return QString::number(size / 1024.0, 'f', 1) + " KB";
-    else if (size < 1024ull * 1024 * 1024)
-        return QString::number(size / (1024.0 * 1024.0), 'f', 2) + " MB";
-    else
-        return QString::number(size / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
+    return QString::fromStdString(FormatSize(size));
 }
 
 void resizeToScreen(QWidget* widget, double width, double height)

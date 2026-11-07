@@ -3,6 +3,7 @@
 
 #include "SmdWriter.h"
 #include "core/VortigauntLog.h"
+#include "utils/AssimpUtils.h"
 #include "utils/FileIO.h"
 #include "utils/util.hpp"
 #include <functional>
@@ -450,43 +451,7 @@ void SmdWriter::WriteTriangles(std::ofstream& file, const aiScene* scene)
 
         aiMesh* mesh = scene->mMeshes[meshIdx];
 
-        std::string textureName;
-        
-        if (mesh->mMaterialIndex < scene->mNumMaterials) {
-            aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            aiString materialName;
-            if (material->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS) {
-                std::string matName = materialName.C_Str();
-                if (!matName.empty() && matName != "DefaultMaterial" && matName.find("Material") != 0 && matName.find("material") != 0) {
-                    textureName = matName;
-                }
-            }
-        }
-        
-        if (textureName.empty()) {
-            textureName = mesh->mName.C_Str();
-        }
-        
-        if (textureName.empty() || textureName.find("Mesh") == 0 || textureName.find("meshes") == 0) {
-            std::function<const aiNode*(const aiNode*, unsigned int)> findNode = [&](const aiNode* node, unsigned int idx) -> const aiNode* {
-                for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
-                    if (node->mMeshes[i] == idx) return node;
-                }
-                for (unsigned int i = 0; i < node->mNumChildren; ++i) {
-                    const aiNode* found = findNode(node->mChildren[i], idx);
-                    if (found) return found;
-                }
-                return nullptr;
-            };
-            const aiNode* node = findNode(scene->mRootNode, meshIdx);
-            if (node) {
-                std::string nodeName = node->mName.C_Str();
-                if (!nodeName.empty()) {
-                    textureName = nodeName;
-                }
-            }
-        }
-        
+        std::string textureName = AssimpUtils::MeshDisplayName(scene, meshIdx);
         if (textureName.empty()) {
             textureName = "default";
         }

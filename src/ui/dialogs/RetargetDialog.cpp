@@ -2,6 +2,7 @@
 // Additional terms under GPL section 7: see ADDITIONAL-TERMS.md
 
 #include "RetargetDialog.h"
+#include "ui/UiUtils.h"
 #include "SettingsDialog.h"
 #include "core/QCFile.h"
 #include "core/VortigauntLog.h"
@@ -39,13 +40,6 @@ QSettings settings()
     return QSettings(QStringLiteral("Vortigaunt"), QStringLiteral("VortigauntTool"));
 }
 
-QHBoxLayout* browseRow(QLineEdit* edit, QPushButton* button)
-{
-    auto* row = new QHBoxLayout();
-    row->addWidget(edit, 1);
-    row->addWidget(button);
-    return row;
-}
 }
 
 RetargetDialog::RetargetDialog(QWidget* parent)
@@ -75,7 +69,7 @@ RetargetDialog::RetargetDialog(QWidget* parent)
     m_characterEdit = new QLineEdit(QDir::toNativeSeparators(settings().value(kCharacterKey).toString()));
     m_characterEdit->setPlaceholderText(tr("The character the motions are of, with its skeleton: .gr2, .fbx, .glb, .smd or .mdl"));
     auto* characterBrowse = new QPushButton(tr("Browse..."));
-    sourceForm->addRow(tr("Character:"), browseRow(m_characterEdit, characterBrowse));
+    sourceForm->addRow(tr("Character:"), UiUtils::browseRow(m_characterEdit, characterBrowse));
     m_motionList = new QListWidget();
     m_motionList->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_motionList->setToolTip(tr("Left empty, the character's own animations are used"));
@@ -96,7 +90,7 @@ RetargetDialog::RetargetDialog(QWidget* parent)
     m_qcEdit = new QLineEdit(QDir::toNativeSeparators(settings().value(kQcKey).toString()));
     m_qcEdit->setPlaceholderText(tr("The decompiled QC of the model; its first body is the skeleton"));
     auto* qcBrowse = new QPushButton(tr("Browse..."));
-    targetForm->addRow(tr("QC:"), browseRow(m_qcEdit, qcBrowse));
+    targetForm->addRow(tr("QC:"), UiUtils::browseRow(m_qcEdit, qcBrowse));
     m_animsEdit = new QLineEdit();
     m_animsEdit->setPlaceholderText(tr("<QC name>_anims"));
     m_animsEdit->setToolTip(tr("The folder beside the QC the SMDs of the motions go to"));
@@ -113,7 +107,7 @@ RetargetDialog::RetargetDialog(QWidget* parent)
     m_studiomdlEdit = new QLineEdit(QDir::toNativeSeparators(SettingsDialog::getStudioMdlPath()));
     m_studiomdlEdit->setPlaceholderText(QStringLiteral("studiomdl.exe"));
     auto* studiomdlBrowse = new QPushButton(tr("Browse..."));
-    compileForm->addRow(tr("studiomdl:"), browseRow(m_studiomdlEdit, studiomdlBrowse));
+    compileForm->addRow(tr("studiomdl:"), UiUtils::browseRow(m_studiomdlEdit, studiomdlBrowse));
     layout->addWidget(m_compileGroup);
 
     m_report = new QPlainTextEdit();

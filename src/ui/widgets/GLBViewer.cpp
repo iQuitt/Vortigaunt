@@ -4,6 +4,7 @@
 #include "GLBViewer.h"
 #include "LoLModelDownloader.h"
 #include "core/VortigauntLog.h"
+#include "utils/AssimpUtils.h"
 #include <QFileInfo>
 #include <QDir>
 #include <QDebug>
@@ -746,20 +747,6 @@ bool GLBViewer::loadModelWithAssimp(const QString& filepath)
         log("No animations found in model");
     }
     
-    // Helper function to find node containing a mesh
-    std::function<const aiNode*(const aiNode*, unsigned int)> findNodeForMesh = [&](const aiNode* node, unsigned int meshIndex) -> const aiNode* {
-        for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
-            if (node->mMeshes[i] == meshIndex) {
-                return node;
-            }
-        }
-        for (unsigned int i = 0; i < node->mNumChildren; ++i) {
-            const aiNode* found = findNodeForMesh(node->mChildren[i], meshIndex);
-            if (found) return found;
-        }
-        return nullptr;
-    };
-    
     // Helper function to calculate base transform from node hierarchy
     std::function<QMatrix4x4(const aiNode*)> getNodeBaseTransform = [&](const aiNode* node) -> QMatrix4x4 {
         QMatrix4x4 transform;
@@ -825,39 +812,8 @@ bool GLBViewer::loadModelWithAssimp(const QString& filepath)
         meshData->hasBones = mesh->HasBones();
         meshData->visible = true;  // Default visible
         
-        // Improve mesh naming - use material name as primary source (matches Blender's glTF mesh naming)
-        // In splitMeshPrimitives (LoLModelDownloader), meshes are named after their materials
-        // So we should prioritize: 1) Material name, 2) Mesh name, 3) Node name
-        QString meshName;
-        
-        // First, try to get material name (this is what Blender shows for glTF meshes)
-        if (mesh->mMaterialIndex < scene->mNumMaterials) {
-            aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            aiString materialName;
-            if (material->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS) {
-                QString matName = QString::fromUtf8(materialName.C_Str());
-                if (!matName.isEmpty() && matName != "DefaultMaterial" && !matName.startsWith("Material", Qt::CaseInsensitive)) {
-                    meshName = matName;
-                }
-            }
-        }
-        
-        // If no material name, try mesh name
-        if (meshName.isEmpty()) {
-            meshName = QString::fromStdString(mesh->mName.C_Str());
-        }
-        
-        // If mesh name is empty or generic, try node name
-        if (meshName.isEmpty() || meshName.startsWith("Mesh", Qt::CaseInsensitive)) {
-            const aiNode* node = findNodeForMesh(scene->mRootNode, i);
-            if (node) {
-                QString nodeName = QString::fromStdString(node->mName.C_Str());
-                if (!nodeName.isEmpty()) {
-                    meshName = nodeName;
-                }
-            }
-        }
-        
+        // meshes split by LoLModelDownloader are named after their materials
+        QString meshName = QString::fromStdString(AssimpUtils::MeshDisplayName(scene, i));
         // If still empty, use default name
         if (meshName.isEmpty()) {
             meshName = QString("Mesh_%1").arg(i);

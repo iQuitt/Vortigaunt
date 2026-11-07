@@ -87,11 +87,10 @@ QImage loadImage(const std::string& filePath) {
     if (filePath.empty()) {
         return QImage();
     }
-    std::ifstream file = FileIO::openRead(filePath, std::ios::binary);
-    if (!file.is_open()) {
+    std::vector<uint8_t> buffer;
+    if (!FileIO::readBytes(filePath, buffer)) {
         return QImage();
     }
-    const std::vector<uint8_t> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     return loadImageFromMemory(buffer.data(), buffer.size(), FileIO::fromPath(FileIO::toPath(filePath).extension()));
 }
 
