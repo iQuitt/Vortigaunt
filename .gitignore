@@ -36,6 +36,10 @@ src/core/autorig/MeshBvh.cpp
 src/core/autorig/WeightTransfer.h
 src/core/autorig/WeightTransfer.cpp
 src/core/autorig/PoseTransfer.h
+src/core/autorig/LolRig.cpp
+src/core/autorig/LolRig.h
+src/ui/widgets/LolRigPanel.cpp
+src/ui/widgets/LolRigPanel.h
 src/core/autorig/PoseTransfer.cpp
 src/ui/dialogs/AutoRigDialog.h
 src/ui/dialogs/AutoRigDialog.cpp

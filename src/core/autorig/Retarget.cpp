@@ -222,22 +222,6 @@ DecompileResult decompile(const std::string& path, const fs::path& work)
     return DecompileStudioModel(path, FileIO::fromPath(work / "mdl" / FileIO::toPath(path).stem()));
 }
 
-// SMD's euler angles of a rotation, R = Rz Ry Rx
-void smdEuler(const aiMatrix3x3& m, float& rx, float& ry, float& rz)
-{
-    ry = std::asin(std::clamp(-m.c1, -1.0f, 1.0f));
-    if (std::abs(m.c1) < 0.9999f)
-    {
-        rx = std::atan2(m.c2, m.c3);
-        rz = std::atan2(m.b1, m.a1);
-    }
-    else
-    {
-        rx = std::atan2(-m.b3, m.b2);
-        rz = 0.0f;
-    }
-}
-
 std::string readQc(const std::string& qcPath)
 {
     std::string qc;
@@ -376,7 +360,7 @@ RetargetResult Retarget(const std::string& sourceRest, const std::string& source
             const int parent = target.parents[i];
             const aiMatrix3x3 local(autorig::SmdEulerRotation(value[3], value[4], value[5]));
             turned[i] = from[i] >= 0 ? facing * aiMatrix3x3(world[from[i]]) * offset[i] : parent >= 0 ? turned[parent] * local : local;
-            smdEuler(parent >= 0 ? aiMatrix3x3(turned[parent]).Transpose() * turned[i] : turned[i], value[3], value[4], value[5]);
+            autorig::SmdEulerAngles(parent >= 0 ? aiMatrix3x3(turned[parent]).Transpose() * turned[i] : turned[i], value[3], value[4], value[5]);
             if (parent >= 0 || sourceHips < 0) continue;
             // root movement at the target's size
             aiVector3D at = positionOf(world[sourceHips]) * result.scale;

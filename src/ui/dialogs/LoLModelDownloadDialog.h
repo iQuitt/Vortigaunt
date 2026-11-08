@@ -141,6 +141,10 @@ private:
     QLabel*             m_viewerPlaceholder = nullptr;
     QComboBox*          m_animCombo = nullptr;
     QListWidget*        m_meshList = nullptr;
+#ifdef ENABLE_AUTORIG
+    QString             m_viewerFile;  // the .glb shown, for Auto-Rig
+    QString             m_viewerSkin;
+#endif
     QComboBox*          m_chromaCombo = nullptr;
     
     // Network

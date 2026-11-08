@@ -556,51 +556,6 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
     }
     putInt(file, 156, static_cast<int32_t>(hitboxCount));
 
-    // more attachments than before move to the end of the file
-    size_t attachmentIndex = static_cast<size_t>(intAt(file, 216));
-    if (attachments.size() > static_cast<size_t>(std::max(0, intAt(file, 212))))
-        attachmentIndex = appendRoom(file, attachments.size() * kAttachmentSize);
-    for (size_t i = 0; i < attachments.size(); i++)
-    {
-        const size_t at = attachmentIndex + i * kAttachmentSize;
-        putName(file, at, 32, attachments[i].name);
-        putInt(file, at + 32, 0);
-        putInt(file, at + 36, attachments[i].bone);
-        putVector(file, at + 40, attachments[i].origin);
-    }
-    putInt(file, 212, static_cast<int32_t>(attachments.size()));
-    putInt(file, 216, static_cast<int32_t>(attachments.empty() ? 0 : attachmentIndex));
-
-    const size_t sequenceIndex = static_cast<size_t>(intAt(file, 168));
-    const size_t sequenceCount = std::min(sequences.size(), static_cast<size_t>(std::max(0, intAt(file, 164))));
-    for (size_t i = 0; i < sequenceCount; i++)
-    {
-        const size_t at = sequenceIndex + i * kSequenceSize;
-        const StudioSequence& s = sequences[i];
-        putFloat(file, at + 32, s.fps);
-        putInt(file, at + 36, s.flags);
-        putInt(file, at + 40, s.activity);
-        putInt(file, at + 44, s.activityWeight);
-        putVector(file, at + 76, s.linearMovement);
-        putVector(file, at + 96, s.boundsMin);
-        putVector(file, at + 108, s.boundsMax);
-        // more events than before move to the end of the file
-        const size_t had = static_cast<size_t>(std::max(0, intAt(file, at + 48)));
-        size_t eventIndex = static_cast<size_t>(intAt(file, at + 52));
-        if (s.events.size() > had)
-            eventIndex = appendRoom(file, s.events.size() * kEventSize);
-        for (size_t e = 0; e < s.events.size(); e++)
-        {
-            const size_t eventAt = eventIndex + e * kEventSize;
-            putInt(file, eventAt, s.events[e].frame);
-            putInt(file, eventAt + 4, s.events[e].event);
-            putInt(file, eventAt + 8, s.events[e].type);
-            putName(file, eventAt + 12, 64, s.events[e].options);
-        }
-        putInt(file, at + 48, static_cast<int32_t>(s.events.size()));
-        putInt(file, at + 52, static_cast<int32_t>(s.events.empty() ? 0 : eventIndex));
-    }
-
     const size_t bodyPartIndex = static_cast<size_t>(intAt(file, 208));
     const size_t bodyPartCount = std::min(bodyParts.size(), static_cast<size_t>(std::max(0, intAt(file, 204))));
     for (size_t b = 0; b < bodyPartCount; b++)
@@ -724,7 +679,62 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
     }
 
 
-    // changed submodels are rewritten at the end; the engine lights normals mesh by mesh, so group them per mesh
+    // the engine keeps a model only up to its texture pixels and drops the rest once they are uploaded, so
+    // anything added goes in before them; reads stay on file, writes go to head
+    // only for studiomdl's layout, where the tables all come before the pixels
+    bool ownPixels = !(externalTextures && m_textureFile) && intAt(file, 180) > 0 && intAt(file, 188) > 0 &&
+                     static_cast<size_t>(intAt(file, 188)) <= file.size();
+    for (int table : { 144, 152, 160, 168, 176, 184, 200, 208, 240 })
+        ownPixels = ownPixels && intAt(file, table) < intAt(file, 188);
+    const size_t pixels = ownPixels ? static_cast<size_t>(intAt(file, 188)) : file.size();
+    std::vector<uint8_t> head(file.begin(), file.begin() + static_cast<std::ptrdiff_t>(pixels));
+
+    // more attachments than before, or ones behind the pixels, get new room
+    size_t attachmentIndex = static_cast<size_t>(intAt(file, 216));
+    if (attachments.size() > static_cast<size_t>(std::max(0, intAt(file, 212))) || attachmentIndex >= pixels)
+        attachmentIndex = appendRoom(head, attachments.size() * kAttachmentSize);
+    for (size_t i = 0; i < attachments.size(); i++)
+    {
+        const size_t at = attachmentIndex + i * kAttachmentSize;
+        putName(head, at, 32, attachments[i].name);
+        putInt(head, at + 32, 0);
+        putInt(head, at + 36, attachments[i].bone);
+        putVector(head, at + 40, attachments[i].origin);
+    }
+    putInt(head, 212, static_cast<int32_t>(attachments.size()));
+    putInt(head, 216, static_cast<int32_t>(attachments.empty() ? 0 : attachmentIndex));
+
+    const size_t sequenceIndex = static_cast<size_t>(intAt(file, 168));
+    const size_t sequenceCount = std::min(sequences.size(), static_cast<size_t>(std::max(0, intAt(file, 164))));
+    for (size_t i = 0; i < sequenceCount; i++)
+    {
+        const size_t at = sequenceIndex + i * kSequenceSize;
+        const StudioSequence& s = sequences[i];
+        putFloat(head, at + 32, s.fps);
+        putInt(head, at + 36, s.flags);
+        putInt(head, at + 40, s.activity);
+        putInt(head, at + 44, s.activityWeight);
+        putVector(head, at + 76, s.linearMovement);
+        putVector(head, at + 96, s.boundsMin);
+        putVector(head, at + 108, s.boundsMax);
+        // more events than before, or ones behind the pixels, get new room
+        const size_t had = static_cast<size_t>(std::max(0, intAt(file, at + 48)));
+        size_t eventIndex = static_cast<size_t>(intAt(file, at + 52));
+        if (s.events.size() > had || (had > 0 && eventIndex >= pixels))
+            eventIndex = appendRoom(head, s.events.size() * kEventSize);
+        for (size_t e = 0; e < s.events.size(); e++)
+        {
+            const size_t eventAt = eventIndex + e * kEventSize;
+            putInt(head, eventAt, s.events[e].frame);
+            putInt(head, eventAt + 4, s.events[e].event);
+            putInt(head, eventAt + 8, s.events[e].type);
+            putName(head, eventAt + 12, 64, s.events[e].options);
+        }
+        putInt(head, at + 48, static_cast<int32_t>(s.events.size()));
+        putInt(head, at + 52, static_cast<int32_t>(s.events.empty() ? 0 : eventIndex));
+    }
+
+    // changed submodels are rewritten before the pixels; the engine lights normals mesh by mesh, so group them per mesh
     for (size_t b = 0; b < bodyPartCount; b++)
     {
         const size_t partAt = bodyPartIndex + b * kBodyPartSize;
@@ -739,6 +749,11 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
                 continue;
             bool changed = static_cast<size_t>(intAt(file, modelAt + 80)) != sub.vertices.size() ||
                            static_cast<size_t>(intAt(file, modelAt + 92)) != sub.normals.size();
+            // a submodel an older save left behind the pixels is moved in front of them
+            for (int field : { 84, 88, 96, 100 })
+                changed = changed || static_cast<size_t>(std::max(0, intAt(file, modelAt + field))) >= pixels;
+            for (size_t k = 0; k < sub.meshes.size() && !changed; k++)
+                changed = static_cast<size_t>(std::max(0, intAt(file, meshIndex + k * kMeshSize + 4))) >= pixels;
             for (size_t k = 0; k < sub.meshes.size() && !changed; k++)
                 changed = static_cast<size_t>(intAt(file, meshIndex + k * kMeshSize)) != sub.meshes[k].triangles.size() / 3;
             for (size_t k = 0; k < sub.meshes.size() && !changed; k++)
@@ -779,21 +794,21 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
                 return false;
             }
 
-            const size_t vertexInfo = appendRoom(file, sub.vertices.size());
-            for (size_t v = 0; v < sub.vertices.size(); v++) file[vertexInfo + v] = static_cast<uint8_t>(sub.vertexBones[v]);
-            const size_t vertexData = appendRoom(file, sub.vertices.size() * 12);
-            for (size_t v = 0; v < sub.vertices.size(); v++) putVector(file, vertexData + v * 12, sub.vertices[v]);
-            const size_t normalInfo = appendRoom(file, normals.size());
+            const size_t vertexInfo = appendRoom(head, sub.vertices.size());
+            for (size_t v = 0; v < sub.vertices.size(); v++) head[vertexInfo + v] = static_cast<uint8_t>(sub.vertexBones[v]);
+            const size_t vertexData = appendRoom(head, sub.vertices.size() * 12);
+            for (size_t v = 0; v < sub.vertices.size(); v++) putVector(head, vertexData + v * 12, sub.vertices[v]);
+            const size_t normalInfo = appendRoom(head, normals.size());
             if (!normals.empty())
-                std::memcpy(file.data() + normalInfo, normalBones.data(), normals.size());
-            const size_t normalData = appendRoom(file, normals.size() * 12);
-            for (size_t n = 0; n < normals.size(); n++) putVector(file, normalData + n * 12, normals[n]);
-            putInt(file, modelAt + 80, static_cast<int32_t>(sub.vertices.size()));
-            putInt(file, modelAt + 84, static_cast<int32_t>(vertexInfo));
-            putInt(file, modelAt + 88, static_cast<int32_t>(vertexData));
-            putInt(file, modelAt + 92, static_cast<int32_t>(normals.size()));
-            putInt(file, modelAt + 96, static_cast<int32_t>(normalInfo));
-            putInt(file, modelAt + 100, static_cast<int32_t>(normalData));
+                std::memcpy(head.data() + normalInfo, normalBones.data(), normals.size());
+            const size_t normalData = appendRoom(head, normals.size() * 12);
+            for (size_t n = 0; n < normals.size(); n++) putVector(head, normalData + n * 12, normals[n]);
+            putInt(head, modelAt + 80, static_cast<int32_t>(sub.vertices.size()));
+            putInt(head, modelAt + 84, static_cast<int32_t>(vertexInfo));
+            putInt(head, modelAt + 88, static_cast<int32_t>(vertexData));
+            putInt(head, modelAt + 92, static_cast<int32_t>(normals.size()));
+            putInt(head, modelAt + 96, static_cast<int32_t>(normalInfo));
+            putInt(head, modelAt + 100, static_cast<int32_t>(normalData));
 
             for (size_t k = 0; k < sub.meshes.size(); k++)
             {
@@ -803,29 +818,45 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
                 const float height = mesh.texture >= 0 && mesh.texture < static_cast<int>(textures.size()) ? static_cast<float>(textures[mesh.texture].height) : 1.0f;
                 // one 3-corner strip per face, ended by 0
                 const size_t faces = mesh.triangles.size() / 3;
-                const size_t runs = appendRoom(file, faces * (2 + 3 * 8) + 2);
+                const size_t runs = appendRoom(head, faces * (2 + 3 * 8) + 2);
                 size_t at = runs;
                 for (size_t i = 0; i < faces * 3; i++)
                 {
                     if (i % 3 == 0)
                     {
                         const int16_t three = 3;
-                        putBytes(file, at, &three, 2);
+                        putBytes(head, at, &three, 2);
                         at += 2;
                     }
                     const StudioTriVertex& corner = mesh.triangles[i];
                     const int16_t values[4] = { static_cast<int16_t>(corner.vertex), static_cast<int16_t>(placed[k][corner.normal]),
                                                 static_cast<int16_t>(std::lround(corner.u * width)), static_cast<int16_t>(std::lround(corner.v * height)) };
-                    putBytes(file, at, values, 8);
+                    putBytes(head, at, values, 8);
                     at += 8;
                 }
-                putInt(file, meshAt, static_cast<int32_t>(faces));
-                putInt(file, meshAt + 4, static_cast<int32_t>(runs));
-                putInt(file, meshAt + 12, static_cast<int32_t>(meshNormals[k]));
+                putInt(head, meshAt, static_cast<int32_t>(faces));
+                putInt(head, meshAt + 4, static_cast<int32_t>(runs));
+                putInt(head, meshAt + 12, static_cast<int32_t>(meshNormals[k]));
             }
         }
     }
 
+    // the pixels after everything else, their offsets moved by what was added
+    head.resize((head.size() + 3) & ~static_cast<size_t>(3), 0);
+    const int64_t moved = static_cast<int64_t>(head.size()) - static_cast<int64_t>(pixels);
+    if (ownPixels && moved != 0)
+    {
+        putInt(head, 188, static_cast<int32_t>(pixels + moved));
+        for (size_t i = 0; i < static_cast<size_t>(std::max(0, intAt(head, 180))); i++)
+        {
+            const size_t at = static_cast<size_t>(intAt(head, 184)) + i * kTextureSize;
+            const int32_t data = intAt(head, at + 76);
+            if (data >= static_cast<int32_t>(pixels))
+                putInt(head, at + 76, static_cast<int32_t>(data + moved));
+        }
+    }
+    head.insert(head.end(), file.begin() + static_cast<std::ptrdiff_t>(pixels), file.end());
+    file = std::move(head);
     putInt(file, 72, static_cast<int32_t>(file.size()));
     const std::filesystem::path target = FileIO::toPath(path);
     if (!writeFile(target, file))

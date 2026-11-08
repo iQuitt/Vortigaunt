@@ -42,6 +42,21 @@ aiMatrix4x4 SmdEulerRotation(float rx, float ry, float rz)
     return mat;
 }
 
+void SmdEulerAngles(const aiMatrix3x3& m, float& rx, float& ry, float& rz)
+{
+    ry = std::asin(std::clamp(-m.c1, -1.0f, 1.0f));
+    if (std::abs(m.c1) < 0.9999f)
+    {
+        rx = std::atan2(m.c2, m.c3);
+        rz = std::atan2(m.b1, m.a1);
+    }
+    else
+    {
+        rx = std::atan2(-m.b3, m.b2);
+        rz = 0.0f;
+    }
+}
+
 std::vector<aiMatrix4x4> ComputeWorldTransforms(const std::vector<SmdBone>& bones)
 {
     std::vector<aiMatrix4x4> world(bones.size());

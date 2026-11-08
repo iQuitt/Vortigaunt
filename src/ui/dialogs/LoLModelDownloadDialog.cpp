@@ -8,6 +8,9 @@
 #include "smd/SmdWriter.h"
 #include "GLBViewer.h"
 #include "utils/AssimpUtils.h"
+#ifdef ENABLE_AUTORIG
+#include "ui/widgets/LolRigPanel.h"
+#endif
 #include "utils/Bmp.h"
 #include "utils/Platform.h"
 #include "QCFile.h"
@@ -462,6 +465,20 @@ void LoLModelDownloadDialog::setupUI()
     viewerControlsLayout->addStretch();
     
     viewerLayout->addLayout(viewerControlsLayout);
+#ifdef ENABLE_AUTORIG
+    LolRigPanel::Source rigSource;
+    rigSource.model = [this]() { return m_viewerFile; };
+    rigSource.name = [this]() { return m_viewerSkin; };
+    rigSource.hidden = [this]() {
+        QStringList hidden;
+        for (int i = 0; m_meshList && i < m_meshList->count(); ++i)
+            if (m_meshList->item(i)->checkState() != Qt::Checked) hidden << m_meshList->item(i)->text();
+        return hidden;
+    };
+    rigSource.outputFolder = [this]() { return m_outputPathEdit ? m_outputPathEdit->text() : QString(); };
+    rigSource.log = [this](const QString& line) { logToDialog(line); };
+    viewerLayout->addWidget(new LolRigPanel(rigSource, viewerPage));
+#endif
     
     m_contentStack->addWidget(viewerPage); // Index 1
     
@@ -2182,6 +2199,10 @@ void LoLModelDownloadDialog::openGLBViewerWithFile(const QString& skinId, const 
         return;
     }
     
+#ifdef ENABLE_AUTORIG
+    m_viewerFile = filePath;
+    m_viewerSkin = skinModel ? skinModel->name : QFileInfo(filePath).completeBaseName();
+#endif
     // Disconnect any previous modelLoaded connections to this dialog
     disconnect(m_viewerWidget, &GLBViewer::modelLoaded, this, nullptr);
     

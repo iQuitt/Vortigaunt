@@ -314,6 +314,8 @@ if(BUILD_GUI)
         core/autorig/MeshBvh.h core/autorig/MeshBvh.cpp
         core/autorig/WeightTransfer.h core/autorig/WeightTransfer.cpp
         ui/dialogs/AutoRigDialog.h ui/dialogs/AutoRigDialog.cpp
+        core/autorig/LolRig.h core/autorig/LolRig.cpp
+        ui/widgets/LolRigPanel.h ui/widgets/LolRigPanel.cpp
         ui/dialogs/PhysicsLabDialog.h ui/dialogs/PhysicsLabDialog.cpp
         core/mdl/HandSwap.h core/mdl/HandSwap.cpp
         ui/workspaces/HandsWorkspace.h ui/workspaces/HandsWorkspace.cpp
