@@ -613,6 +613,10 @@ Başarılı: %1 / %2</translation>
         <translation>Şampiyon adını yazıp Enter&apos;a basın...</translation>
     </message>
     <message>
+        <source>All Champions</source>
+        <translation>Tüm Şampiyonlar</translation>
+    </message>
+    <message>
         <source>Refresh Skins</source>
         <translation>Kostumleri Yenile</translation>
     </message>

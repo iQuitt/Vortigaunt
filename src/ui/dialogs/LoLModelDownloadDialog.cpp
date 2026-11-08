@@ -59,19 +59,65 @@
 #include <QPainter>
 #include <QImage>
 #include <QImageReader>
+#include <QTextDocumentFragment>
 
 
 // we're just get the league of legends models from Khada's CDN and view.
 // Khada: https://modelviewer.lol/
 
-SkinCardWidget::SkinCardWidget(const QString& skinName, const QString& skinId, QWidget* parent)
+namespace
+{
+
+// the champions known when this was written, for when the site's list cannot be read
+const char* const kKnownChampions[] = {
+    "aatrox", "ahri", "akali", "akshan", "alistar", "ambessa", "amumu", "anivia", "annie", "aphelios",
+    "ashe", "aurelionsol", "aurora", "azir", "bard", "belveth", "blitzcrank", "brand", "braum", "briar",
+    "caitlyn", "camille", "cassiopeia", "chogath", "corki", "darius", "diana", "draven",
+    "drmundo", "ekko", "elise", "evelynn", "ezreal", "fiddlesticks", "fiora", "fizz",
+    "galio", "gangplank", "garen", "gnar", "gragas", "graves", "gwen", "hecarim", "heimerdinger",
+    "hwei", "illaoi", "irelia", "ivern", "janna", "jarvaniv", "jax", "jayce", "jhin",
+    "jinx", "kaisa", "kalista", "karma", "karthus", "kassadin", "katarina", "kayle", "kayn",
+    "kennen", "khazix", "kindred", "kled", "kogmaw", "ksante", "leblanc", "leesin", "leona",
+    "lillia", "lissandra", "lucian", "lulu", "lux", "malphite", "malzahar", "maokai",
+    "masteryi", "mel", "milio", "missfortune", "mordekaiser", "morgana", "naafiri", "nami", "nasus",
+    "nautilus", "neeko", "nidalee", "nilah", "nocturne", "nunu", "olaf", "orianna", "ornn",
+    "pantheon", "poppy", "pyke", "qiyana", "quinn", "rakan", "rammus", "reksai", "rell",
+    "renata", "renekton", "rengar", "riven", "rumble", "ryze", "samira", "sejuani", "senna",
+    "seraphine", "sett", "shaco", "shen", "shyvana", "singed", "sion", "sivir", "skarner",
+    "sona", "soraka", "swain", "sylas", "syndra", "tahmkench", "taliyah", "talon", "taric",
+    "teemo", "thresh", "tristana", "trundle", "tryndamere", "twistedfate", "twitch", "udyr",
+    "urgot", "varus", "vayne", "veigar", "velkoz", "vex", "vi", "viego", "viktor", "vladimir",
+    "volibear", "warwick", "xayah", "xerath", "xinzhao", "yasuo", "yone", "yorick", "yuumi",
+    "zaahen", "zac", "zed", "zeri", "ziggs", "zilean", "zoe", "zyra"
+};
+
+// champion and skin cards alike: a portrait tile and a name, rows of eight
+const QSize kCardImage(150, 200);
+constexpr int kCardColumns = 8;
+
+// the site's tile of a skin
+QString tileUrl(const QString& skinId)
+{
+    return QStringLiteral("https://cdn.modelviewer.lol/lol/tiles/%1.webp").arg(skinId);
+}
+
+// the text of an HTML snippet, entities decoded
+QString htmlText(const QString& html)
+{
+    return QTextDocumentFragment::fromHtml(html).toPlainText().simplified();
+}
+
+}  // namespace
+
+SkinCardWidget::SkinCardWidget(const QString& skinName, const QString& skinId, QWidget* parent, const QSize& imageSize)
     : QWidget(parent)
     , m_skinName(skinName)
     , m_skinId(skinId)
     , m_selected(false)
     , m_hovered(false)
+    , m_imageSize(imageSize)
 {
-    setFixedSize(300, 370);  // Card size: image (310) + name (42) + spacing (18)
+    setFixedSize(imageSize.width(), imageSize.height() + 60);  // the image, the name (42) and spacing
     setCursor(Qt::PointingHandCursor);
     
     auto* layout = new QVBoxLayout(this);
@@ -79,7 +125,7 @@ SkinCardWidget::SkinCardWidget(const QString& skinName, const QString& skinId, Q
     layout->setSpacing(8);
     
     m_imageLabel = new QLabel(this);
-    m_imageLabel->setFixedSize(300, 310);  // LINUX FIX: was 500, overflowed card (350) causing transparent ghost region
+    m_imageLabel->setFixedSize(imageSize);  // LINUX FIX: never larger than the card, or it leaves a transparent ghost region
     m_imageLabel->setScaledContents(true);
     m_imageLabel->setAlignment(Qt::AlignCenter);
     m_imageLabel->setStyleSheet("background-color: #1a1a1a; border-radius: 0px;");
@@ -100,7 +146,7 @@ void SkinCardWidget::setSplashArt(const QPixmap& pixmap)
 {
     m_splashArt = pixmap;
     if (!pixmap.isNull()) {
-        QPixmap scaled = pixmap.scaled(300, 310, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+        QPixmap scaled = pixmap.scaled(m_imageSize, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
         m_imageLabel->setPixmap(scaled);
         m_imageLabel->setText("");
     }
@@ -236,6 +282,8 @@ void LoLModelDownloadDialog::setupUI()
     m_championCombo->setCompleter(nullptr); // Disable default completer, we'll use autocomplete
     m_championCombo->lineEdit()->setPlaceholderText(tr("Type champion name and press Enter..."));
     championLayout->addWidget(m_championCombo, 1);
+    m_allChampionsButton = new QPushButton(tr("All Champions"));
+    championLayout->addWidget(m_allChampionsButton);
     m_refreshSkinsButton = new QPushButton(tr("Refresh Skins"));
     m_refreshSkinsButton->setEnabled(false);
     championLayout->addWidget(m_refreshSkinsButton);
@@ -260,8 +308,9 @@ void LoLModelDownloadDialog::setupUI()
     
     m_skinContainer = new QWidget();
     m_skinGridLayout = new QGridLayout(m_skinContainer);
-    m_skinGridLayout->setSpacing(20);
-    m_skinGridLayout->setContentsMargins(20, 20, 20, 20);
+    m_skinGridLayout->setSpacing(12);
+    m_skinGridLayout->setContentsMargins(12, 12, 12, 12);
+    m_skinGridLayout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
     
     m_skinScrollArea->setWidget(m_skinContainer);
     skinCardsLayout->addWidget(m_skinScrollArea);
@@ -481,6 +530,19 @@ void LoLModelDownloadDialog::setupUI()
 #endif
     
     m_contentStack->addWidget(viewerPage); // Index 1
+
+    // Page 2: every champion as a card, shown first
+    auto* championScroll = new QScrollArea();
+    championScroll->setWidgetResizable(true);
+    championScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_championContainer = new QWidget();
+    m_championGridLayout = new QGridLayout(m_championContainer);
+    m_championGridLayout->setSpacing(12);
+    m_championGridLayout->setContentsMargins(12, 12, 12, 12);
+    m_championGridLayout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
+    championScroll->setWidget(m_championContainer);
+    m_contentStack->addWidget(championScroll); // Index 2
+    m_contentStack->setCurrentIndex(2);
     
     skinLayout->addWidget(m_contentStack, 1);
 
@@ -566,6 +628,15 @@ void LoLModelDownloadDialog::setupUI()
             }
         });
     }
+    connect(m_championCombo->lineEdit(), &QLineEdit::textEdited, this, [this](const QString& text) {
+        showChampionCards();
+        filterChampionCards(text);
+    });
+    connect(m_allChampionsButton, &QPushButton::clicked, this, [this]() {
+        m_championCombo->lineEdit()->clear();
+        filterChampionCards(QString());
+        showChampionCards();
+    });
     // Refresh button removed per user request
     connect(m_refreshSkinsButton, &QPushButton::clicked, this, [this]() { if (!m_currentChampion.isEmpty()) loadSkinList(m_currentChampion); });
     connect(m_skinListWidget, &QListWidget::itemSelectionChanged, this, &LoLModelDownloadDialog::onSkinSelected);
@@ -587,47 +658,95 @@ void LoLModelDownloadDialog::loadChampionList()
     logToDialog(QStringLiteral("Loading champion list..."));
     m_statusLabel->setText(tr("Loading champions..."));
     m_championCombo->setEnabled(false);
-    
-	// i dont want to deal with fetching from khada right now, so hardcoding the champion list
-    QStringList champions = {
-        "aatrox", "ahri", "akali", "akshan", "alistar", "ambessa", "amumu", "anivia", "annie", "aphelios",
-        "ashe", "aurelionsol", "aurora", "azir", "bard", "belveth", "blitzcrank", "brand", "braum", "briar",
-        "caitlyn", "camille", "cassiopeia", "chogath", "corki", "darius", "diana", "draven",
-        "drmundo", "ekko", "elise", "evelynn", "ezreal", "fiddlesticks", "fiora", "fizz",
-        "galio", "gangplank", "garen", "gnar", "gragas", "graves", "gwen", "hecarim", "heimerdinger",
-        "hwei", "illaoi", "irelia", "ivern", "janna", "jarvaniv", "jax", "jayce", "jhin",
-        "jinx", "kaisa", "kalista", "karma", "karthus", "kassadin", "katarina", "kayle", "kayn",
-        "kennen", "khazix", "kindred", "kled", "kogmaw", "ksante", "leblanc", "leesin", "leona",
-        "lillia", "lissandra", "lucian", "lulu", "lux", "malphite", "malzahar", "maokai",
-        "masteryi", "mel", "milio", "missfortune", "mordekaiser", "morgana", "naafiri", "nami", "nasus",
-        "nautilus", "neeko", "nidalee", "nilah", "nocturne", "nunu", "olaf", "orianna", "ornn",
-        "pantheon", "poppy", "pyke", "qiyana", "quinn", "rakan", "rammus", "reksai", "rell",
-        "renata", "renekton", "rengar", "riven", "rumble", "ryze", "samira", "sejuani", "senna",
-        "seraphine", "sett", "shaco", "shen", "shyvana", "singed", "sion", "sivir", "skarner",
-        "sona", "soraka", "swain", "sylas", "syndra", "tahmkench", "taliyah", "talon", "taric",
-        "teemo", "thresh", "tristana", "trundle", "tryndamere", "twistedfate", "twitch", "udyr",
-        "urgot", "varus", "vayne", "veigar", "velkoz", "vex", "vi", "viego", "viktor", "vladimir",
-        "volibear", "warwick", "xayah", "xerath", "xinzhao", "yasuo", "yone", "yorick", "yuumi",
-        "zaahen", "zac", "zed", "zeri", "ziggs", "zilean", "zoe", "zyra"
-    };
-    
-    m_championList = champions;
+    QNetworkRequest request(QUrl(QStringLiteral("https://modelviewer.lol/champions")));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"));
+    QNetworkReply* reply = m_networkManager->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        QList<ChampionModel> champions;
+        if (reply->error() == QNetworkReply::NoError) {
+            static const QRegularExpression link(QStringLiteral(R"re(<a[^>]*href="/champions/([a-z0-9]+)"[^>]*>\s*<img[^>]*src="[^"]*/circles/(\d+)\.\w+"[^>]*>\s*([^<]+?)\s*</a>)re"));
+            QSet<QString> seen;
+            for (auto it = link.globalMatch(QString::fromUtf8(reply->readAll())); it.hasNext();) {
+                const QRegularExpressionMatch match = it.next();
+                if (seen.contains(match.captured(1))) continue;
+                seen.insert(match.captured(1));
+                champions.append({ match.captured(1), htmlText(match.captured(3)), match.captured(2) });
+            }
+        }
+        if (champions.isEmpty()) {
+            logToDialog(QStringLiteral("^3Could not read the champion list from modelviewer.lol, using the built-in one"));
+            for (const char* alias : kKnownChampions) champions.append({ QString::fromLatin1(alias), QString::fromLatin1(alias), QString() });
+        }
+        setChampions(champions);
+    });
+}
+
+void LoLModelDownloadDialog::setChampions(const QList<ChampionModel>& champions)
+{
+    m_championModels = champions;
+    m_championList.clear();
+    for (const ChampionModel& champion : champions) m_championList << champion.id;
     m_championCombo->clear();
     m_championCombo->blockSignals(true);
-    m_championCombo->addItems(champions);
+    m_championCombo->addItems(m_championList);
     m_championCombo->setCurrentIndex(-1);
     m_championCombo->blockSignals(false);
-    
+
     // Enable autocomplete for typing
-    QCompleter* completer = new QCompleter(champions, this);
+    QCompleter* completer = new QCompleter(m_championList, this);
     completer->setCaseSensitivity(Qt::CaseInsensitive);
     completer->setCompletionMode(QCompleter::PopupCompletion);
     completer->setFilterMode(Qt::MatchContains);
     m_championCombo->setCompleter(completer);
-    
+
+    // a card for each, a click opens its skins
+    qDeleteAll(m_championCards);
+    m_championCards.clear();
+    for (const ChampionModel& champion : champions) {
+        auto* card = new SkinCardWidget(champion.name, champion.id, m_championContainer, kCardImage);
+        connect(card, &SkinCardWidget::clicked, this, [this, id = champion.id]() {
+            const int index = m_championList.indexOf(id);
+            if (index < 0) return;
+            if (m_championCombo->currentIndex() == index) onChampionSelected();
+            else m_championCombo->setCurrentIndex(index);
+        });
+        m_championCards[champion.id] = card;
+        if (!champion.tileId.isEmpty()) loadSplashArt(QStringLiteral("champion:") + champion.id, tileUrl(champion.tileId));
+    }
+    filterChampionCards(QString());
+
     logToDialog(QStringLiteral("DEBUG: ^2%1 champions loaded").arg(champions.size()));
     m_statusLabel->setText(tr("Ready"));
     m_championCombo->setEnabled(true);
+}
+
+void LoLModelDownloadDialog::filterChampionCards(const QString& text)
+{
+    const QString wanted = text.trimmed();
+    int shown = 0;
+    for (const ChampionModel& champion : m_championModels) {
+        SkinCardWidget* card = m_championCards.value(champion.id);
+        if (!card) continue;
+        m_championGridLayout->removeWidget(card);
+        const bool match = wanted.isEmpty() || champion.name.contains(wanted, Qt::CaseInsensitive) || champion.id.contains(wanted, Qt::CaseInsensitive);
+        card->setVisible(match);
+        if (match) {
+            m_championGridLayout->addWidget(card, shown / kCardColumns, shown % kCardColumns);
+            ++shown;
+        }
+    }
+}
+
+void LoLModelDownloadDialog::showChampionCards()
+{
+    if (m_contentStack->currentIndex() == 1) {
+        m_viewedSkinId.clear();
+        if (m_viewerWidget) m_viewerWidget->clearModel();
+        setWindowTitle(tr("LoL Model Download"));
+        updateDownloadButton();
+    }
+    m_contentStack->setCurrentIndex(2);
 }
 
 void LoLModelDownloadDialog::onChampionSelected()
@@ -669,6 +788,7 @@ void LoLModelDownloadDialog::onChampionSelected()
     }
     
     m_currentChampion = championName;
+    m_contentStack->setCurrentIndex(0);
     logToDialog(QStringLiteral("^2Champion selected: %1").arg(championName));
     loadSkinList(championName);
 }
@@ -692,6 +812,8 @@ void LoLModelDownloadDialog::loadSkinList(const QString& championName)
     m_skinListWidget->clear();
     m_skinScrollArea->setEnabled(false);
     m_refreshSkinsButton->setEnabled(false);
+    for (QNetworkReply* reply : std::as_const(m_additionalReplies)) reply->abort();
+    m_additionalReplies.clear();
     
     // Send a simple request
     QUrl url(QString("https://modelviewer.lol/champions/%1").arg(championName));
@@ -803,26 +925,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
   
         
         seenIds.insert(modelId);
-        SkinModel skin;
-        skin.id = modelId;
-        skin.name = skinName;
-        m_skinModels.append(skin);
-        
-        QString displayName = formatSkinDisplayName(skinName, modelId);
-        m_skinListWidget->addItem(displayName);
-        
-        // Create skin card widget
-        SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
-        connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
-        connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
-        m_skinCards[modelId] = card;
-        
-        // Add to grid (4 columns)
-        int row = m_skinModels.size() - 1;
-        m_skinGridLayout->addWidget(card, row / 4, row % 4);
-        
-        // Load splash art
-        loadSplashArt(modelId);
+        addSkinCard({ modelId, skinName, modelId, QString() });
     }
     
     
@@ -851,23 +954,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
             
             if (!modelId.isEmpty() && !seenIds.contains(modelId)) {
                 seenIds.insert(modelId);
-                SkinModel skin;
-                skin.id = modelId;
-                skin.name = skinName;
-                m_skinModels.append(skin);
-                
-                QString displayName = formatSkinDisplayName(skinName, modelId);
-                m_skinListWidget->addItem(displayName);
-                
-                SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
-                connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
-                connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
-                m_skinCards[modelId] = card;
-                
-                int row = m_skinModels.size() - 1;
-                m_skinGridLayout->addWidget(card, row / 4, row % 4);
-                
-                loadSplashArt(modelId);
+                addSkinCard({ modelId, skinName, modelId, QString() });
             }
         }
     }
@@ -890,26 +977,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
             
             if (!modelId.isEmpty() && !seenIds.contains(modelId)) {
                 seenIds.insert(modelId);
-                SkinModel skin;
-                skin.id = modelId;
-                skin.name = skinName;
-                m_skinModels.append(skin);
-                
-                QString displayName = formatSkinDisplayName(skinName, modelId);
-                m_skinListWidget->addItem(displayName);
-                
-                // Create skin card widget
-                SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
-                connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
-                connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
-                m_skinCards[modelId] = card;
-                
-                // Add to grid (4 columns)
-                int row = m_skinModels.size() - 1;
-                m_skinGridLayout->addWidget(card, row / 4, row % 4);
-                
-                // Load splash art
-                loadSplashArt(modelId);
+                addSkinCard({ modelId, skinName, modelId, QString() });
             }
         }
         
@@ -930,26 +998,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
                 
                 if (!modelId.isEmpty() && !seenIds.contains(modelId)) {
                     seenIds.insert(modelId);
-                    SkinModel skin;
-                    skin.id = modelId;
-                    skin.name = skinName;
-                    m_skinModels.append(skin);
-                    
-                    QString displayName = formatSkinDisplayName(skinName, modelId);
-                    m_skinListWidget->addItem(displayName);
-                    
-                    // Create skin card widget
-                    SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
-                    connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
-                    connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
-                    m_skinCards[modelId] = card;
-                    
-                    // Add to grid (4 columns)
-                    int row = m_skinModels.size() - 1;
-                    m_skinGridLayout->addWidget(card, row / 4, row % 4);
-                    
-                    // Load splash art
-                    loadSplashArt(modelId);
+                    addSkinCard({ modelId, skinName, modelId, QString() });
                 }
             }
         }
@@ -978,25 +1027,7 @@ void LoLModelDownloadDialog::onSkinListLoaded()
                 
                 if (!modelId.isEmpty() && !skinName.isEmpty() && !seenIds.contains(modelId)) {
                     seenIds.insert(modelId);
-                    SkinModel skin;
-                    skin.id = modelId;
-                    skin.name = skinName;
-                    m_skinModels.append(skin);
-                    
-                    QString displayName = formatSkinDisplayName(skinName, modelId);
-                    m_skinListWidget->addItem(displayName);
-                    
-                    // Create skin card widget
-                    SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
-                    connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
-                    connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
-                    m_skinCards[modelId] = card;
-                    
-                    // Add to grid. 4 columns
-                    int row = m_skinModels.size() - 1;
-                    m_skinGridLayout->addWidget(card, row / 4, row % 4);
-                    
-                    loadSplashArt(modelId);
+                    addSkinCard({ modelId, skinName, modelId, QString() });
                     
                     jsonCount++;
                 }
@@ -1078,30 +1109,16 @@ void LoLModelDownloadDialog::onSkinListLoaded()
             
             if (!modelId.isEmpty() && !seenIds.contains(modelId)) {
                 seenIds.insert(modelId);
-                SkinModel skin;
-                skin.id = modelId;
-                skin.name = skinName;
-                m_skinModels.append(skin);
-                
-                QString displayName = formatSkinDisplayName(skinName, modelId);
-                m_skinListWidget->addItem(displayName);
-                
-                // Create skin card widget
-                SkinCardWidget* card = new SkinCardWidget(skinName, modelId, m_skinContainer);
-                connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
-                connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
-                m_skinCards[modelId] = card;
-                
-                // Add to grid (4 columns)
-                int row = m_skinModels.size() - 1;
-                m_skinGridLayout->addWidget(card, row / 4, row % 4);
-                
-                loadSplashArt(modelId);
+                addSkinCard({ modelId, skinName, modelId, QString() });
             }
         }
     }
     
     reply->deleteLater();
+
+    // the models each skin's page offers besides it
+    const QList<SkinModel> skins = m_skinModels;
+    for (const SkinModel& skin : skins) loadAdditionalModels(skin);
     
     if (m_skinModels.isEmpty()) {
         logToDialog(QStringLiteral("^3No skins found. Try refreshing or check champion name."));
@@ -1116,62 +1133,89 @@ void LoLModelDownloadDialog::onSkinListLoaded()
     updateDownloadButton();
 }
 
-void LoLModelDownloadDialog::loadSplashArt(const QString& skinId)
+void LoLModelDownloadDialog::addSkinCard(const SkinModel& skin, int at)
 {
-    // Qt doesn't support WEBP by default, so try PNG first, then fallback to WEBP
-    // We'll handle WEBP conversion if needed
-    QString urlString = QString("https://cdn.modelviewer.lol/lol/tiles/%1.png").arg(skinId);
-    QUrl url(urlString);
-    
-    
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, 
-                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-    
-    QNetworkReply* reply = m_networkManager->get(request);
-    if (!reply) {
-        return;
+    if (at < 0 || at > m_skinModels.size()) at = static_cast<int>(m_skinModels.size());
+    m_skinModels.insert(at, skin);
+    m_skinListWidget->insertItem(at, formatSkinDisplayName(skin.name, skin.id));
+    auto* card = new SkinCardWidget(skin.name, skin.id, m_skinContainer, kCardImage);
+    connect(card, &SkinCardWidget::clicked, this, &LoLModelDownloadDialog::onSkinCardClicked);
+    connect(card, &SkinCardWidget::doubleClicked, this, &LoLModelDownloadDialog::onSkinCardDoubleClicked);
+    m_skinCards[skin.id] = card;
+    relayoutSkinCards();
+    // an additional model has no tile of its own but a picture of the model
+    loadSplashArt(skin.id, skin.alias.isEmpty() ? tileUrl(skin.modelId)
+                                                : QStringLiteral("https://cdn.modelviewer.lol/lol/models/%1/%2/og/default.webp").arg(skin.alias, skin.modelId));
+}
+
+void LoLModelDownloadDialog::relayoutSkinCards()
+{
+    for (int i = 0; i < m_skinModels.size(); ++i) {
+        SkinCardWidget* card = m_skinCards.value(m_skinModels[i].id);
+        if (!card) continue;
+        m_skinGridLayout->removeWidget(card);
+        m_skinGridLayout->addWidget(card, i / kCardColumns, i % kCardColumns);
     }
-    
-    // Store format info with reply
-    reply->setProperty("skinId", skinId);
-    reply->setProperty("format", "PNG");
-    reply->setProperty("webpFallback", true); // Try WEBP if PNG fails
-    
-    m_splashArtReplies[skinId] = reply;
-    connect(reply, &QNetworkReply::finished, this, &LoLModelDownloadDialog::onSplashArtLoaded);
-    connect(reply, &QNetworkReply::errorOccurred, this, [this, skinId](QNetworkReply::NetworkError) {
-        QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
-        if (reply && reply->property("webpFallback").toBool()) {
-            loadSplashArtWebP(skinId);
+}
+
+void LoLModelDownloadDialog::loadAdditionalModels(const SkinModel& skin)
+{
+    QNetworkRequest request(QUrl(QStringLiteral("https://modelviewer.lol/model-viewer?id=%1").arg(skin.modelId)));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"));
+    QNetworkReply* reply = m_networkManager->get(request);
+    m_additionalReplies.append(reply);
+    const QString champion = m_currentChampion;
+    connect(reply, &QNetworkReply::finished, this, [this, reply, skin, champion]() {
+        m_additionalReplies.removeOne(reply);
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError || champion != m_currentChampion) return;
+        QString html = QString::fromUtf8(reply->readAll());
+        html.replace(QStringLiteral("&quot;"), QStringLiteral("\""));
+        const int start = html.indexOf(QStringLiteral("\"additionalAliases\""));
+        if (start < 0) return;
+        const int end = html.indexOf(QStringLiteral("\"id\":[0,\"%1\"]").arg(skin.modelId), start);
+        const QString list = html.mid(start, end > start ? end - start : 8000);
+        static const QRegularExpression entry(QStringLiteral(R"re(\{"id":\[0,"([a-z0-9_]+)"\],"name":\[0,"([^"]*)"\])re"));
+        int at = -1;
+        for (int i = 0; i < m_skinModels.size(); ++i)
+            if (m_skinModels[i].id == skin.id) at = i + 1;
+        if (at < 0) return;
+        int added = 0;
+        for (auto it = entry.globalMatch(list); it.hasNext();) {
+            const QRegularExpressionMatch match = it.next();
+            SkinModel extra{ match.captured(1) + QStringLiteral("/") + skin.modelId, skin.name + QStringLiteral(" - ") + htmlText(match.captured(2)), skin.modelId,
+                             match.captured(1) };
+            if (m_skinCards.contains(extra.id)) continue;
+            addSkinCard(extra, at++);
+            ++added;
         }
+        if (added > 0) logToDialog(QStringLiteral("DEBUG: ^2%1: %2 additional model(s)").arg(skin.name).arg(added));
     });
 }
 
-void LoLModelDownloadDialog::loadSplashArtWebP(const QString& skinId)
+QString LoLModelDownloadDialog::aliasOf(const SkinModel& skin) const
 {
-    QString urlString = QString("https://cdn.modelviewer.lol/lol/tiles/%1.webp").arg(skinId);
-    QUrl url(urlString);
-    
-    
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, 
-                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-    
+    return skin.alias.isEmpty() ? m_currentChampion : skin.alias;
+}
+
+const SkinModel* LoLModelDownloadDialog::skinById(const QString& id) const
+{
+    for (const SkinModel& skin : m_skinModels)
+        if (skin.id == id) return &skin;
+    return nullptr;
+}
+
+void LoLModelDownloadDialog::loadSplashArt(const QString& cardId, const QString& imageUrl)
+{
+    QNetworkRequest request{ QUrl(imageUrl) };
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"));
     QNetworkReply* reply = m_networkManager->get(request);
     if (!reply) {
         return;
     }
-    
-    reply->setProperty("skinId", skinId);
-    reply->setProperty("format", "WEBP");
-    reply->setProperty("webpFallback", false);
-    
-    m_splashArtReplies[skinId] = reply;
+    reply->setProperty("skinId", cardId);
+    m_splashArtReplies[cardId] = reply;
     connect(reply, &QNetworkReply::finished, this, &LoLModelDownloadDialog::onSplashArtLoaded);
-    connect(reply, &QNetworkReply::errorOccurred, this, [this, skinId](QNetworkReply::NetworkError) {
-        Q_UNUSED(skinId);
-    });
 }
 
 void LoLModelDownloadDialog::onSplashArtLoaded()
@@ -1183,7 +1227,6 @@ void LoLModelDownloadDialog::onSplashArtLoaded()
     
     // Get skinId from reply property (more reliable)
     QString skinId = reply->property("skinId").toString();
-    QString format = reply->property("format").toString();
     
     // Fallback: Find in map if property not set
     if (skinId.isEmpty()) {
@@ -1199,19 +1242,15 @@ void LoLModelDownloadDialog::onSplashArtLoaded()
         m_splashArtReplies.remove(skinId);
     }
     
-    if (skinId.isEmpty() || !m_skinCards.contains(skinId)) {
+    // a champion's card, or a skin's
+    SkinCardWidget* card = skinId.startsWith(QStringLiteral("champion:")) ? m_championCards.value(skinId.mid(9)) : m_skinCards.value(skinId);
+    if (skinId.isEmpty() || !card) {
         reply->deleteLater();
         return;
     }
     
     
     if (reply->error() != QNetworkReply::NoError) {
-        // If PNG failed and we haven't tried WEBP yet, try WEBP
-        if (format == "PNG" && reply->property("webpFallback").toBool()) {
-            reply->deleteLater();
-            loadSplashArtWebP(skinId);
-            return;
-        }
         reply->deleteLater();
         return;
     }
@@ -1260,7 +1299,7 @@ void LoLModelDownloadDialog::onSplashArtLoaded()
         painter.setFont(QFont("Arial", 12, QFont::Bold));
         painter.drawText(placeholder.rect(), Qt::AlignCenter, tr("WEBP\nNot\nSupported"));
         painter.end();
-        m_skinCards[skinId]->setSplashArt(placeholder);
+        card->setSplashArt(placeholder);
         reply->deleteLater();
         return;
     }
@@ -1288,7 +1327,7 @@ void LoLModelDownloadDialog::onSplashArtLoaded()
                     painter.setFont(QFont("Arial", 10));
                     painter.drawText(placeholder.rect(), Qt::AlignCenter, tr("Image\nLoad\nFailed"));
                     painter.end();
-                    m_skinCards[skinId]->setSplashArt(placeholder);
+                    card->setSplashArt(placeholder);
                     reply->deleteLater();
                     return;
                 }
@@ -1297,7 +1336,10 @@ void LoLModelDownloadDialog::onSplashArtLoaded()
     }
     
     if (loaded && !pixmap.isNull()) {
-        m_skinCards[skinId]->setSplashArt(pixmap);
+        // a model's banner: its title on the left, the model right of the middle
+        if (reply->url().path().endsWith(QStringLiteral("/og/default.webp")))
+            pixmap = pixmap.copy(static_cast<int>(pixmap.width() * 0.45), 0, static_cast<int>(pixmap.width() * 0.48), pixmap.height());
+        card->setSplashArt(pixmap);
     }
     
     reply->deleteLater();
@@ -1478,8 +1520,8 @@ void LoLModelDownloadDialog::onDownloadClicked()
         });
         
         bool downloadSuccess = downloader.downloadModel(
-            m_currentChampion,
-            skin.id,
+            aliasOf(skin),
+            skin.modelId,
             skin.name,
             tempDir,
             true,   // autoFix
@@ -1494,7 +1536,7 @@ void LoLModelDownloadDialog::onDownloadClicked()
         }
         
         // Find the downloaded GLB file
-        QString championDir = QDir(tempDir).filePath(m_currentChampion);
+        QString championDir = QDir(tempDir).filePath(aliasOf(skin));
         QString glbFile;
         
         // Look for GLB files in champion directory
@@ -1506,7 +1548,7 @@ void LoLModelDownloadDialog::onDownloadClicked()
         safeName.replace(" ", "_").replace("/", "_").replace("\\", "_");
         
         for (const QString& file : glbFiles) {
-            if (file.contains(safeName) || file.contains(skin.id)) {
+            if (file.contains(safeName) || file.contains(skin.modelId)) {
                 glbFile = dir.filePath(file);
                 break;
             }
@@ -2060,7 +2102,8 @@ void LoLModelDownloadDialog::openGLBViewer(const QString& skinId)
         outputDir = SettingsDialog::getLoLOutputDir(true);
     }
     
-    QString championDir = QDir(outputDir).filePath(m_currentChampion);
+    const QString alias = aliasOf(*skinModel), modelId = skinModel->modelId;
+    QString championDir = QDir(outputDir).filePath(alias);
     QString safeName = skinModel->name;
     for (QChar& c : safeName) {
         if (c == ' ' || c == '/' || c == '\\' || c == ':' || c == '*' || c == '?' || 
@@ -2071,7 +2114,7 @@ void LoLModelDownloadDialog::openGLBViewer(const QString& skinId)
     
     // Try different possible file names
     QStringList possibleFiles;
-    possibleFiles << QString("%1/%2_%3.glb").arg(championDir, safeName, skinId);
+    possibleFiles << QString("%1/%2_%3.glb").arg(championDir, safeName, modelId);
     //possibleFiles << QString("%1/%2_%3_FIXED.glb").arg(championDir, safeName, skinId);
     //possibleFiles << QString("%1/%2_%3_SPLIT.glb").arg(championDir, safeName, skinId);
     //possibleFiles << QString("%1/%2_%3_FIXED_SPLIT.glb").arg(championDir, safeName, skinId);
@@ -2092,14 +2135,14 @@ void LoLModelDownloadDialog::openGLBViewer(const QString& skinId)
         
     // Generate unique temp file name
     QString tempFileName = QString("model_%1_%2_%3.glb")
-                            .arg(m_currentChampion)
-                            .arg(skinId)
+                            .arg(alias)
+                            .arg(modelId)
                             .arg(QDateTime::currentMSecsSinceEpoch());
     QString tempFilePath = QDir(tempDir).filePath(tempFileName);
         
     // Build CDN URL
     QString cdnUrl = QString("https://cdn.modelviewer.lol/lol/models/%1/%2/model.glb")
-                        .arg(m_currentChampion.toLower(), skinId);
+                        .arg(alias.toLower(), modelId);
         
     // Start async download using QNetworkAccessManager (NO QEventLoop!)
     QUrl urlObj(cdnUrl);
@@ -2254,7 +2297,9 @@ void LoLModelDownloadDialog::startAsyncChromaDetection(const QString& skinId, co
     m_detectedChromaIds.clear();
     m_chromaDetectionPending = 0;
     
-    int baseId = skinId.toInt();
+    const SkinModel* skin = skinById(skinId);
+    const QString alias = skin ? aliasOf(*skin) : m_currentChampion, modelId = skin ? skin->modelId : skinId;
+    int baseId = modelId.toInt();
     if (baseId <= 0) {
         logToDialog(QStringLiteral("No chromas detected for this skin"));
         return;
@@ -2287,7 +2332,7 @@ void LoLModelDownloadDialog::startAsyncChromaDetection(const QString& skinId, co
         QString testIdStr = QString::number(testId);
         
         QString testUrl = QString("https://cdn.modelviewer.lol/lol/models/%1/%2/chromas/%3/%4")
-                         .arg(m_currentChampion.toLower(), skinId, testIdStr, probeTextureName);
+                         .arg(alias.toLower(), modelId, testIdStr, probeTextureName);
         
         QUrl urlObj(testUrl);
         QNetworkRequest request(urlObj);
@@ -2300,7 +2345,7 @@ void LoLModelDownloadDialog::startAsyncChromaDetection(const QString& skinId, co
         m_chromaDetectionReplies.append(reply);
         requestCount++;
         
-        connect(reply, &QNetworkReply::finished, this, [this, reply, skinId]() {
+        connect(reply, &QNetworkReply::finished, this, [this, reply, alias, modelId]() {
             // Verify this is still for the current skin
             QString replySkinId = reply->property("skinId").toString();
             if (replySkinId != m_viewedSkinId) {
@@ -2335,7 +2380,7 @@ void LoLModelDownloadDialog::startAsyncChromaDetection(const QString& skinId, co
                     logToDialog(QStringLiteral("[Chroma] Detected %1 chromas, loading textures...").arg(m_detectedChromaIds.size()));
                     
                     if (m_viewerWidget && replySkinId == m_viewedSkinId) {
-                        m_viewerWidget->loadChromaTextures(m_currentChampion, skinId, m_detectedChromaIds);
+                        m_viewerWidget->loadChromaTextures(alias, modelId, m_detectedChromaIds);
                     }
                 } else {
                     logToDialog(QStringLiteral("No chromas detected for this skin"));

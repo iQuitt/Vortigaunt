@@ -39,13 +39,16 @@ class QPaintEvent;
 class GLBViewer;
 
 struct ChampionModel {
-    QString id;
-    QString name;
+    QString id;      
+    QString name;   
+    QString tileId; 
 };
 
 struct SkinModel {
-    QString id;
+    QString id;      
     QString name;
+    QString modelId;  
+    QString alias; 
 };
 
 class SkinCardWidget : public QWidget
@@ -53,7 +56,7 @@ class SkinCardWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit SkinCardWidget(const QString& skinName, const QString& skinId, QWidget* parent = nullptr);
+    explicit SkinCardWidget(const QString& skinName, const QString& skinId, QWidget* parent = nullptr, const QSize& imageSize = QSize(300, 310));
     void setSplashArt(const QPixmap& pixmap);
     void setSelected(bool selected);
     bool isSelected() const { return m_selected; }
@@ -79,6 +82,7 @@ private:
     bool m_hovered;
     QLabel* m_imageLabel;
     QLabel* m_nameLabel;
+    QSize m_imageSize;
 };
 
 class LoLModelDownloadDialog : public QDialog
@@ -103,9 +107,16 @@ private slots:
 private:
     void setupUI();
     void loadChampionList();
+    void setChampions(const QList<ChampionModel>& champions);
+    void showChampionCards();
+    void filterChampionCards(const QString& text);
     void loadSkinList(const QString& championName);
-    void loadSplashArt(const QString& skinId);
-    void loadSplashArtWebP(const QString& skinId);
+    void addSkinCard(const SkinModel& skin, int at = -1);
+    void relayoutSkinCards();
+    void loadAdditionalModels(const SkinModel& skin);
+    QString aliasOf(const SkinModel& skin) const;
+    const SkinModel* skinById(const QString& id) const;
+    void loadSplashArt(const QString& cardId, const QString& imageUrl);
     void downloadModel(const QString& championName, const QString& modelId, const QString& modelName, bool autoFix = true, bool splitPrimitives = true, bool downloadChromas = true);
     void updateStatus(const QString& message);
     void logToDialog(const QString& message);
@@ -121,7 +132,11 @@ private:
     QScrollArea*        m_skinScrollArea;
     QWidget*            m_skinContainer;
     QGridLayout*        m_skinGridLayout;
-    QStackedWidget*     m_contentStack;    // Stacked widget for skin cards and 3D viewer
+    QStackedWidget*     m_contentStack;    // Stacked widget for skin cards, 3D viewer and champion cards
+    QWidget*            m_championContainer = nullptr;
+    QGridLayout*        m_championGridLayout = nullptr;
+    QPushButton*        m_allChampionsButton = nullptr;
+    QMap<QString, SkinCardWidget*> m_championCards;  // alias -> card
     GLBViewer*    m_viewerWidget = nullptr;   // 3D viewer widget (lazy-created) 
     QPushButton*        m_backToSkinsButton; // Button to go back to skin cards
     QPushButton*        m_refreshSkinsButton;
@@ -151,6 +166,7 @@ private:
     QNetworkAccessManager* m_networkManager;
     QNetworkReply*         m_currentReply;
     QMap<QString, QNetworkReply*> m_splashArtReplies;  // Skin ID -> Reply mapping
+    QList<QNetworkReply*> m_additionalReplies;          // skin pages read for additional models
     
     // Data
     QStringList           m_championList;

@@ -613,6 +613,10 @@ Successful: %1 of %2</translation>
         <translation>Type champion name and press Enter...</translation>
     </message>
     <message>
+        <source>All Champions</source>
+        <translation>All Champions</translation>
+    </message>
+    <message>
         <source>Refresh Skins</source>
         <translation>Refresh Skins</translation>
     </message>

@@ -613,6 +613,10 @@ Pomyślnie: %1 z %2</translation>
         <translation>Wpisz nazwę bohatera i naciśnij Enter...</translation>
     </message>
     <message>
+        <source>All Champions</source>
+        <translation>Wszyscy bohaterowie</translation>
+    </message>
+    <message>
         <source>Refresh Skins</source>
         <translation>Odśwież skórki</translation>
     </message>

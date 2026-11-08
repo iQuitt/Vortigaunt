@@ -613,6 +613,10 @@ Exitosos: %1 de %2</translation>
         <translation>Escribe el nombre del campeón y presiona Enter...</translation>
     </message>
     <message>
+        <source>All Champions</source>
+        <translation>Todos los campeones</translation>
+    </message>
+    <message>
         <source>Refresh Skins</source>
         <translation>Actualizar Aspectos</translation>
     </message>
