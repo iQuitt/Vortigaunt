@@ -86,6 +86,10 @@
         <source>The archive could not be read. It may be damaged or of a version Vortigaunt does not know.</source>
         <translation>The archive could not be read. It may be damaged or of a version Vortigaunt does not know.</translation>
     </message>
+    <message>
+        <source>IMG (Grand Theft Auto)</source>
+        <translation>IMG (Grand Theft Auto)</translation>
+    </message>
 </context>
 <context>
     <name>ArchiveWorkspace</name>
@@ -178,8 +182,8 @@
         <translation>Open Archives</translation>
     </message>
     <message>
-        <source>Archives (*.rez *.pak *.xfs *.vpk *.gma);;All files (*.*)</source>
-        <translation>Archives (*.rez *.pak *.xfs *.vpk *.gma);;All files (*.*)</translation>
+        <source>Archives (*.rez *.pak *.xfs *.vpk *.gma *.img);;All files (*.*)</source>
+        <translation>Archives (*.rez *.pak *.xfs *.vpk *.gma *.img);;All files (*.*)</translation>
     </message>
     <message>
         <source>Open an archive from the ribbon, or drop one here.</source>
@@ -1960,6 +1964,14 @@ The operation is picked from the file type.</translation>
         <source>The application needs to restart for the language change to take effect.</source>
         <translation>The application needs to restart for the language change to take effect.</translation>
     </message>
+    <message>
+        <source>DFF to SMD (GTA)</source>
+        <translation>DFF to SMD (GTA)</translation>
+    </message>
+    <message>
+        <source>GTA model. Convert writes its SMD, textures and QC; the TXD of the same name is read from its folder.</source>
+        <translation>GTA model. Convert writes its SMD, textures and QC; the TXD of the same name is read from its folder.</translation>
+    </message>
 </context>
 <context>
     <name>ModelViewerWindow</name>
@@ -3154,6 +3166,42 @@ The operation is picked from the file type.</translation>
     <message>
         <source>Export the textures to</source>
         <translation>Export the textures to</translation>
+    </message>
+    <message>
+        <source>%1 / %2: %3 vertices, %4 normals</source>
+        <translation>%1 / %2: %3 vertices, %4 normals</translation>
+    </message>
+    <message>
+        <source>GoldSrc draws at most %1 vertices and %1 normals in a body part; more and the game draws it broken or not at all.</source>
+        <translation>GoldSrc draws at most %1 vertices and %1 normals in a body part; more and the game draws it broken or not at all.</translation>
+    </message>
+    <message>
+        <source>These can be split into parts within the limit, which look the same:</source>
+        <translation>These can be split into parts within the limit, which look the same:</translation>
+    </message>
+    <message>
+        <source>These are one of several choices of their part and cannot be split; reduce their polygons instead:</source>
+        <translation>These are one of several choices of their part and cannot be split; reduce their polygons instead:</translation>
+    </message>
+    <message>
+        <source>Body parts over the limit</source>
+        <translation>Body parts over the limit</translation>
+    </message>
+    <message>
+        <source>Split and Save</source>
+        <translation>Split and Save</translation>
+    </message>
+    <message>
+        <source>Save As It Is</source>
+        <translation>Save As It Is</translation>
+    </message>
+    <message>
+        <source>The model cannot be split: it would need more than 32 body parts.</source>
+        <translation>The model cannot be split: it would need more than 32 body parts.</translation>
+    </message>
+    <message>
+        <source>Split Oversized Parts</source>
+        <translation>Split Oversized Parts</translation>
     </message>
 </context>
 <context>

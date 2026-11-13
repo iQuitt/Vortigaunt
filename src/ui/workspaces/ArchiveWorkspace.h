@@ -34,6 +34,7 @@ public:
 
     bool openArchive(const QString& path);
     bool isBusy() const { return m_busy; }
+    QString currentArchivePath() const;
 
 public slots:
     void openArchiveDialog();

@@ -150,6 +150,8 @@ private:
     void showModelData();
     void updateTabTitle(int index);
     bool confirmClose(int index);
+    // offers to split the parts GoldSrc cannot draw whole; false when the save is called off
+    bool splitOversized();
     void saveCurrent();
     void saveCurrentAs();
     void showSequence(int index);

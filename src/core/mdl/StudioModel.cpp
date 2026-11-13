@@ -734,7 +734,81 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
         putInt(head, at + 52, static_cast<int32_t>(s.events.empty() ? 0 : eventIndex));
     }
 
-    // changed submodels are rewritten before the pixels; the engine lights normals mesh by mesh, so group them per mesh
+    // a submodel written before the pixels, into its entry at modelAt and its meshes' at meshIndex; the engine
+    // lights normals mesh by mesh, so they are grouped per mesh
+    auto writeSubModel = [&](const StudioSubModel& sub, size_t modelAt, size_t meshIndex) {
+        std::vector<aiVector3D> normals;
+        std::vector<uint8_t> normalBones;
+        std::vector<std::vector<int>> placed(sub.meshes.size());
+        std::vector<size_t> meshNormals(sub.meshes.size());
+        for (size_t k = 0; k < sub.meshes.size(); k++)
+        {
+            placed[k].assign(sub.normals.size(), -1);
+            const size_t first = normals.size();
+            for (const StudioTriVertex& corner : sub.meshes[k].triangles)
+                if (placed[k][corner.normal] < 0)
+                {
+                    placed[k][corner.normal] = static_cast<int>(normals.size());
+                    normals.push_back(sub.normals[corner.normal]);
+                    normalBones.push_back(static_cast<uint8_t>(sub.normalBones[corner.normal]));
+                }
+            meshNormals[k] = normals.size() - first;
+        }
+        if (sub.vertices.size() > static_cast<size_t>(kStudioMaxVertices) || normals.size() > static_cast<size_t>(kStudioMaxVertices))
+        {
+            error = "Submodel \"" + sub.name + "\" has more vertices or normals than GoldSrc draws (" + std::to_string(kStudioMaxVertices) + ")";
+            return false;
+        }
+
+        const size_t vertexInfo = appendRoom(head, sub.vertices.size());
+        for (size_t v = 0; v < sub.vertices.size(); v++) head[vertexInfo + v] = static_cast<uint8_t>(sub.vertexBones[v]);
+        const size_t vertexData = appendRoom(head, sub.vertices.size() * 12);
+        for (size_t v = 0; v < sub.vertices.size(); v++) putVector(head, vertexData + v * 12, sub.vertices[v]);
+        const size_t normalInfo = appendRoom(head, normals.size());
+        if (!normals.empty())
+            std::memcpy(head.data() + normalInfo, normalBones.data(), normals.size());
+        const size_t normalData = appendRoom(head, normals.size() * 12);
+        for (size_t n = 0; n < normals.size(); n++) putVector(head, normalData + n * 12, normals[n]);
+        putInt(head, modelAt + 80, static_cast<int32_t>(sub.vertices.size()));
+        putInt(head, modelAt + 84, static_cast<int32_t>(vertexInfo));
+        putInt(head, modelAt + 88, static_cast<int32_t>(vertexData));
+        putInt(head, modelAt + 92, static_cast<int32_t>(normals.size()));
+        putInt(head, modelAt + 96, static_cast<int32_t>(normalInfo));
+        putInt(head, modelAt + 100, static_cast<int32_t>(normalData));
+
+        for (size_t k = 0; k < sub.meshes.size(); k++)
+        {
+            const StudioMesh& mesh = sub.meshes[k];
+            const size_t meshAt = meshIndex + k * kMeshSize;
+            const float width = mesh.texture >= 0 && mesh.texture < static_cast<int>(textures.size()) ? static_cast<float>(textures[mesh.texture].width) : 1.0f;
+            const float height = mesh.texture >= 0 && mesh.texture < static_cast<int>(textures.size()) ? static_cast<float>(textures[mesh.texture].height) : 1.0f;
+            // one 3-corner strip per face, ended by 0
+            const size_t faces = mesh.triangles.size() / 3;
+            const size_t runs = appendRoom(head, faces * (2 + 3 * 8) + 2);
+            size_t at = runs;
+            for (size_t i = 0; i < faces * 3; i++)
+            {
+                if (i % 3 == 0)
+                {
+                    const int16_t three = 3;
+                    putBytes(head, at, &three, 2);
+                    at += 2;
+                }
+                const StudioTriVertex& corner = mesh.triangles[i];
+                const int16_t values[4] = { static_cast<int16_t>(corner.vertex), static_cast<int16_t>(placed[k][corner.normal]),
+                                            static_cast<int16_t>(std::lround(corner.u * width)), static_cast<int16_t>(std::lround(corner.v * height)) };
+                putBytes(head, at, values, 8);
+                at += 8;
+            }
+            putInt(head, meshAt, static_cast<int32_t>(faces));
+            putInt(head, meshAt + 4, static_cast<int32_t>(runs));
+            if (mesh.skinRef >= 0) putInt(head, meshAt + 8, static_cast<int32_t>(mesh.skinRef));
+            putInt(head, meshAt + 12, static_cast<int32_t>(meshNormals[k]));
+        }
+        return true;
+    };
+
+    // changed submodels are rewritten before the pixels
     for (size_t b = 0; b < bodyPartCount; b++)
     {
         const size_t partAt = bodyPartIndex + b * kBodyPartSize;
@@ -771,74 +845,49 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
             if (!changed)
                 continue;
 
-            std::vector<aiVector3D> normals;
-            std::vector<uint8_t> normalBones;
-            std::vector<std::vector<int>> placed(sub.meshes.size());
-            std::vector<size_t> meshNormals(sub.meshes.size());
-            for (size_t k = 0; k < sub.meshes.size(); k++)
-            {
-                placed[k].assign(sub.normals.size(), -1);
-                const size_t first = normals.size();
-                for (const StudioTriVertex& corner : sub.meshes[k].triangles)
-                    if (placed[k][corner.normal] < 0)
-                    {
-                        placed[k][corner.normal] = static_cast<int>(normals.size());
-                        normals.push_back(sub.normals[corner.normal]);
-                        normalBones.push_back(static_cast<uint8_t>(sub.normalBones[corner.normal]));
-                    }
-                meshNormals[k] = normals.size() - first;
-            }
-            if (sub.vertices.size() > static_cast<size_t>(kStudioMaxVertices) || normals.size() > static_cast<size_t>(kStudioMaxVertices))
-            {
-                error = "Submodel \"" + sub.name + "\" has more vertices or normals than GoldSrc draws (" + std::to_string(kStudioMaxVertices) + ")";
-                return false;
-            }
-
-            const size_t vertexInfo = appendRoom(head, sub.vertices.size());
-            for (size_t v = 0; v < sub.vertices.size(); v++) head[vertexInfo + v] = static_cast<uint8_t>(sub.vertexBones[v]);
-            const size_t vertexData = appendRoom(head, sub.vertices.size() * 12);
-            for (size_t v = 0; v < sub.vertices.size(); v++) putVector(head, vertexData + v * 12, sub.vertices[v]);
-            const size_t normalInfo = appendRoom(head, normals.size());
-            if (!normals.empty())
-                std::memcpy(head.data() + normalInfo, normalBones.data(), normals.size());
-            const size_t normalData = appendRoom(head, normals.size() * 12);
-            for (size_t n = 0; n < normals.size(); n++) putVector(head, normalData + n * 12, normals[n]);
-            putInt(head, modelAt + 80, static_cast<int32_t>(sub.vertices.size()));
-            putInt(head, modelAt + 84, static_cast<int32_t>(vertexInfo));
-            putInt(head, modelAt + 88, static_cast<int32_t>(vertexData));
-            putInt(head, modelAt + 92, static_cast<int32_t>(normals.size()));
-            putInt(head, modelAt + 96, static_cast<int32_t>(normalInfo));
-            putInt(head, modelAt + 100, static_cast<int32_t>(normalData));
-
-            for (size_t k = 0; k < sub.meshes.size(); k++)
-            {
-                const StudioMesh& mesh = sub.meshes[k];
-                const size_t meshAt = meshIndex + k * kMeshSize;
-                const float width = mesh.texture >= 0 && mesh.texture < static_cast<int>(textures.size()) ? static_cast<float>(textures[mesh.texture].width) : 1.0f;
-                const float height = mesh.texture >= 0 && mesh.texture < static_cast<int>(textures.size()) ? static_cast<float>(textures[mesh.texture].height) : 1.0f;
-                // one 3-corner strip per face, ended by 0
-                const size_t faces = mesh.triangles.size() / 3;
-                const size_t runs = appendRoom(head, faces * (2 + 3 * 8) + 2);
-                size_t at = runs;
-                for (size_t i = 0; i < faces * 3; i++)
-                {
-                    if (i % 3 == 0)
-                    {
-                        const int16_t three = 3;
-                        putBytes(head, at, &three, 2);
-                        at += 2;
-                    }
-                    const StudioTriVertex& corner = mesh.triangles[i];
-                    const int16_t values[4] = { static_cast<int16_t>(corner.vertex), static_cast<int16_t>(placed[k][corner.normal]),
-                                                static_cast<int16_t>(std::lround(corner.u * width)), static_cast<int16_t>(std::lround(corner.v * height)) };
-                    putBytes(head, at, values, 8);
-                    at += 8;
-                }
-                putInt(head, meshAt, static_cast<int32_t>(faces));
-                putInt(head, meshAt + 4, static_cast<int32_t>(runs));
-                putInt(head, meshAt + 12, static_cast<int32_t>(meshNormals[k]));
-            }
+            if (!writeSubModel(sub, modelAt, meshIndex)) return false;
         }
+    }
+
+    // parts added (an oversized submodel split up) after the last: a new part table, each of the new parts with its
+    // own submodels; its base is what the parts before multiply to, so the body values pick as they did
+    if (bodyParts.size() > bodyPartCount)
+    {
+        if (bodyParts.size() > 32)
+        {
+            error = "The model has " + std::to_string(bodyParts.size()) + " body parts; GoldSrc takes 32";
+            return false;
+        }
+        const size_t table = appendRoom(head, bodyParts.size() * kBodyPartSize);
+        if (bodyPartCount > 0) std::memmove(head.data() + table, head.data() + bodyPartIndex, bodyPartCount * kBodyPartSize);
+        int base = 1;
+        for (size_t b = 0; b < bodyPartCount; b++) base *= std::max(1, intAt(head, table + b * kBodyPartSize + 64));
+        for (size_t b = bodyPartCount; b < bodyParts.size(); b++)
+        {
+            const StudioBodyPart& part = bodyParts[b];
+            const size_t models = appendRoom(head, part.models.size() * kModelSize);
+            for (size_t m = 0; m < part.models.size(); m++)
+            {
+                const StudioSubModel& sub = part.models[m];
+                const size_t modelAt = models + m * kModelSize;
+                putName(head, modelAt, 64, sub.name);
+                float radius = 0.0f;
+                for (const aiVector3D& v : sub.vertices) radius = std::max(radius, v.Length());
+                putFloat(head, modelAt + 68, radius);
+                const size_t meshes = appendRoom(head, sub.meshes.size() * kMeshSize);
+                putInt(head, modelAt + 72, static_cast<int32_t>(sub.meshes.size()));
+                putInt(head, modelAt + 76, static_cast<int32_t>(meshes));
+                if (!writeSubModel(sub, modelAt, meshes)) return false;
+            }
+            const size_t partAt = table + b * kBodyPartSize;
+            putName(head, partAt, 64, part.name);
+            putInt(head, partAt + 64, static_cast<int32_t>(part.models.size()));
+            putInt(head, partAt + 68, base);
+            putInt(head, partAt + 72, static_cast<int32_t>(models));
+            base *= std::max<int>(1, static_cast<int>(part.models.size()));
+        }
+        putInt(head, 204, static_cast<int32_t>(bodyParts.size()));
+        putInt(head, 208, static_cast<int32_t>(table));
     }
 
     // the pixels after everything else, their offsets moved by what was added

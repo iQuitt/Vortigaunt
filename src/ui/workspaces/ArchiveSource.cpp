@@ -4,6 +4,7 @@
 #include "ArchiveSource.h"
 
 #include "core/extractors/gma/GmaFile.h"
+#include "core/extractors/img/ImgFile.h"
 #include "core/extractors/pak/PakFile.h"
 #include "core/extractors/rez/RezExtractor.h"
 #include "core/extractors/vpk/VpkFile.h"
@@ -165,6 +166,31 @@ private:
     GmaFile m_gma;
 };
 
+class ImgSource : public ArchiveSource
+{
+public:
+    bool load(const QString& path)
+    {
+        if (!m_img.Load(path.toStdString()))
+            return false;
+        for (const ImgEntry& e : m_img.GetEntries())
+            m_entries.push_back({ QString::fromStdString(e.name), e.size });
+        return true;
+    }
+    QString typeName() const override { return QCoreApplication::translate("ArchiveSource", "IMG (Grand Theft Auto)"); }
+    bool read(size_t index, QByteArray& data) const override
+    {
+        std::vector<uint8_t> bytes;
+        if (index >= m_img.GetEntries().size() || !m_img.Read(m_img.GetEntries()[index], bytes))
+            return false;
+        data = QByteArray(reinterpret_cast<const char*>(bytes.data()), static_cast<qsizetype>(bytes.size()));
+        return true;
+    }
+
+private:
+    ImgFile m_img;
+};
+
 template <typename Source>
 std::unique_ptr<ArchiveSource> load(const QString& path)
 {
@@ -179,7 +205,7 @@ std::unique_ptr<ArchiveSource> load(const QString& path)
 bool ArchiveSource::isArchive(const QString& path)
 {
     const QString ext = QFileInfo(path).suffix().toLower();
-    return ext == "rez" || ext == "pak" || ext == "xfs" || ext == "vpk" || ext == "gma";
+    return ext == "rez" || ext == "pak" || ext == "xfs" || ext == "vpk" || ext == "gma" || ext == "img";
 }
 
 std::unique_ptr<ArchiveSource> ArchiveSource::open(const QString& path, QString& error)
@@ -187,23 +213,41 @@ std::unique_ptr<ArchiveSource> ArchiveSource::open(const QString& path, QString&
     const QFileInfo info(path);
     const QString ext = info.suffix().toLower();
     std::unique_ptr<ArchiveSource> source;
-    if (ext == "rez")
-    {
+    if (ext == "rez") // CF and Lithtech
+    { 
         source = load<RezSource>(path);
     }
-    else if (ext == "pak")
+    else if (ext == "pak") // CSO
     {
         source = load<PakSource>(path);
     }
-    else if (ext == "xfs")
+    else if (ext == "xfs") // Xenesis File System (etc. Wolfteam)
     {
         source = load<XfsSource>(path);
     }
-    else if (ext == "gma")
+    else if (ext == "gma") // Garry's Mod Addon
     {
         source = load<GmaSource>(path);
     }
-    else if (ext == "vpk")
+    else if (ext == "img") // GTA:SA
+    {
+        source = load<ImgSource>(path);
+    }
+	else if (ext == "vpk") // Srceng 
+	{
+		// the numbered parts hold data only; their _dir.vpk has the file list
+		if (QRegularExpression("_\\d{3}$").match(info.completeBaseName()).hasMatch())
+		{
+			error = QCoreApplication::translate("ArchiveSource", "This is a data part of a VPK. Open the matching _dir.vpk instead.");
+			return nullptr;
+		}
+		source = load<VpkSource>(path);
+	}
+	else
+	{
+		error = QCoreApplication::translate("ArchiveSource", "Not an archive Vortigaunt can read.");
+		return nullptr;
+	}
     {
         // the numbered parts hold data only; their _dir.vpk has the file list
         if (QRegularExpression("_\\d{3}$").match(info.completeBaseName()).hasMatch())

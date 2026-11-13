@@ -77,6 +77,7 @@
 #include "core/extractors/pak/PakExtractor.h"
 #include "core/converters/Gr2Converter.h"
 #include "core/converters/FbxGlbConverter.h"
+#include "core/converters/DffConverter.h"
 #include "core/converters/WeaponModelConverter.h"
 #include "utils/FileIO.h"
 #include "utils/ImageUtils.h"
@@ -698,7 +699,7 @@ void MainWindow::setupDocks()
     auto* opRow = new QHBoxLayout();
     opRow->addWidget(new QLabel(tr("Operation:"), properties));
     m_fileOpCombo = new QComboBox(properties);
-    for (FileOp op : { FileOp::None, FileOp::Ltb, FileOp::Gr2, FileOp::Mesh, FileOp::Weapon, FileOp::Dtx,
+    for (FileOp op : { FileOp::None, FileOp::Ltb, FileOp::Gr2, FileOp::Mesh, FileOp::Dff, FileOp::Weapon, FileOp::Dtx,
                        FileOp::Rez, FileOp::Pak, FileOp::Xfs, FileOp::Vpk, FileOp::Unity })
     {
         m_fileOpCombo->addItem(fileOpName(op), static_cast<int>(op));
@@ -974,6 +975,10 @@ void MainWindow::setupPreview()
     m_archiveWorkspace = new ArchiveWorkspace([this]() { return outputDir(); }, this);
     m_archiveWorkspace->hide();
     connect(m_archiveWorkspace, &ArchiveWorkspace::addToConvert, this, [this](const QStringList& files) {
+        // models from a GTA archive take their colours and shared textures from that game
+        const std::string game = DffConverter::FindGameFolder(m_archiveWorkspace->currentArchivePath().toStdString());
+        if (!game.empty())
+            m_gtaFolder = QString::fromStdString(game);
         addPaths(files);
         m_workspaces->setCurrentIndex(0);
     });
@@ -1229,6 +1234,7 @@ MainWindow::FileOp MainWindow::detectFileOp(const QString& path)
     if (ext == "fbx" || ext == "glb" || ext == "gltf" || ext == "obj") return FileOp::Mesh;
     if (ext == "mdl") return WeaponModelConverter::IsViewModelFile(path.toStdString()) ? FileOp::Weapon : FileOp::None;
     if (ext == "dtx") return FileOp::Dtx;
+    if (ext == "dff") return FileOp::Dff;
     if (ext == "rez") return FileOp::Rez;
     if (ext == "pak") return FileOp::Pak;
     if (ext == "xfs") return FileOp::Xfs;
@@ -1244,6 +1250,7 @@ QString MainWindow::fileOpName(FileOp op)
     case FileOp::Ltb: return tr("LTB to SMD");
     case FileOp::Gr2: return tr("GR2 to SMD");
     case FileOp::Mesh: return tr("FBX/GLB/OBJ to SMD");
+    case FileOp::Dff: return tr("DFF to SMD (GTA)");
     case FileOp::Weapon: return tr("v_ to p_ / w_ model");
     case FileOp::Dtx: return tr("DTX to BMP");
     case FileOp::Rez: return tr("Extract REZ");
@@ -1361,7 +1368,7 @@ void MainWindow::onFileSelectionChanged()
 
 void MainWindow::updatePropertiesFor(FileOp op)
 {
-    const bool model = op == FileOp::Ltb || op == FileOp::Gr2 || op == FileOp::Mesh || op == FileOp::Weapon;
+    const bool model = op == FileOp::Ltb || op == FileOp::Gr2 || op == FileOp::Mesh || op == FileOp::Weapon || op == FileOp::Dff;
     m_weaponGroup->setVisible(op == FileOp::Weapon);
     QTreeWidgetItem* current = m_fileList->currentItem();
     const bool converted = current && current->data(0, kConvertedRole).toBool();
@@ -1481,6 +1488,9 @@ void MainWindow::showPreview(const QString& path, FileOp op)
     case FileOp::Weapon:
         showInfo(tr("GoldSrc view model. Convert makes the p_ and w_ models from it."));
         break;
+    case FileOp::Dff:
+        showInfo(tr("GTA model. Convert writes its SMD, textures and QC; the TXD of the same name is read from its folder."));
+        break;
     case FileOp::Gr2:
     case FileOp::Ltb:
         showInfo(tr("There is no 3D preview for this format yet."));
@@ -1497,7 +1507,7 @@ void MainWindow::showPreview(const QString& path, FileOp op)
 void MainWindow::onAddFiles()
 {
     const QString filter = tr("Supported files (%1);;All files (*.*)")
-        .arg("*.ltb *.gr2 *.fbx *.glb *.gltf *.obj *.mdl *.dtx *.rez *.pak *.xfs *.vpk *.gma *.unity3d *.bundle *.assets");
+        .arg("*.ltb *.gr2 *.fbx *.glb *.gltf *.obj *.dff *.mdl *.dtx *.rez *.pak *.xfs *.vpk *.gma *.img *.unity3d *.bundle *.assets");
     addPaths(QFileDialog::getOpenFileNames(this, tr("Add Files"), QString(), filter));
 }
 
@@ -1707,7 +1717,7 @@ void MainWindow::onRun()
         }
         const QString sub = item->data(0, kSubfolderRole).toString();
         jobs.push_back({ item, item->data(0, kPathRole).toString(), op, sub.isEmpty() ? outputDir() : QDir(outputDir()).filePath(sub) });
-        anyModel |= op == FileOp::Ltb || op == FileOp::Gr2 || op == FileOp::Mesh || op == FileOp::Weapon;
+        anyModel |= op == FileOp::Ltb || op == FileOp::Gr2 || op == FileOp::Mesh || op == FileOp::Weapon || op == FileOp::Dff;
         anyWeapon |= op == FileOp::Weapon;
         gr2Count += op == FileOp::Gr2 ? 1 : 0;
     }
@@ -1829,6 +1839,7 @@ void MainWindow::onRun()
                 case FileOp::Ltb: ok = convertLtb(job.path, job.outputDir, ltbSettings); break;
                 case FileOp::Gr2: ok = convertGr2(job.path, job.outputDir, gr2WithAnimations); break;
                 case FileOp::Mesh: ok = convertFbxGlb(job.path, job.outputDir, writeQC); break;
+                case FileOp::Dff: ok = convertDff(job.path, job.outputDir, writeQC); break;
                 case FileOp::Weapon:
                 {
                     // the row remembers its p_ model, for Show on player
@@ -1996,6 +2007,17 @@ bool MainWindow::convertFbxGlb(const QString& inputPath, const QString& outputDi
     FbxGlbConvertOptions options;
     options.writeQC = writeQC;
     FbxGlbConverter converter;
+    converter.SetOptions(options);
+    const ConvertAssets summary = runConverter(converter, inputPath, outputDir);
+    return summary.total > 0 && summary.failed.empty();
+}
+
+bool MainWindow::convertDff(const QString& inputPath, const QString& outputDir, bool writeQC)
+{
+    DffConverter converter;
+    DffConvertOptions options;
+    options.writeQC = writeQC;
+    options.gameFolder = m_gtaFolder.toStdString();
     converter.SetOptions(options);
     const ConvertAssets summary = runConverter(converter, inputPath, outputDir);
     return summary.total > 0 && summary.failed.empty();

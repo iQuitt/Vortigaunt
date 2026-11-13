@@ -22,6 +22,10 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 - **GR2 to SMD** (Only Windows) - Export Granny2 Models to Valve SMD with  Animations, Bone and Texture [Watch Video](https://youtu.be/I2yra8eqjds?t=200)
   - Tested with Metin2 assets
   - More games coming soon
+- **DFF to SMD** - Export GTA San Andreas Models to Valve SMD with Bones, Textures (TXD) and QC
+  - Vehicles get bodygroups for their extras and damaged parts, controllers for wheels and steering, and attachments (exhaust, lights, seat)
+  - IFP (San Andreas) animations to SMD
+  - GTA III and Vice City files are read by the same code but are not tested yet
 
 ### Textures
 - **DTX Viewer & Extract** (Only Windows) - View and Extract LithTech Engine textures
@@ -35,6 +39,7 @@ This Project Main Purpose is Convert game assets from various engines to GoldSrc
 - **GMA File** - Extract and browse Garry's Mod GMA files
 - **VPK File** - Extract and browse Valve VPK files
 - **UnityFS** - Extract UnityFS and Unity Assets
+- **IMG File** - Extract and browse GTA San Andreas IMG archives
 
 ### Sprite Management
 - **Sprite Viewer** - View, edit, and create GoldSrc sprites [Watch Video](https://youtu.be/q3DvdgdLPls)
@@ -110,6 +115,7 @@ Special Thanks To:
 - nolith for Lithtech REZ (https://github.com/no-lith/RezExtract)
 - SamVanheer for HLAM (https://github.com/SamVanheer/HalfLifeAssetManager)
 	- Khada for League of Legends Model Viewer (https://modelviewer.lol/)
+- aap for librw, used to read GTA DFF and TXD files (https://github.com/aap/librw)
 
 ## License
 

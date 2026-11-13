@@ -17,8 +17,12 @@ set(VORTIGAUNT_CORE_HEADERS
     core/converters/IConverter.h
     core/converters/FbxGlbConverter.h
     core/converters/WeaponModelConverter.h
+    core/converters/DffConverter.h
+    core/converters/IfpAnimation.h
+    core/extractors/img/ImgFile.h
     core/mdl/StudioModel.h
     core/mdl/StudioSimplify.h
+    core/mdl/StudioSplit.h
     core/mdl/StudioDecompiler.h
     core/autorig/SkeletonMath.h
     core/autorig/Retarget.h
@@ -107,8 +111,11 @@ set(VORTIGAUNT_CORE
     core/converters/IConverter.cpp
     core/converters/FbxGlbConverter.cpp
     core/converters/WeaponModelConverter.cpp
+    core/converters/DffConverter.cpp
+    core/converters/IfpAnimation.cpp
     core/mdl/StudioModel.cpp
     core/mdl/StudioSimplify.cpp
+    core/mdl/StudioSplit.cpp
     core/mdl/StudioDecompiler.cpp
     core/autorig/SkeletonMath.cpp
     core/autorig/Retarget.cpp
@@ -132,6 +139,7 @@ set(VORTIGAUNT_CORE
     core/extractors/vpk/VpkExtractor.cpp
     core/extractors/gma/GmaFile.cpp
     core/extractors/gma/GmaExtractor.cpp
+    core/extractors/img/ImgFile.cpp
     core/VortigauntLog.cpp
     core/extractors/unity/UnityAssetParser.cpp
     core/extractors/unity/UnityDataResolver.cpp
@@ -218,7 +226,7 @@ target_include_directories(VortigauntCore PUBLIC
 )
 target_link_libraries(VortigauntCore PUBLIC
     assimp_includes rapidjson_headers zlib_headers lzma lz4
-    gcl_headers audio_headers libimagequant
+    gcl_headers audio_headers libimagequant librw
     unordered_dense::unordered_dense
 )
 if(ENABLE_LITHTECH)
@@ -283,7 +291,7 @@ if(BUILD_GUI)
     )
     target_link_libraries(VortigauntTool_gui PRIVATE
         assimp_includes rapidjson_headers zlib_headers lzma lz4 discord_partner_sdk
-        gcl_headers audio_headers libimagequant vtflib
+        gcl_headers audio_headers libimagequant vtflib librw
         Qt6::Widgets Qt6::Network Qt6::OpenGL Qt6::OpenGLWidgets Qt6::Multimedia
         unordered_dense::unordered_dense
     )

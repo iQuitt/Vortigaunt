@@ -147,6 +147,7 @@ private:
         Xfs,
         Vpk,
         Unity,
+        Dff,
     };
 
     struct FileJob
@@ -230,6 +231,7 @@ private:
     void showSelectedOnPlayer();
 
     bool convertDtx(const QString& inputPath, const QString& outputDir);
+    bool convertDff(const QString& inputPath, const QString& outputDir, bool writeQC);
 
     // runs a converter over a file or folder: progress, QC compiling and the failures for the summary box
     ConvertAssets runConverter(IConverter& converter, const QString& inputPath, const QString& outputDir,
@@ -329,6 +331,7 @@ private:
     QGroupBox*     m_gr2AnimGroup;
     QListWidget*   m_animationListWidget;
     QString        m_animationListOwner;  // the GR2 the list was filled for
+    QString        m_gtaFolder;  // the GTA a model was last taken from, for its colours and shared textures
 
     // Tool actions
     QAction*       m_lolModelAction = nullptr; // Khada LoL Model Downloader

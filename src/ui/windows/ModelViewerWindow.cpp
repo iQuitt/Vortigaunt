@@ -6,6 +6,7 @@
 #include "core/VortigauntLog.h"
 #include "core/mdl/StudioModel.h"
 #include "core/mdl/StudioSimplify.h"
+#include "core/mdl/StudioSplit.h"
 #include "ui/widgets/UvMapEditor.h"
 
 #include <QApplication>
@@ -2662,8 +2663,55 @@ void ModelViewerWindow::updateTabTitle(int index)
     if (index == m_current) setWindowTitle(title);
 }
 
+bool ModelViewerWindow::splitOversized()
+{
+    Asset* shown = asset();
+    if (!shown) return false;
+    const std::vector<StudioOversize> over = FindOversizedSubModels(*shown->model);
+    if (over.empty()) return true;
+    QStringList lines, kept;
+    for (const StudioOversize& o : over)
+    {
+        const StudioBodyPart& part = shown->model->bodyParts[o.part];
+        const QString line = tr("%1 / %2: %3 vertices, %4 normals")
+                                 .arg(QString::fromStdString(part.name), QString::fromStdString(part.models[o.model].name))
+                                 .arg(o.vertices)
+                                 .arg(o.normals);
+        (o.splittable ? lines : kept) << line;
+    }
+    QString text = tr("GoldSrc draws at most %1 vertices and %1 normals in a body part; more and the game draws it broken or not at all.")
+                       .arg(kMaxStudioVertices);
+    if (!lines.isEmpty())
+        text += QStringLiteral("\n\n") + tr("These can be split into parts within the limit, which look the same:") + QStringLiteral("\n") + lines.join(QLatin1Char('\n'));
+    if (!kept.isEmpty())
+        text += QStringLiteral("\n\n") + tr("These are one of several choices of their part and cannot be split; reduce their polygons instead:") + QStringLiteral("\n") +
+                kept.join(QLatin1Char('\n'));
+    QMessageBox box(QMessageBox::Warning, tr("Body parts over the limit"), text, QMessageBox::NoButton, this);
+    QPushButton* split = lines.isEmpty() ? nullptr : box.addButton(tr("Split and Save"), QMessageBox::AcceptRole);
+    QPushButton* asIs = box.addButton(tr("Save As It Is"), QMessageBox::DestructiveRole);
+    box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(split ? split : asIs);
+    box.exec();
+    if (box.clickedButton() == asIs) return true;
+    if (!split || box.clickedButton() != split) return false;
+
+    auto parted = std::make_shared<StudioModel>(*shown->model);
+    const SplitResult result = SplitOversizedSubModels(*parted);
+    if (!result.error.empty())
+    {
+        VortigauntLog::Vortigaunt_Printf(QStringLiteral("ERROR: %1").arg(QString::fromStdString(result.error)));
+        QMessageBox::warning(this, tr("Body parts over the limit"), tr("The model cannot be split: it would need more than 32 body parts."));
+        return false;
+    }
+    editModel(tr("Split Oversized Parts"), QString(), [&](StudioModel& model) { model = *parted; });
+    VortigauntLog::Vortigaunt_Printf(QStringLiteral("Split %1 oversized submodel(s) into %2 more body part(s).").arg(result.split).arg(result.partsAdded));
+    return true;
+}
+
 bool ModelViewerWindow::saveAs(const QString& path)
 {
+    // a part the engine cannot draw whole is offered a split first
+    if (!splitOversized()) return false;
     Asset* shown = asset();
     if (!shown) return false;
     const QString whole = QFileInfo(path).absoluteFilePath();

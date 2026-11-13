@@ -171,3 +171,22 @@ FetchContent_Declare(
     GIT_TAG        v4.4.0
 )
 FetchContent_MakeAvailable(unordered_dense)
+# librw (RenderWare DFF/TXD reader, MIT), headless
+file(GLOB_RECURSE LIBRW_SOURCES CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/librw/src/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/librw/src/gl/glad/glad.c
+)
+# PS2 only, not in librw's own list
+list(FILTER LIBRW_SOURCES EXCLUDE REGEX "ps2/(ps2file|ps2immed|ps2render)\.cpp$")
+add_library(librw STATIC ${LIBRW_SOURCES})
+target_include_directories(librw PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/librw)
+target_compile_definitions(librw PUBLIC RW_NULL PRIVATE LODEPNG_NO_COMPILE_CPP)
+set_target_properties(librw PROPERTIES
+    CXX_STANDARD 17
+    POSITION_INDEPENDENT_CODE ON
+    FOLDER "ThirdParty"
+)
+if(MSVC)
+    target_compile_options(librw PRIVATE /wd4996 /wd4244 /wd4267 /wd4305 /W0)
+    target_compile_definitions(librw PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()

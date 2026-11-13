@@ -86,6 +86,10 @@
         <source>The archive could not be read. It may be damaged or of a version Vortigaunt does not know.</source>
         <translation>Arşiv okunamadı. Hasarlı olabilir ya da Vortigaunt&apos;ın bilmediği bir sürümde olabilir.</translation>
     </message>
+    <message>
+        <source>IMG (Grand Theft Auto)</source>
+        <translation>IMG (Grand Theft Auto)</translation>
+    </message>
 </context>
 <context>
     <name>ArchiveWorkspace</name>
@@ -178,8 +182,8 @@
         <translation>Arşivleri Aç</translation>
     </message>
     <message>
-        <source>Archives (*.rez *.pak *.xfs *.vpk *.gma);;All files (*.*)</source>
-        <translation>Arşivler (*.rez *.pak *.xfs *.vpk *.gma);;Tüm dosyalar (*.*)</translation>
+        <source>Archives (*.rez *.pak *.xfs *.vpk *.gma *.img);;All files (*.*)</source>
+        <translation>Arşivler (*.rez *.pak *.xfs *.vpk *.gma *.img);;Tüm dosyalar (*.*)</translation>
     </message>
     <message>
         <source>Open an archive from the ribbon, or drop one here.</source>
@@ -1959,6 +1963,14 @@ The operation is picked from the file type.</source>
         <source>The application needs to restart for the language change to take effect.</source>
         <translation>Dil değişikliğinin uygulanması için uygulamanın yeniden başlatılması gerekiyor.</translation>
     </message>
+    <message>
+        <source>DFF to SMD (GTA)</source>
+        <translation>DFF&apos;den SMD&apos;ye (GTA)</translation>
+    </message>
+    <message>
+        <source>GTA model. Convert writes its SMD, textures and QC; the TXD of the same name is read from its folder.</source>
+        <translation>GTA modeli. Dönüştür; SMD, doku ve QC dosyalarını yazar; aynı adlı TXD kendi klasöründen okunur.</translation>
+    </message>
 </context>
 <context>
     <name>ModelViewerWindow</name>
@@ -3153,6 +3165,42 @@ The operation is picked from the file type.</source>
     <message>
         <source>Export the textures to</source>
         <translation>Dokuların aktarılacağı klasör</translation>
+    </message>
+    <message>
+        <source>%1 / %2: %3 vertices, %4 normals</source>
+        <translation>%1 / %2: %3 köşe, %4 normal</translation>
+    </message>
+    <message>
+        <source>GoldSrc draws at most %1 vertices and %1 normals in a body part; more and the game draws it broken or not at all.</source>
+        <translation>GoldSrc bir gövde parçasında en fazla %1 köşe ve %1 normal çizebilir; fazlası oyunda bozuk görünür ya da hiç görünmez.</translation>
+    </message>
+    <message>
+        <source>These can be split into parts within the limit, which look the same:</source>
+        <translation>Bunlar sınırı aşmayan parçalara bölünebilir; görünümleri değişmez:</translation>
+    </message>
+    <message>
+        <source>These are one of several choices of their part and cannot be split; reduce their polygons instead:</source>
+        <translation>Bunlar parçalarının seçeneklerinden biri olduğu için bölünemez; bunun yerine poligonlarını azaltın:</translation>
+    </message>
+    <message>
+        <source>Body parts over the limit</source>
+        <translation>Sınırı aşan gövde parçaları</translation>
+    </message>
+    <message>
+        <source>Split and Save</source>
+        <translation>Böl ve Kaydet</translation>
+    </message>
+    <message>
+        <source>Save As It Is</source>
+        <translation>Olduğu Gibi Kaydet</translation>
+    </message>
+    <message>
+        <source>The model cannot be split: it would need more than 32 body parts.</source>
+        <translation>Model bölünemiyor: 32&apos;den fazla gövde parçası gerekirdi.</translation>
+    </message>
+    <message>
+        <source>Split Oversized Parts</source>
+        <translation>Büyük Parçaları Böl</translation>
     </message>
 </context>
 <context>

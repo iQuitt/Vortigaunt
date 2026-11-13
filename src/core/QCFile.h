@@ -22,6 +22,22 @@ struct QCBody
     std::string SmdPath;
 };
 
+// a $bodygroup; "blank" as a path is the empty choice
+struct QCBodyGroup
+{
+    std::string Name;
+    std::vector<std::string> SmdPaths;
+};
+
+// a $controller: a bone turned or moved by the game along one axis (XR, YR, ZR, X, Y, Z)
+struct QCController
+{
+    int Index = 0;
+    std::string Bone;
+    std::string Axis;
+    float Start = 0.0f, End = 0.0f;
+};
+
 struct QCAttachment
 {
     int Index = 0;
@@ -73,6 +89,16 @@ public:
     void AddBody(const std::string& name, const std::string& smdPath);
 
     /*
+	*   @brief Add a $bodygroup with one choice per SMD, "blank" for none
+    */
+    void AddBodyGroup(const std::string& name, const std::vector<std::string>& smdPaths);
+
+    /*
+	*   @brief Add a bone controller
+    */
+    void AddController(int index, const std::string& bone, const std::string& axis, float start, float end);
+
+    /*
 	*   @brief Add an attachment point on a bone
     */
     void AddAttachment(int index, const std::string& bone, float x, float y, float z);
@@ -104,6 +130,8 @@ private:
     QCFileSettings m_settings;
     std::vector<QCSequence> m_sequences;
     std::vector<QCBody> m_bodies;
+    std::vector<QCBodyGroup> m_bodyGroups;
+    std::vector<QCController> m_controllers;
     std::vector<QCAttachment> m_attachments;
     std::vector<QCTextureRenderMode> m_renderModes;
     std::string m_error;

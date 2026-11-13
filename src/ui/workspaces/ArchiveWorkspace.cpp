@@ -16,6 +16,7 @@
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QHash>
+#include <QSet>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
@@ -30,6 +31,7 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <fstream>
 #include <thread>
 
@@ -71,7 +73,7 @@ constexpr qint64 kMaxTextPreviewBytes = 256 * 1024;
 EntryKind kindOf(const QString& ext)
 {
 	static const QStringList textures = { "dtx", "dds", "tga", "bmp", "png", "jpg", "jpeg", "vtf", "pcx" };// supported by TextureWorkspace
-    static const QStringList models = { "ltb", "mdl", "gr2", "fbx", "glb", "gltf", "obj", "smd", "msh", "ltt" };
+    static const QStringList models = { "ltb", "mdl", "gr2", "fbx", "glb", "gltf", "obj", "smd", "msh", "ltt", "dff" };
     static const QStringList sounds = { "wav", "mp3", "ogg", "flac" };
     static const QStringList texts = { "txt", "cfg", "ini", "qc", "lua", "json", "xml", "csv", "res", "vmt", "vdf", "scr", "fx", "msk" };
     if (textures.contains(ext)) return EntryKind::Texture;
@@ -251,7 +253,7 @@ bool ArchiveWorkspace::openArchive(const QString& path)
 void ArchiveWorkspace::openArchiveDialog()
 {
     const QStringList files = QFileDialog::getOpenFileNames(this, tr("Open Archives"), QString(),
-        tr("Archives (*.rez *.pak *.xfs *.vpk *.gma);;All files (*.*)"));
+        tr("Archives (*.rez *.pak *.xfs *.vpk *.gma *.img);;All files (*.*)"));
     for (const QString& file : files)
         openArchive(file);
 }
@@ -505,11 +507,43 @@ void ArchiveWorkspace::extractAll()
     extract(all, {});
 }
 
+QString ArchiveWorkspace::currentArchivePath() const
+{
+    ArchiveSource* source = current();
+    return source ? source->filePath() : QString();
+}
+
 void ArchiveWorkspace::sendSelectedToConvert()
 {
-    const std::vector<size_t> selected = selectedEntries();
-    if (!selected.empty())
-        extract(selected, [this](const QStringList& files) { emit addToConvert(files); });
+    std::vector<size_t> selected = selectedEntries();
+    ArchiveSource* source = current();
+    if (selected.empty() || !source)
+        return;
+    // a GTA model reads the TXD of its name from its folder, so that comes out with it
+    QSet<QString> txds;
+    for (size_t index : selected)
+    {
+        const QFileInfo name(source->entries()[index].path);
+        if (name.suffix().compare(QStringLiteral("dff"), Qt::CaseInsensitive) == 0)
+            txds.insert(name.completeBaseName().toLower() + QStringLiteral(".txd"));
+    }
+    const size_t chosen = selected.size();
+    for (size_t i = 0; i < source->entries().size() && !txds.isEmpty(); ++i)
+    {
+        if (txds.remove(QFileInfo(source->entries()[i].path).fileName().toLower())
+            && std::find(selected.begin(), selected.begin() + chosen, i) == selected.begin() + chosen)
+            selected.push_back(i);
+    }
+    QSet<QString> extra;
+    for (size_t i = chosen; i < selected.size(); ++i)
+        extra.insert(QFileInfo(source->entries()[selected[i]].path).fileName().toLower());
+    extract(selected, [this, extra](const QStringList& files) {
+        QStringList convert;
+        for (const QString& file : files)
+            if (!extra.contains(QFileInfo(file).fileName().toLower()))
+                convert << file;
+        emit addToConvert(convert);
+    });
 }
 
 void ArchiveWorkspace::sendSelectedToWad()

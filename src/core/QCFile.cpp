@@ -125,6 +125,16 @@ void QCFile::AddBody(const std::string& name, const std::string& smdPath)
     m_bodies.push_back({ name, smdPath });
 }
 
+void QCFile::AddController(int index, const std::string& bone, const std::string& axis, float start, float end)
+{
+    m_controllers.push_back({ index, bone, axis, start, end });
+}
+
+void QCFile::AddBodyGroup(const std::string& name, const std::vector<std::string>& smdPaths)
+{
+    m_bodyGroups.push_back({ name, smdPaths });
+}
+
 void QCFile::AddAttachment(int index, const std::string& bone, float x, float y, float z)
 {
     QCAttachment attachment;
@@ -161,7 +171,7 @@ bool QCFile::Write(const std::string& outputPath)
     
     file << "$scale " << m_settings.Scale << "\n\n";
 
-    if (m_bodies.empty())
+    if (m_bodies.empty() && m_bodyGroups.empty())
     {
         file << "$bodygroup \"studio\"\n";
         file << "{\n";
@@ -173,6 +183,18 @@ bool QCFile::Write(const std::string& outputPath)
         for (const auto& body : m_bodies)
         {
             file << "$body \"" << body.Name << "\" \"" << body.SmdPath << "\"\n";
+        }
+        for (const auto& group : m_bodyGroups)
+        {
+            file << "$bodygroup \"" << group.Name << "\"\n{\n";
+            for (const auto& smd : group.SmdPaths)
+            {
+                if (smd == "blank")
+                    file << "\tblank\n";
+                else
+                    file << "\tstudio \"" << smd << "\"\n";
+            }
+            file << "}\n";
         }
         file << "\n";
     }
@@ -186,7 +208,12 @@ bool QCFile::Write(const std::string& outputPath)
         file << "$attachment " << attachment.Index << " \"" << attachment.Bone << "\" "
              << attachment.X << " " << attachment.Y << " " << attachment.Z << "\n";
     }
-    if (!m_renderModes.empty() || !m_attachments.empty())
+    for (const auto& controller : m_controllers)
+    {
+        file << "$controller " << controller.Index << " \"" << controller.Bone << "\" " << controller.Axis << " "
+             << controller.Start << " " << controller.End << "\n";
+    }
+    if (!m_renderModes.empty() || !m_attachments.empty() || !m_controllers.empty())
     {
         file << "\n";
     }
