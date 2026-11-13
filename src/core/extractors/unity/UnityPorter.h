@@ -33,6 +33,9 @@ public:
     // 8-bit indexed BMP (mesh material names follow the chosen extension).
     void SetConvertTexturesToBmp(bool enabled) { m_convertTexturesToBmp = enabled; }
 
+    // a bundle or a serialized assets file, by its name or the start of it
+    static bool IsUnityFile(const std::string& path);
+
 private:
     struct ObjectRef { int32_t fileKey = -1; int64_t pathId = 0; };   // fileKey indexes m_summaries
     struct FileSummary {

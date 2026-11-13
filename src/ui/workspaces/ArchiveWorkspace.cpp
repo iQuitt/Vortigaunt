@@ -219,43 +219,70 @@ ArchiveSource* ArchiveWorkspace::current() const
     return row >= 0 && row < static_cast<int>(m_archives.size()) ? m_archives[row].get() : nullptr;
 }
 
-bool ArchiveWorkspace::openArchive(const QString& path)
+int ArchiveWorkspace::open(const QString& path, QString& error)
 {
     const QString absolute = QFileInfo(path).absoluteFilePath();
     for (size_t i = 0; i < m_archives.size(); ++i)
     {
         if (m_archives[i]->filePath().compare(absolute, Qt::CaseInsensitive) == 0)
-        {
-            m_archiveList->setCurrentRow(static_cast<int>(i));
-            return true;
-        }
+            return static_cast<int>(i);
     }
 
-    QString error;
-    QApplication::setOverrideCursor(Qt::WaitCursor);
     std::unique_ptr<ArchiveSource> source = ArchiveSource::open(absolute, error);
-    QApplication::restoreOverrideCursor();
     if (!source)
-    {
-        QMessageBox::warning(this, tr("Cannot open archive"), QStringLiteral("%1\n\n%2").arg(QFileInfo(path).fileName(), error));
-        return false;
-    }
+        return -1;
 
     VortigauntLog::Vortigaunt_Printf(QStringLiteral("Opened %1: %2 files").arg(QFileInfo(absolute).fileName()).arg(source->entries().size()));
     auto* item = new QListWidgetItem(QStringLiteral("%1\n%2").arg(QFileInfo(absolute).fileName(), source->typeName()));
     item->setToolTip(QDir::toNativeSeparators(absolute));
     m_archives.push_back(std::move(source));
     m_archiveList->addItem(item);
-    m_archiveList->setCurrentRow(m_archiveList->count() - 1);
-    return true;
+    return m_archiveList->count() - 1;
+}
+
+bool ArchiveWorkspace::openArchive(const QString& path)
+{
+    return openArchives({ path }) == 1;
+}
+
+int ArchiveWorkspace::openArchives(const QStringList& paths)
+{
+    QStringList failed;
+    int opened = 0, last = -1;
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    for (const QString& path : paths)
+    {
+        QString error;
+        const int row = open(path, error);
+        if (row < 0)
+        {
+            VortigauntLog::Vortigaunt_Printf(QStringLiteral("ERROR: Cannot open %1: %2").arg(QDir::toNativeSeparators(path), error));
+            failed << QStringLiteral("%1: %2").arg(QFileInfo(path).fileName(), error);
+            continue;
+        }
+        last = row;
+        opened++;
+    }
+    QApplication::restoreOverrideCursor();
+    // the list is filled once, for the last of them
+    if (last >= 0)
+        m_archiveList->setCurrentRow(last);
+    if (!failed.isEmpty())
+    {
+        QString text = failed.mid(0, 10).join(QStringLiteral("\n\n"));
+        if (failed.size() > 10)
+            text += QStringLiteral("\n\n") + tr("... and %1 more.").arg(failed.size() - 10);
+        QMessageBox::warning(this, tr("Cannot open archive"), text);
+    }
+    return opened;
 }
 
 void ArchiveWorkspace::openArchiveDialog()
 {
     const QStringList files = QFileDialog::getOpenFileNames(this, tr("Open Archives"), QString(),
         tr("Archives (*.rez *.pak *.xfs *.vpk *.gma *.img);;All files (*.*)"));
-    for (const QString& file : files)
-        openArchive(file);
+    if (!files.isEmpty())
+        openArchives(files);
 }
 
 void ArchiveWorkspace::closeCurrentArchive()
@@ -493,7 +520,7 @@ void ArchiveWorkspace::extractSelected()
 {
     const std::vector<size_t> selected = selectedEntries();
     if (!selected.empty())
-        extract(selected, {});
+        extract(current(), selected, {});
 }
 
 void ArchiveWorkspace::extractAll()
@@ -504,7 +531,38 @@ void ArchiveWorkspace::extractAll()
     std::vector<size_t> all(source->entries().size());
     for (size_t i = 0; i < all.size(); ++i)
         all[i] = i;
-    extract(all, {});
+    extract(source, all, {});
+}
+
+void ArchiveWorkspace::extractAllArchives()
+{
+    if (m_busy || m_archives.empty())
+        return;
+    m_extractQueue.clear();
+    for (const std::unique_ptr<ArchiveSource>& archive : m_archives)
+    {
+        if (!archive->entries().empty())
+            m_extractQueue.push_back(archive.get());
+    }
+    m_queuedArchives = static_cast<int>(m_extractQueue.size());
+    extractNextArchive();
+}
+
+void ArchiveWorkspace::extractNextArchive()
+{
+    if (m_extractQueue.empty())
+        return;
+    ArchiveSource* source = m_extractQueue.front();
+    m_extractQueue.erase(m_extractQueue.begin());
+    std::vector<size_t> all(source->entries().size());
+    for (size_t i = 0; i < all.size(); ++i)
+        all[i] = i;
+    extract(source, all, [this](const QStringList&) {
+        if (!m_extractQueue.empty())
+            extractNextArchive();
+        else
+            m_countLabel->setText(tr("Extracted %1 archive(s) to %2").arg(m_queuedArchives).arg(QDir::toNativeSeparators(m_outputDir())));
+    });
 }
 
 QString ArchiveWorkspace::currentArchivePath() const
@@ -537,7 +595,7 @@ void ArchiveWorkspace::sendSelectedToConvert()
     QSet<QString> extra;
     for (size_t i = chosen; i < selected.size(); ++i)
         extra.insert(QFileInfo(source->entries()[selected[i]].path).fileName().toLower());
-    extract(selected, [this, extra](const QStringList& files) {
+    extract(source, selected, [this, extra](const QStringList& files) {
         QStringList convert;
         for (const QString& file : files)
             if (!extra.contains(QFileInfo(file).fileName().toLower()))
@@ -575,9 +633,8 @@ void ArchiveWorkspace::setBusy(bool busy)
     updatePreview();
 }
 
-void ArchiveWorkspace::extract(const std::vector<size_t>& indices, const std::function<void(const QStringList&)>& done)
+void ArchiveWorkspace::extract(ArchiveSource* source, const std::vector<size_t>& indices, const std::function<void(const QStringList&)>& done)
 {
-    ArchiveSource* source = current();
     if (!source || m_busy || indices.empty())
         return;
 

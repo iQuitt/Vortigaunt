@@ -165,7 +165,13 @@ static bool IsSerializedAssetFile(const std::string& filepath) {
     if (f.gcount() < 16) return false;
 
     std::uint32_t version = Utils::ReadBE32(reinterpret_cast<const std::uint8_t*>(header + 8));
-    return (version >= 9);
+    return (version >= 9 && version < 100);
+}
+
+bool UnityPorter::IsUnityFile(const std::string& path)
+{
+    const std::string ext = String_ToLower(std::filesystem::path(path).extension().string());
+    return ext == ".unity3d" || ext == ".bundle" || ext == ".assets" || IsSerializedAssetFile(path);
 }
 
 static bool IsKeyClass(int32_t classId) {

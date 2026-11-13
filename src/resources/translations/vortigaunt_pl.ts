@@ -221,6 +221,14 @@
         <source>Extracted %1 file(s) to %2</source>
         <translation>Wypakowano plików: %1 do %2</translation>
     </message>
+    <message>
+        <source>... and %1 more.</source>
+        <translation>... i jeszcze %1.</translation>
+    </message>
+    <message>
+        <source>Extracted %1 archive(s) to %2</source>
+        <translation>Wypakowano %1 archiwum(ów) do %2</translation>
+    </message>
 </context>
 <context>
     <name>AudioConvertDialog</name>
@@ -1972,6 +1980,82 @@ Operacja jest wybierana według typu pliku.</translation>
     <message>
         <source>GTA model. Convert writes its SMD, textures and QC; the TXD of the same name is read from its folder.</source>
         <translation>Model GTA. Konwersja zapisuje SMD, tekstury i QC; TXD o tej samej nazwie jest czytany z jego folderu.</translation>
+    </message>
+    <message>
+        <source>Open REZ, PAK, XFS, VPK, GMA or IMG archives</source>
+        <translation>Otwórz archiwa REZ, PAK, XFS, VPK, GMA lub IMG</translation>
+    </message>
+    <message>
+        <source>Extract
+all archives</source>
+        <translation>Wypakuj wszystkie
+archiwa</translation>
+    </message>
+    <message>
+        <source>Extract every open archive to the output folder, each into a folder of its name</source>
+        <translation>Wypakuj każde otwarte archiwum do folderu wyjściowego, każde do folderu o swojej nazwie</translation>
+    </message>
+    <message>
+        <source>CSO
+sprite fix</source>
+        <translation>Napraw
+sprite CSO</translation>
+    </message>
+    <message>
+        <source>Convert MP3, OGG or WAV files to the WAV GoldSrc plays...</source>
+        <translation>Konwertuj pliki MP3, OGG lub WAV na WAV odtwarzany przez GoldSrc...</translation>
+    </message>
+    <message>
+        <source>Audio
+to WAV</source>
+        <translation>Dźwięk
+na WAV</translation>
+    </message>
+    <message>
+        <source>Open
+model</source>
+        <translation>Otwórz
+model</translation>
+    </message>
+    <message>
+        <source>Open GoldSrc models in the viewer: sequences, parts, textures, skeleton...</source>
+        <translation>Otwórz modele GoldSrc w przeglądarce: sekwencje, części, tekstury, szkielet...</translation>
+    </message>
+    <message>
+        <source>Open Models</source>
+        <translation>Otwórz modele</translation>
+    </message>
+    <message>
+        <source>Weapon Fit</source>
+        <translation>Dopasowanie broni</translation>
+    </message>
+    <message>
+        <source>Restart</source>
+        <translation>Uruchom ponownie</translation>
+    </message>
+    <message>
+        <source>Drop files or folders here</source>
+        <translation>Upuść tutaj pliki lub foldery</translation>
+    </message>
+    <message>
+        <source>Models: LTB, GR2, FBX, GLB, OBJ and GTA DFF to SMD</source>
+        <translation>Modele: LTB, GR2, FBX, GLB, OBJ i GTA DFF na SMD</translation>
+    </message>
+    <message>
+        <source>Weapons: v_ models to p_ and w_ models</source>
+        <translation>Bronie: modele v_ na modele p_ i w_</translation>
+    </message>
+    <message>
+        <source>Textures: DTX to BMP</source>
+        <translation>Tekstury: DTX na BMP</translation>
+    </message>
+    <message>
+        <source>Unity: the meshes, textures and animations of bundles and assets</source>
+        <translation>Unity: siatki, tekstury i animacje z plików bundle i assets</translation>
+    </message>
+    <message>
+        <source>Archives, sprites, WADs and other textures open in their own tabs.</source>
+        <translation>Archiwa, sprite&apos;y, pliki WAD i inne tekstury otwierają się we własnych kartach.</translation>
     </message>
 </context>
 <context>

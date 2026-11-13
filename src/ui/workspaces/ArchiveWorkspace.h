@@ -33,6 +33,8 @@ public:
     ~ArchiveWorkspace() override;
 
     bool openArchive(const QString& path);
+    // several at once, with one message for the ones that could not be opened; how many are open of them
+    int openArchives(const QStringList& paths);
     bool isBusy() const { return m_busy; }
     QString currentArchivePath() const;
 
@@ -41,6 +43,8 @@ public slots:
     void closeCurrentArchive();
     void extractSelected();
     void extractAll();
+    // every open archive, one after the other
+    void extractAllArchives();
     // extracts the selected files and hands them to the Convert list
     void sendSelectedToConvert();
     // the selected textures, decoded, for the WAD tab
@@ -60,13 +64,18 @@ private:
     void openSelectedInViewer();
     std::vector<size_t> selectedEntries() const;
     // in the background; done gets the written files, on the UI thread
-    void extract(const std::vector<size_t>& indices, const std::function<void(const QStringList&)>& done);
+    void extract(ArchiveSource* source, const std::vector<size_t>& indices, const std::function<void(const QStringList&)>& done);
+    void extractNextArchive();
+    // the row of the archive in the list, opened when it was not; -1 with the error
+    int open(const QString& path, QString& error);
     void setBusy(bool busy);
     ArchiveSource* current() const;
 
     std::function<QString()> m_outputDir;
     std::vector<std::unique_ptr<ArchiveSource>> m_archives;
     bool m_busy = false;
+    std::vector<ArchiveSource*> m_extractQueue;  // what extractAllArchives still has to do
+    int m_queuedArchives = 0;
 
     QListWidget*    m_archiveList = nullptr;
     QTreeWidget*    m_folderTree = nullptr;

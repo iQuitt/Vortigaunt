@@ -31,6 +31,9 @@
 #include <QDropEvent>
 #include <QMimeData>
 #include <QUrl>
+#include <QTextBlock>
+#include <QTextDocument>
+#include <QTextLayout>
 #include <QTextStream>
 #include <QDateTime>
 #include <QThread>
@@ -69,12 +72,7 @@
 #include "utils/util.hpp"
 
 #include "core/converters/LtbConverter.h"
-#include "core/extractors/rez/RezExtractor.h"
-#include "core/extractors/xfs/XfsExtractor.h"
-#include "core/extractors/vpk/VpkExtractor.h"
-#include "core/extractors/gma/GmaExtractor.h"
 #include "core/VortigauntVersion.h"
-#include "core/extractors/pak/PakExtractor.h"
 #include "core/converters/Gr2Converter.h"
 #include "core/converters/FbxGlbConverter.h"
 #include "core/converters/DffConverter.h"
@@ -163,7 +161,6 @@ constexpr const char* kIconFolder = "M3 6h7l2 2h9v11H3z M12 11v6 M9 14h6";
 constexpr const char* kIconClear = "M5 7h14 M9 7V4h6v3 M7 7l1 13h8l1-13";
 constexpr const char* kIconPlay = "M7 4l12 8-12 8z";
 constexpr const char* kIconStop = "M6 6h12v12H6z";
-constexpr const char* kIconQc = "M5 3h10l4 4v14H5z M8 12h8 M8 16h6";
 constexpr const char* kIconCompile = "M14 4l-4 16 M7 8l-4 4 4 4 M17 8l4 4-4 4";
 constexpr const char* kIconOutput = "M3 6h7l2 2h9v11H3z M13 13h5 M16 10l3 3-3 3";
 constexpr const char* kIconOpen = "M3 6h7l2 2h9v11H3z M10 16l6-6 M11 10h5v5";
@@ -197,12 +194,11 @@ constexpr const char* kIconDownload = "M12 4v11 M7 10l5 5 5-5 M4 20h16";
 constexpr const char* kIconRig = "M12 3v6 M12 9l-6 5 M12 9l6 5 M12 9v8 M9 21l3-4 3 4";
 constexpr const char* kIconSettings = "M4 6h9 M17 6h3 M15 4v4 M4 12h3 M11 12h9 M9 10v4 M4 18h11 M19 18h1 M17 16v4";
 
-QString grabFileExt(const QString& filePath)
+// files that open in a tab of their own, not in the Convert list
+bool hasOwnTab(const QString& path)
 {
-    int idx = filePath.lastIndexOf('.');
-    if (idx < 0)
-        return {};
-    return filePath.mid(idx + 1).toLower();
+    const QString ext = QFileInfo(path).suffix().toLower();
+    return ArchiveSource::isArchive(path) || ext == "spr" || ext == "wad" || (ext != "dtx" && TextureWorkspace::isTexture(path));
 }
 
 // readable on the dark and on the light theme
@@ -224,7 +220,6 @@ QColor statusColor(StatusKind kind)
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
-    , m_currentLogFilter(VortigauntLog::LogLevel::Info)
     , m_updateChecker(nullptr)
 {
     setWindowTitle("Vortigaunt");
@@ -306,8 +301,6 @@ void MainWindow::setupRibbon()
     m_runAction = command(tr("Convert"), tr("Convert every file in the list (F5)"), kIconPlay);
     m_stopAction = command(tr("Stop"), tr("Stop after the file being converted"), kIconStop);
     m_stopAction->setEnabled(false);
-    m_writeQCAction = command(tr("Write\nQC"), tr("Generate QC file for studiomdl compilation"), kIconQc);
-    m_compileAction = command(tr("Compile\nmodel"), tr("Run studiomdl on the QC to produce the .mdl. Set the location of studiomdl in Settings."), kIconCompile);
     m_outputFolderAction = command(tr("Output\nfolder"), tr("Choose the output folder (Ctrl+Shift+O)"), kIconOutput);
     m_openOutputAction = command(tr("Open\noutput"), tr("Open the output folder"), kIconOpen);
     connect(m_addFilesAction, &QAction::triggered, this, &MainWindow::onAddFiles);
@@ -320,22 +313,12 @@ void MainWindow::setupRibbon()
     connect(m_stopAction, &QAction::triggered, this, &MainWindow::onStop);
     connect(m_outputFolderAction, &QAction::triggered, this, &MainWindow::onBrowseOutput);
     connect(m_openOutputAction, &QAction::triggered, this, &MainWindow::onOpenOutputFolder);
-    // the ribbon toggles and the Properties checkboxes are the same setting
-    m_writeQCAction->setCheckable(true);
-    m_compileAction->setCheckable(true);
-    m_writeQCAction->setChecked(m_writeQCCheck->isChecked());
-    m_compileAction->setChecked(m_compileModelCheck->isChecked());
-    m_compileAction->setEnabled(m_writeQCCheck->isChecked());
-    connect(m_writeQCAction, &QAction::toggled, m_writeQCCheck, &QCheckBox::setChecked);
-    connect(m_writeQCCheck, &QCheckBox::toggled, m_writeQCAction, &QAction::setChecked);
-    connect(m_writeQCCheck, &QCheckBox::toggled, m_compileAction, &QAction::setEnabled);
-    connect(m_compileAction, &QAction::toggled, m_compileModelCheck, &QCheckBox::setChecked);
-    connect(m_compileModelCheck, &QCheckBox::toggled, m_compileAction, &QAction::setChecked);
 
-    QAction* openArchiveAction = command(tr("Open\narchive"), tr("Open REZ, PAK, XFS, VPK or GMA archives"), kIconArchive);
+    QAction* openArchiveAction = command(tr("Open\narchive"), tr("Open REZ, PAK, XFS, VPK, GMA or IMG archives"), kIconArchive);
     QAction* closeArchiveAction = command(tr("Close\narchive"), tr("Close the archive shown"), kIconClose);
     QAction* extractSelectedAction = command(tr("Extract\nselected"), tr("Extract the selected files to the output folder"), kIconExtract);
     QAction* extractAllAction = command(tr("Extract\nall"), tr("Extract every file of the archive to the output folder"), kIconExtractAll);
+    QAction* extractArchivesAction = command(tr("Extract\nall archives"), tr("Extract every open archive to the output folder, each into a folder of its name"), kIconArchiveAdd);
     QAction* sendToConvertAction = command(tr("Send to\nConvert"), tr("Extract the selected files and add them to the Convert list"), kIconSend);
     connect(openArchiveAction, &QAction::triggered, this, [this]() {
         showWorkspace(m_archiveWorkspace);
@@ -344,6 +327,7 @@ void MainWindow::setupRibbon()
     connect(closeArchiveAction, &QAction::triggered, m_archiveWorkspace, &ArchiveWorkspace::closeCurrentArchive);
     connect(extractSelectedAction, &QAction::triggered, m_archiveWorkspace, &ArchiveWorkspace::extractSelected);
     connect(extractAllAction, &QAction::triggered, m_archiveWorkspace, &ArchiveWorkspace::extractAll);
+    connect(extractArchivesAction, &QAction::triggered, m_archiveWorkspace, &ArchiveWorkspace::extractAllArchives);
     connect(sendToConvertAction, &QAction::triggered, m_archiveWorkspace, &ArchiveWorkspace::sendSelectedToConvert);
 
     QAction* openTexturesAction = command(tr("Open\ntextures"), tr("Open DTX, VTF, DDS, TGA, BMP, PNG or JPG files"), kIconTextureAdd);
@@ -380,7 +364,7 @@ void MainWindow::setupRibbon()
     workspaceCommand(m_spriteWorkspace->nextAction(), tr("Next"), kIconNext, m_spriteWorkspace);
     workspaceCommand(m_spriteWorkspace->viewModeAction(), tr("View"), kIconView, m_spriteWorkspace);
     workspaceCommand(m_spriteWorkspace->createModeAction(), tr("Create\nfrom images"), kIconCreate, m_spriteWorkspace);
-    workspaceCommand(m_spriteWorkspace->fixModeAction(), tr("Fix\nV3 to V2"), kIconFix, m_spriteWorkspace);
+    workspaceCommand(m_spriteWorkspace->fixModeAction(), tr("CSO\nsprite fix"), kIconFix, m_spriteWorkspace);
     workspaceCommand(m_wadWorkspace->newAction(), tr("New\nWAD"), kIconFile, m_wadWorkspace);
     workspaceCommand(m_wadWorkspace->openAction(), tr("Open\nWAD"), kIconOpen, m_wadWorkspace);
     workspaceCommand(m_wadWorkspace->saveAction(), tr("Save"), kIconSave, m_wadWorkspace);
@@ -403,8 +387,8 @@ void MainWindow::setupRibbon()
 #endif
     QAction* texturesToWadAction = command(tr("Send to\nWAD"), tr("Add the selected textures to the WAD open in the WAD tab"), kIconWad);
     connect(texturesToWadAction, &QAction::triggered, m_textureWorkspace, &TextureWorkspace::sendSelectedToWad);
-    m_audioConvertAction = new QAction(tr("Convert WAV for Goldsrc..."), this);
-    tool(m_audioConvertAction, tr("Convert\nWAV"), kIconAudio);
+    m_audioConvertAction = new QAction(tr("Convert MP3, OGG or WAV files to the WAV GoldSrc plays..."), this);
+    tool(m_audioConvertAction, tr("Audio\nto WAV"), kIconAudio);
     connect(m_audioConvertAction, &QAction::triggered, this, &MainWindow::onOpenAudioConverter);
 #ifdef ENABLE_MAPPORT
     m_mapPortAction = new QAction(QStringLiteral("Port a GR2 room to a GoldSrc map of brushes..."), this);
@@ -417,9 +401,13 @@ void MainWindow::setupRibbon()
     m_hudSpriteAction = new QAction(tr("Make a weapon's 640hud sprite from its model..."), this);
     tool(m_hudSpriteAction, tr("HUD\nsprite"), kIconSprite);
     connect(m_hudSpriteAction, &QAction::triggered, this, &MainWindow::onOpenHudSprite);
-    m_modelViewerAction = new QAction(tr("Look through GoldSrc models: sequences, parts, textures, skeleton..."), this);
-    tool(m_modelViewerAction, tr("Model\nviewer"), kIconView);
-    connect(m_modelViewerAction, &QAction::triggered, this, &MainWindow::onOpenModelViewer);
+    QAction* openModelAction = command(tr("Open\nmodel"), tr("Open GoldSrc models in the viewer: sequences, parts, textures, skeleton..."), kIconOpen);
+    connect(openModelAction, &QAction::triggered, this, [this]() {
+        onOpenModelViewer();
+        const QStringList files = QFileDialog::getOpenFileNames(this, tr("Open Models"), QString(), tr("GoldSrc model (*.mdl);;All files (*.*)"));
+        for (const QString& file : files)
+            openModel(file);
+    });
     m_lolModelAction = new QAction(tr("League of Legends Models..."), this);
     tool(m_lolModelAction, tr("LoL\nmodels"), kIconDownload);
     connect(m_lolModelAction, &QAction::triggered, this, &MainWindow::onOpenLoLModelDownloader);
@@ -451,9 +439,6 @@ void MainWindow::setupRibbon()
     QWidget* runGroup = m_ribbon->addGroup(convertTab, tr("Run"));
     m_ribbon->addButton(runGroup, m_runAction, true);
     m_ribbon->addButton(runGroup, m_stopAction);
-    QWidget* modelGroup = m_ribbon->addGroup(convertTab, tr("Model"));
-    m_ribbon->addButton(modelGroup, m_writeQCAction);
-    m_ribbon->addButton(modelGroup, m_compileAction);
     QWidget* outputGroup = m_ribbon->addGroup(convertTab, tr("Output"));
     m_ribbon->addButton(outputGroup, m_outputFolderAction);
     m_ribbon->addButton(outputGroup, m_openOutputAction);
@@ -466,7 +451,13 @@ void MainWindow::setupRibbon()
     QWidget* extractGroup = m_ribbon->addGroup(archiveTab, tr("Extract"));
     m_ribbon->addButton(extractGroup, extractSelectedAction);
     m_ribbon->addButton(extractGroup, extractAllAction);
+    m_ribbon->addButton(extractGroup, extractArchivesAction);
     m_ribbon->addButton(extractGroup, sendToConvertAction);
+
+    // the viewer is a tool tab, opened when its ribbon tab is
+    m_viewerRibbonTab = m_ribbon->addTab(tr("Model Viewer"));
+    QWidget* viewerGroup = m_ribbon->addGroup(m_viewerRibbonTab, tr("Model"));
+    m_ribbon->addButton(viewerGroup, openModelAction);
 
     const int textureTab = m_ribbon->addTab(tr("Textures"));
     m_persistentWorkspaces.push_back({ m_textureWorkspace, textureTab, tr("Textures") });
@@ -511,8 +502,8 @@ void MainWindow::setupRibbon()
     m_ribbon->addButton(wadTextureGroup, m_wadWorkspace->renameAction());
     m_ribbon->addButton(wadTextureGroup, m_wadWorkspace->replaceAction());
 
-    const int weaponTab = m_ribbon->addTab(tr("P Model"));
-    m_persistentWorkspaces.push_back({ m_weaponFitWorkspace, weaponTab, tr("P Model") });
+    const int weaponTab = m_ribbon->addTab(tr("Weapon Fit"));
+    m_persistentWorkspaces.push_back({ m_weaponFitWorkspace, weaponTab, tr("Weapon Fit") });
     QWidget* weaponFileGroup = m_ribbon->addGroup(weaponTab, tr("Model"));
     m_ribbon->addButton(weaponFileGroup, m_weaponFitWorkspace->openAction());
     m_ribbon->addButton(weaponFileGroup, m_weaponFitWorkspace->playerAction());
@@ -542,13 +533,8 @@ void MainWindow::setupRibbon()
 #endif
     QWidget* animationGroup = m_ribbon->addGroup(toolsTab, tr("Animation"));
     m_ribbon->addButton(animationGroup, m_retargetAction);
-    QWidget* viewerGroup = m_ribbon->addGroup(toolsTab, tr("Model"));
-    m_ribbon->addButton(viewerGroup, m_modelViewerAction);
     QWidget* weaponGroup = m_ribbon->addGroup(toolsTab, tr("Weapon"));
     m_ribbon->addButton(weaponGroup, m_hudSpriteAction);
-    QWidget* downloadGroup = m_ribbon->addGroup(toolsTab, tr("Download"));
-    m_ribbon->addButton(downloadGroup, m_lolModelAction);
-    m_ribbon->addButton(downloadGroup, m_steamWorkshopAction);
 #if defined(ENABLE_AUTORIG) || defined(METIN2_SCRIPT_EFFECT)
     QWidget* experimentalGroup = m_ribbon->addGroup(toolsTab, tr("Experimental"));
 #endif
@@ -559,6 +545,11 @@ void MainWindow::setupRibbon()
 #ifdef METIN2_SCRIPT_EFFECT
     m_ribbon->addButton(experimentalGroup, m_mseViewAction);
 #endif
+
+    m_downloadRibbonTab = m_ribbon->addTab(tr("Download"));
+    QWidget* downloadGroup = m_ribbon->addGroup(m_downloadRibbonTab, tr("Download"));
+    m_ribbon->addButton(downloadGroup, m_lolModelAction);
+    m_ribbon->addButton(downloadGroup, m_steamWorkshopAction);
 
     // Settings, language, updates and about live in one menu at the end of the tab row
     m_settingsMenu = new QMenu(this);
@@ -573,16 +564,24 @@ void MainWindow::setupRibbon()
         langAction->setCheckable(true);
         langAction->setChecked(lang.toLower() == currentLang.toLower());
         langAction->setData(lang);
-        connect(langAction, &QAction::triggered, this, [this, lang]() {
+        connect(langAction, &QAction::triggered, this, [this, lang, langAction]() {
             if (lang.toLower() == LanguageManager::instance().getCurrentLanguage().toLower())
+            {
+                langAction->setChecked(true);
                 return;
-            LanguageManager::instance().loadLanguage(lang);
-            QMessageBox msgBox(this);
-            msgBox.setWindowTitle(tr("Restart Required"));
-            msgBox.setText(tr("The application needs to restart for the language change to take effect."));
-            msgBox.setIcon(QMessageBox::Information);
-            msgBox.setStandardButtons(QMessageBox::Ok);
+            }
+            QMessageBox msgBox(QMessageBox::Question, tr("Restart Required"),
+                               tr("The application needs to restart for the language change to take effect."), QMessageBox::NoButton, this);
+            QPushButton* restart = msgBox.addButton(tr("Restart"), QMessageBox::AcceptRole);
+            msgBox.addButton(QMessageBox::Cancel);
             msgBox.exec();
+            // closing asks about what is not saved, and can be called off too
+            if (msgBox.clickedButton() != restart || !close())
+            {
+                langAction->setChecked(false);
+                return;
+            }
+            LanguageManager::instance().loadLanguage(lang);
             QProcess::startDetached(QCoreApplication::applicationFilePath(), QCoreApplication::arguments());
             QCoreApplication::quit();
         });
@@ -631,6 +630,11 @@ void MainWindow::setupRibbon()
         if (tab == 0)
         {
             m_workspaces->setCurrentIndex(0);
+            return;
+        }
+        if (tab == m_viewerRibbonTab)
+        {
+            onOpenModelViewer();
             return;
         }
         for (const Workspace& workspace : m_persistentWorkspaces)
@@ -696,23 +700,25 @@ void MainWindow::setupDocks()
     m_selectedNameLabel->setWordWrap(true);
     propertiesLayout->addWidget(m_selectedNameLabel);
 
-    auto* opRow = new QHBoxLayout();
-    opRow->addWidget(new QLabel(tr("Operation:"), properties));
-    m_fileOpCombo = new QComboBox(properties);
-    for (FileOp op : { FileOp::None, FileOp::Ltb, FileOp::Gr2, FileOp::Mesh, FileOp::Dff, FileOp::Weapon, FileOp::Dtx,
-                       FileOp::Rez, FileOp::Pak, FileOp::Xfs, FileOp::Vpk, FileOp::Unity })
-    {
-        m_fileOpCombo->addItem(fileOpName(op), static_cast<int>(op));
-    }
+    m_fileOpRow = new QWidget(properties);
+    auto* opRow = new QHBoxLayout(m_fileOpRow);
+    opRow->setContentsMargins(0, 0, 0, 0);
+    opRow->addWidget(new QLabel(tr("Operation:"), m_fileOpRow));
+    m_fileOpCombo = new QComboBox(m_fileOpRow);
     m_fileOpCombo->setToolTip(tr("Picked from the file name; change it when the guess is wrong"));
     opRow->addWidget(m_fileOpCombo, 1);
-    propertiesLayout->addLayout(opRow);
+    propertiesLayout->addWidget(m_fileOpRow);
     connect(m_fileOpCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int index) {
         const FileOp op = static_cast<FileOp>(m_fileOpCombo->itemData(index).toInt());
         for (QTreeWidgetItem* item : m_fileList->selectedItems())
         {
+            // only the files it is a choice for
+            const std::vector<FileOp> choices = fileOpChoices(item->data(0, kPathRole).toString());
+            if (std::find(choices.begin(), choices.end(), op) == choices.end())
+                continue;
             item->setData(0, kOpRole, static_cast<int>(op));
             item->setText(1, fileOpName(op));
+            setRowStatus(item, op == FileOp::None ? tr("Pick an operation") : tr("Waiting"), statusColor(StatusKind::Waiting));
         }
         onFileSelectionChanged();
     });
@@ -852,13 +858,6 @@ void MainWindow::setupDocks()
     modelLayout->addWidget(m_ignoreAnimsCheck);
     propertiesLayout->addWidget(m_modelGroup);
 
-    m_archiveGroup = new QGroupBox(tr("Extract"), properties);
-    auto* archiveLayout = new QVBoxLayout(m_archiveGroup);
-    m_separateFoldersCheck = new QCheckBox(tr("Extract multiple file to separate folders"), m_archiveGroup);
-    m_separateFoldersCheck->setToolTip(tr("When extracting REZ/PAK/XFS files, create a separate folder for each file"));
-    archiveLayout->addWidget(m_separateFoldersCheck);
-    propertiesLayout->addWidget(m_archiveGroup);
-
     m_unityGroup = new QGroupBox(tr("Unity"), properties);
     auto* unityLayout = new QVBoxLayout(m_unityGroup);
     m_unityBmpCheck = new QCheckBox(tr("Convert textures to BMP (8-bit)"), m_unityGroup);
@@ -893,7 +892,7 @@ void MainWindow::setupDocks()
     auto* logToolbarLayout = new QHBoxLayout();
     logToolbarLayout->addWidget(new QLabel(tr("Filter:"), logPanel));
     m_logFilterCombo = new QComboBox(logPanel);
-    m_logFilterCombo->addItem(tr("All"), static_cast<int>(VortigauntLog::LogLevel::Info));
+    m_logFilterCombo->addItem(tr("All"), -1);
     m_logFilterCombo->addItem(tr("Info"), static_cast<int>(VortigauntLog::LogLevel::Info));
     m_logFilterCombo->addItem(tr("Warning"), static_cast<int>(VortigauntLog::LogLevel::Warning));
     m_logFilterCombo->addItem(tr("Error"), static_cast<int>(VortigauntLog::LogLevel::Error));
@@ -913,6 +912,13 @@ void MainWindow::setupDocks()
     logLayout->addWidget(m_logEdit, 1);
 
     connect(m_logFilterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onLogFilterChanged);
+    // new lines are filtered as they come
+    connect(m_logEdit, &QPlainTextEdit::textChanged, this, [this]() {
+        const int blocks = m_logEdit->document()->blockCount();
+        if (m_logFilter >= 0 && !m_filteringLog)
+            applyLogFilter(std::max(0, std::min(m_logBlocksSeen, blocks) - 1));
+        m_logBlocksSeen = blocks;
+    });
     connect(m_saveLogButton, &QPushButton::clicked, this, &MainWindow::onExportLog);
     connect(m_clearLogButton, &QPushButton::clicked, this, &MainWindow::onClearLog);
 
@@ -929,12 +935,19 @@ void MainWindow::setupPreview()
 {
     m_preview = new QStackedWidget(this);
 
-    m_previewHint = new QLabel(tr("Drop files or folders here\n\nThe operation is picked from the file type."), m_preview);
+    m_previewHint = new QLabel(QStringLiteral("<h2>%1</h2><p>%2<br>%3<br>%4<br>%5</p><p>%6</p>")
+                                   .arg(tr("Drop files or folders here"),
+                                        tr("Models: LTB, GR2, FBX, GLB, OBJ and GTA DFF to SMD"),
+                                        tr("Weapons: v_ models to p_ and w_ models"),
+                                        tr("Textures: DTX to BMP"),
+                                        tr("Unity: the meshes, textures and animations of bundles and assets"),
+                                        tr("Archives, sprites, WADs and other textures open in their own tabs.")),
+                               m_preview);
+    m_previewHint->setTextFormat(Qt::RichText);
+    // long lines must not push the panels aside
+    m_previewHint->setWordWrap(true);
     m_previewHint->setAlignment(Qt::AlignCenter);
     m_previewHint->setForegroundRole(QPalette::PlaceholderText);
-    QFont hintFont = m_previewHint->font();
-    hintFont.setPointSizeF(hintFont.pointSizeF() + 3.0);
-    m_previewHint->setFont(hintFont);
     m_preview->addWidget(m_previewHint);
 
     // created lazily: any GL widget forces GPU composition of the whole window
@@ -954,8 +967,6 @@ void MainWindow::setupPreview()
     m_previewInfo->setAlignment(Qt::AlignCenter);
     m_previewInfo->setWordWrap(true);
     infoLayout->addWidget(m_previewInfo);
-    m_previewOpenButton = new QPushButton(infoPage);
-    infoLayout->addWidget(m_previewOpenButton, 0, Qt::AlignCenter);
     infoLayout->addStretch();
     m_preview->addWidget(infoPage);
     // after the info page, which is page 3
@@ -1155,32 +1166,53 @@ GLBViewer* MainWindow::modelPreview()
     return m_modelPreview;
 }
 
+void MainWindow::openModel(const QString& path)
+{
+    onOpenModelViewer();
+    if (auto* viewer = qobject_cast<ModelViewerWindow*>(m_workspaces->currentWidget()))
+        viewer->load(path);
+}
+
 void MainWindow::openPaths(const QStringList& paths)
 {
+    QStringList archives;
     QStringList textures;
     QStringList others;
     for (const QString& path : paths)
     {
-        const QString ext = QFileInfo(path).suffix().toLower();
-        if (ArchiveSource::isArchive(path))
-            openArchive(path);
-        else if (ext == "dtx" || ext == "vtf")
+        const QFileInfo info(path);
+        const QString ext = info.suffix().toLower();
+        if (info.isDir())
+            others << path;
+        else if (ArchiveSource::isArchive(path))
+            archives << path;
+        else if (TextureWorkspace::isTexture(path))
             textures << path;
         else if (ext == "spr")
             openSprite(path);
         else if (ext == "wad")
             openWad(path);
-        else if (ext == "mdl" && QFileInfo(path).fileName().startsWith(QStringLiteral("p_"), Qt::CaseInsensitive))
+        else if (ext == "mdl" && info.fileName().startsWith(QStringLiteral("p_"), Qt::CaseInsensitive))
             openWeaponFit(path);
+        else if (ext == "mdl" && detectFileOp(path) == FileOp::None)
+            openModel(path);
         else
             others << path;
+    }
+    if (!archives.isEmpty())
+    {
+        showWorkspace(m_archiveWorkspace);
+        m_archiveWorkspace->openArchives(archives);
     }
     if (!textures.isEmpty())
         openTextures(textures);
     if (!others.isEmpty())
     {
+        // a folder of nothing but archives leaves the Archives tab shown
+        const int before = m_fileList->topLevelItemCount();
         addPaths(others);
-        m_workspaces->setCurrentIndex(0);
+        if (m_fileList->topLevelItemCount() > before)
+            m_workspaces->setCurrentIndex(0);
     }
 }
 
@@ -1219,11 +1251,19 @@ void MainWindow::onWorkspaceChanged(int index)
     }
 
     if (convert)
+    {
         m_ribbon->setCurrentTab(0);
+    }
     else if (const Workspace* workspace = workspaceOf(m_workspaces->widget(index)))
+    {
         m_ribbon->setCurrentTab(workspace->ribbonTab);
+    }
     else if (index > 0)
-        m_ribbon->setCurrentTab(m_toolsRibbonTab);
+    {
+        const QByteArray key = page->property("vortigauntToolKey").toByteArray();
+        m_ribbon->setCurrentTab(key == "modelviewer" ? m_viewerRibbonTab
+                                : key == "lol" || key == "workshop" ? m_downloadRibbonTab : m_toolsRibbonTab);
+    }
 }
 
 MainWindow::FileOp MainWindow::detectFileOp(const QString& path)
@@ -1235,12 +1275,16 @@ MainWindow::FileOp MainWindow::detectFileOp(const QString& path)
     if (ext == "mdl") return WeaponModelConverter::IsViewModelFile(path.toStdString()) ? FileOp::Weapon : FileOp::None;
     if (ext == "dtx") return FileOp::Dtx;
     if (ext == "dff") return FileOp::Dff;
-    if (ext == "rez") return FileOp::Rez;
-    if (ext == "pak") return FileOp::Pak;
-    if (ext == "xfs") return FileOp::Xfs;
-    if (ext == "vpk" || ext == "gma") return FileOp::Vpk;
-    if (ext == "unity3d" || ext == "bundle" || ext == "assets") return FileOp::Unity;
+    if (!hasOwnTab(path) && UnityPorter::IsUnityFile(path.toStdString())) return FileOp::Unity;
     return FileOp::None;
+}
+
+std::vector<MainWindow::FileOp> MainWindow::fileOpChoices(const QString& path)
+{
+    // a view model is told by its v_ name, which it does not always have
+    if (QFileInfo(path).suffix().compare(QStringLiteral("mdl"), Qt::CaseInsensitive) == 0)
+        return { FileOp::None, FileOp::Weapon };
+    return { detectFileOp(path) };
 }
 
 QString MainWindow::fileOpName(FileOp op)
@@ -1253,10 +1297,6 @@ QString MainWindow::fileOpName(FileOp op)
     case FileOp::Dff: return tr("DFF to SMD (GTA)");
     case FileOp::Weapon: return tr("v_ to p_ / w_ model");
     case FileOp::Dtx: return tr("DTX to BMP");
-    case FileOp::Rez: return tr("Extract REZ");
-    case FileOp::Pak: return tr("Extract PAK (CSO)");
-    case FileOp::Xfs: return tr("Extract XFS");
-    case FileOp::Vpk: return tr("Extract VPK / GMA");
     case FileOp::Unity: return tr("Extract Unity assets");
     case FileOp::None: break;
     }
@@ -1273,6 +1313,7 @@ void MainWindow::addPaths(const QStringList& paths)
         listed.insert(m_fileList->topLevelItem(i)->data(0, kPathRole).toString());
 
     const int before = m_fileList->topLevelItemCount();
+    QStringList elsewhere;
     for (const QString& path : paths)
     {
         const QFileInfo info(path);
@@ -1285,6 +1326,12 @@ void MainWindow::addPaths(const QStringList& paths)
             while (it.hasNext())
             {
                 const QString file = it.next();
+                if (ArchiveSource::isArchive(file))
+                {
+                    elsewhere << file;
+                    found++;
+                    continue;
+                }
                 if (detectFileOp(file) == FileOp::None || listed.contains(file))
                     continue;
                 QString sub = root.relativeFilePath(QFileInfo(file).absolutePath());
@@ -1299,10 +1346,25 @@ void MainWindow::addPaths(const QStringList& paths)
         }
         else if (info.isFile() && !listed.contains(info.absoluteFilePath()))
         {
-            addFileRow(info.absoluteFilePath(), QString());
-            listed.insert(info.absoluteFilePath());
+            const QString file = info.absoluteFilePath();
+            if (hasOwnTab(file))
+            {
+                elsewhere << file;
+            }
+            else if (detectFileOp(file) != FileOp::None || info.suffix().compare(QStringLiteral("mdl"), Qt::CaseInsensitive) == 0)
+            {
+                addFileRow(file, QString());
+                listed.insert(file);
+            }
+            else
+            {
+                VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: Not added, Vortigaunt has no conversion for this kind of file: %1").arg(QDir::toNativeSeparators(file)));
+            }
         }
     }
+    // archives, sprites, WADs and textures have tabs of their own
+    if (!elsewhere.isEmpty())
+        openPaths(elsewhere);
 
     if (m_fileList->selectedItems().isEmpty() && m_fileList->topLevelItemCount() > before)
         m_fileList->setCurrentItem(m_fileList->topLevelItem(before));
@@ -1348,8 +1410,10 @@ void MainWindow::onFileSelectionChanged()
     QTreeWidgetItem* item = selected.isEmpty() ? nullptr : selected.first();
     m_noSelectionLabel->setVisible(!item);
     m_fileOpCombo->setEnabled(item && !m_isProcessing);
+    m_fileOpCombo->clear();
     if (!item)
     {
+        m_fileOpRow->hide();
         m_selectedNameLabel->setText(tr("No file selected"));
         updatePropertiesFor(FileOp::None);
         showPreview(QString(), FileOp::None);
@@ -1359,7 +1423,11 @@ void MainWindow::onFileSelectionChanged()
     const QString path = item->data(0, kPathRole).toString();
     const FileOp op = static_cast<FileOp>(item->data(0, kOpRole).toInt());
     m_selectedNameLabel->setText(selected.size() > 1 ? tr("%1 files selected").arg(selected.size()) : QFileInfo(path).fileName());
+    const std::vector<FileOp> choices = fileOpChoices(path);
+    for (FileOp choice : choices)
+        m_fileOpCombo->addItem(fileOpName(choice), static_cast<int>(choice));
     m_fileOpCombo->setCurrentIndex(m_fileOpCombo->findData(static_cast<int>(op)));
+    m_fileOpRow->setVisible(choices.size() > 1);
     updatePropertiesFor(op);
     showPreview(path, op);
     if (op == FileOp::Gr2 && path != m_animationListOwner)
@@ -1379,7 +1447,6 @@ void MainWindow::updatePropertiesFor(FileOp op)
     m_modelGroup->setVisible(model);
     m_ignoreMeshesCheck->setVisible(op == FileOp::Ltb || op == FileOp::Gr2);
     m_ignoreAnimsCheck->setVisible(op == FileOp::Ltb || op == FileOp::Gr2);
-    m_archiveGroup->setVisible(op == FileOp::Rez || op == FileOp::Pak || op == FileOp::Xfs || op == FileOp::Vpk);
     m_unityGroup->setVisible(op == FileOp::Unity);
     m_textureGroup->setVisible(op == FileOp::Dtx);
     updateWeaponModelControls();
@@ -1390,8 +1457,6 @@ void MainWindow::showPreview(const QString& path, FileOp op)
     if (path == m_previewPath && !path.isEmpty())
         return;
     m_previewPath = path;
-    m_previewOpenButton->disconnect();
-    m_previewOpenButton->hide();
 
     if (path.isEmpty())
     {
@@ -1445,10 +1510,6 @@ void MainWindow::showPreview(const QString& path, FileOp op)
             image = QImage(reinterpret_cast<const uchar*>(pixels.data()), width, height, QImage::Format_ARGB32).copy();
         }
     }
-    else if (op == FileOp::None && (ext == "png" || ext == "tga" || ext == "bmp" || ext == "jpg" || ext == "jpeg" || ext == "dds" || ext == "vtf"))
-    {
-        image = ImageUtils::loadImage(path);
-    }
     if (!image.isNull())
     {
         const QSize room = m_preview->size() - QSize(24, 24);
@@ -1461,30 +1522,8 @@ void MainWindow::showPreview(const QString& path, FileOp op)
         return;
     }
 
-    auto openWith = [this](const QString& label, const std::function<void()>& open) {
-        m_previewOpenButton->setText(label);
-        connect(m_previewOpenButton, &QPushButton::clicked, this, open);
-        m_previewOpenButton->show();
-    };
-    auto browseArchive = [this, path]() { openArchive(path); };
     switch (op)
     {
-    case FileOp::Rez:
-        showInfo(tr("REZ archive. Convert extracts it to the output folder."));
-        openWith(tr("Browse in Archives"), browseArchive);
-        break;
-    case FileOp::Pak:
-        showInfo(tr("Counter-Strike Online PAK archive. Convert extracts it to the output folder."));
-        openWith(tr("Browse in Archives"), browseArchive);
-        break;
-    case FileOp::Xfs:
-        showInfo(tr("XFS archive. Convert extracts it to the output folder."));
-        openWith(tr("Browse in Archives"), browseArchive);
-        break;
-    case FileOp::Vpk:
-        showInfo(tr("Source engine archive. Convert extracts it to the output folder."));
-        openWith(tr("Browse in Archives"), browseArchive);
-        break;
     case FileOp::Weapon:
         showInfo(tr("GoldSrc view model. Convert makes the p_ and w_ models from it."));
         break;
@@ -1507,7 +1546,7 @@ void MainWindow::showPreview(const QString& path, FileOp op)
 void MainWindow::onAddFiles()
 {
     const QString filter = tr("Supported files (%1);;All files (*.*)")
-        .arg("*.ltb *.gr2 *.fbx *.glb *.gltf *.obj *.dff *.mdl *.dtx *.rez *.pak *.xfs *.vpk *.gma *.img *.unity3d *.bundle *.assets");
+        .arg("*.ltb *.gr2 *.fbx *.glb *.gltf *.obj *.dff *.mdl *.dtx *.unity3d *.bundle *.assets");
     addPaths(QFileDialog::getOpenFileNames(this, tr("Add Files"), QString(), filter));
 }
 
@@ -1775,112 +1814,55 @@ void MainWindow::onRun()
         const QColor running = statusColor(StatusKind::Running);
         const QColor done = statusColor(StatusKind::Done);
         const QColor failed = statusColor(StatusKind::Failed);
-        std::vector<bool> finished(jobs.size(), false);
-        size_t finishedCount = 0;
-
         for (size_t i = 0; i < jobs.size(); ++i)
         {
-            if (finished[i])
-                continue;
             if (m_cancelRequested)
             {
                 for (size_t j = i; j < jobs.size(); ++j)
-                {
-                    if (!finished[j])
-                        setRowStatusLater(jobs[j].item, tr("Cancelled"), statusColor(StatusKind::Waiting));
-                }
+                    setRowStatusLater(jobs[j].item, tr("Cancelled"), statusColor(StatusKind::Waiting));
                 break;
             }
 
             const FileJob& job = jobs[i];
-            const bool archive = job.op == FileOp::Rez || job.op == FileOp::Pak || job.op == FileOp::Xfs || job.op == FileOp::Vpk;
-            if (archive)
+            setRowStatusLater(job.item, tr("Converting..."), running);
+            bool ok = false;
+            switch (job.op)
             {
-                // archives of one kind go together, so "separate folders" means what it says
-                std::vector<size_t> group;
-                QStringList paths;
-                for (size_t j = i; j < jobs.size(); ++j)
-                {
-                    if (!finished[j] && jobs[j].op == job.op && jobs[j].outputDir == job.outputDir)
-                    {
-                        group.push_back(j);
-                        paths << jobs[j].path;
-                        setRowStatusLater(jobs[j].item, tr("Extracting..."), running);
-                    }
-                }
-                const size_t errorsBefore = m_extractionErrors.size();
-                switch (job.op)
-                {
-                case FileOp::Rez: extractArchiveRez(paths, job.outputDir); break;
-                case FileOp::Pak: extractArchivePak(paths, job.outputDir); break;
-                case FileOp::Xfs: extractArchiveXfs(paths, job.outputDir); break;
-                default: extractArchiveVpk(paths, job.outputDir); break;
-                }
-                for (size_t j : group)
-                {
-                    const QString name = QFileInfo(jobs[j].path).fileName();
-                    bool ok = true;
-                    for (size_t e = errorsBefore; e < m_extractionErrors.size(); ++e)
-                    {
-                        if (m_extractionErrors[e].filename == jobs[j].path || m_extractionErrors[e].filename == name)
-                            ok = false;
-                    }
-                    setRowStatusLater(jobs[j].item, ok ? tr("Done") : tr("Failed"), ok ? done : failed);
-                    finished[j] = true;
-                    finishedCount++;
-                }
-            }
-            else
+            case FileOp::Ltb: ok = convertLtb(job.path, job.outputDir, ltbSettings); break;
+            case FileOp::Gr2: ok = convertGr2(job.path, job.outputDir, gr2WithAnimations); break;
+            case FileOp::Mesh: ok = convertFbxGlb(job.path, job.outputDir, writeQC); break;
+            case FileOp::Dff: ok = convertDff(job.path, job.outputDir, writeQC); break;
+            case FileOp::Weapon:
             {
-                setRowStatusLater(job.item, tr("Converting..."), running);
-                bool ok = false;
-                switch (job.op)
+                // the row remembers its p_ model, for Show on player
+                QStringList pQcs;
+                ok = convertViewModel(job.path, job.outputDir, weaponOptions, &pQcs);
+                if (ok)
                 {
-                case FileOp::Ltb: ok = convertLtb(job.path, job.outputDir, ltbSettings); break;
-                case FileOp::Gr2: ok = convertGr2(job.path, job.outputDir, gr2WithAnimations); break;
-                case FileOp::Mesh: ok = convertFbxGlb(job.path, job.outputDir, writeQC); break;
-                case FileOp::Dff: ok = convertDff(job.path, job.outputDir, writeQC); break;
-                case FileOp::Weapon:
-                {
-                    // the row remembers its p_ model, for Show on player
-                    QStringList pQcs;
-                    ok = convertViewModel(job.path, job.outputDir, weaponOptions, &pQcs);
-                    if (ok)
-                    {
-                        QTreeWidgetItem* item = job.item;
-                        const QString qc = pQcs.isEmpty() ? QString() : pQcs.front();
-                        QMetaObject::invokeMethod(this, [this, item, qc]() {
-                            item->setData(0, kPModelRole, qc);
-                            item->setData(0, kConvertedRole, true);
-                            onFileSelectionChanged();
-                        }, Qt::QueuedConnection);
-                    }
-                    break;
+                    QTreeWidgetItem* item = job.item;
+                    const QString qc = pQcs.isEmpty() ? QString() : pQcs.front();
+                    QMetaObject::invokeMethod(this, [this, item, qc]() {
+                        item->setData(0, kPModelRole, qc);
+                        item->setData(0, kConvertedRole, true);
+                        onFileSelectionChanged();
+                    }, Qt::QueuedConnection);
                 }
-                case FileOp::Dtx: ok = convertDtx(job.path, job.outputDir); break;
-                case FileOp::Unity:
-                {
-                    UnityPorter porter;
-                    porter.SetConvertTexturesToBmp(unityTexturesToBmp);
-                    porter.Process(job.path.toStdString(), job.outputDir.toStdString());
-                    ok = true;
-                    break;
-                }
-                default: break;
-                }
-                setRowStatusLater(job.item, ok ? tr("Done") : tr("Failed"), ok ? done : failed);
-                finished[i] = true;
-                finishedCount++;
+                break;
             }
-            updateProgressSafe(static_cast<int>(finishedCount * 100 / jobs.size()));
+            case FileOp::Dtx: ok = convertDtx(job.path, job.outputDir); break;
+            case FileOp::Unity:
+            {
+                UnityPorter porter;
+                porter.SetConvertTexturesToBmp(unityTexturesToBmp);
+                porter.Process(job.path.toStdString(), job.outputDir.toStdString());
+                ok = true;
+                break;
+            }
+            default: break;
+            }
+            setRowStatusLater(job.item, ok ? tr("Done") : tr("Failed"), ok ? done : failed);
+            updateProgressSafe(static_cast<int>((i + 1) * 100 / jobs.size()));
         }
-
-        // Cleanup callbacks
-        RezExtractor::SetProgressFunc(nullptr);
-        PakExtractor::SetProgressFunc(nullptr);
-        XfsExtractor::SetProgressFunc(nullptr);
-        VpkExtractor::SetProgressFunc(nullptr);
-        GmaExtractor::SetProgressFunc(nullptr);
 
         QMetaObject::invokeMethod(this, [this]() {
             if (!m_extractionErrors.empty())
@@ -2120,362 +2102,6 @@ bool MainWindow::convertLtb(const QString& inputPath, const QString& outputDir, 
     const ConvertAssets summary = runConverter(converter, inputPath, outputDir);
     return summary.total > 0 && summary.failed.empty();
 }
-
-void MainWindow::extractArchiveRez(const QStringList& paths, const QString& outputDir)
-{
-    if (paths.isEmpty())
-    {
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: No REZ files selected."));
-        return;
-    }
-
-
-    // Boost process priority for faster extraction (Windows only)
-    Platform::setHighPriority();
-
-    const int totalFiles = paths.size();
-    const bool isBatch = totalFiles > 1;
-
-    if (isBatch)
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^5Extracting^7 ^3%1^7 ^5REZ files...^7").arg(totalFiles));
-
-    // Show initial count removed as requested
-
-    // Set up progress callback
-    int lastProcessedPercent = -1;
-    RezExtractor::SetProgressFunc([this, &lastProcessedPercent](int percent) {
-        if (percent != lastProcessedPercent)
-        {
-            lastProcessedPercent = percent;
-            updateProgressSafe(percent);
-        }
-    });
-
-    int successCount = 0;
-
-    for (int i = 0; i < totalFiles; ++i)
-    {
-        const QString& rezPath = paths.at(i);
-
-        // Update progress bar with file-level percentage
-        if (isBatch)
-        {
-            int filePercent = ((i + 1) * 100) / totalFiles;
-            QMetaObject::invokeMethod(this, [this, filePercent, i, totalFiles]() {
-                if (m_progressBar) {
-                    m_progressBar->setValue(filePercent);
-                    m_progressBar->setFormat(tr("REZ %1/%2: %p%").arg(i + 1).arg(totalFiles));
-                }
-            }, Qt::QueuedConnection);
-        }
-
-        // Validate extension
-        if (grabFileExt(rezPath) != "rez")
-        {
-            VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: Skipped (not a .rez file): %1").arg(rezPath));
-            ExtractionError err;
-            err.filename = rezPath;
-            err.errorMessage = tr("Invalid file type");
-            m_extractionErrors.push_back(err);
-            continue;
-        }
-
-        if (!QFileInfo::exists(rezPath))
-        {
-            VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: Skipped (file not found): %1").arg(rezPath));
-            continue;
-        }
-
-        // Determine output directory (separate folders for batch mode)
-        QString targetDir;
-        if (isBatch && m_separateFoldersCheck->isChecked())
-        {
-            QFileInfo fileInfo(rezPath);
-            targetDir = QDir(outputDir).filePath(fileInfo.completeBaseName());
-        }
-        else
-        {
-            targetDir = outputDir.isEmpty() ? SettingsDialog::getExtractedOutputDir() : outputDir;
-        }
-
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^5Extracting REZ:^7 ^4%1^7 -> ^4%2^7").arg(rezPath, targetDir));
-        updateProgressSafe(0);
-
-        RezExtractor rezExtractor;
-        bool loadSuccess = rezExtractor.Load(rezPath.toStdString());
-
-        if (loadSuccess)
-        {
-            bool rezExtracted = rezExtractor.ExtractAll(targetDir.toStdString());
-
-            if (rezExtracted)
-            {
-                VortigauntLog::Vortigaunt_Printf(QStringLiteral("  ^2REZ extraction successful.^7"));
-                ++successCount;
-            }
-            else
-            {
-                VortigauntLog::Vortigaunt_Printf(QStringLiteral("ERROR:   REZ extraction failed."));
-                ExtractionError err;
-                err.filename = rezPath;
-                err.errorMessage = tr("Extraction failed");
-                m_extractionErrors.push_back(err);
-            }
-        }
-        else
-        {
-            VortigauntLog::Vortigaunt_Printf(QStringLiteral("ERROR:   Failed to load REZ file."));
-        }
-
-    }
-
-    // Clear callbacks
-    RezExtractor::SetProgressFunc(RezExtractor::ProgressFunc());
-
-    // Restore normal priority
-    Platform::restoreNormalPriority();
-
-    if (isBatch)
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2Extraction complete.^7 ^3%1^7 of ^3%2^7 files processed.").arg(successCount).arg(totalFiles));
-}
-
-void MainWindow::extractArchivePak(const QStringList& paths, const QString& outputDir)
-{
-    if (paths.isEmpty())
-    {
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: No PAK files selected."));
-        return;
-    }
-
-    Platform::setHighPriority();
-
-    const int totalFiles = paths.size();
-    const bool isBatch = totalFiles > 1;
-    int successCount = 0;
-
-    PakExtractor pakExtractor;
-
-    PakExtractor::SetProgressFunc([this](int percent) {
-        updateProgressSafe(percent);
-    });
-
-    for (int i = 0; i < totalFiles; ++i)
-    {
-        const QString& pakPath = paths.at(i);
-
-        if (isBatch)
-        {
-            int filePercent = ((i + 1) * 100) / totalFiles;
-            QMetaObject::invokeMethod(this, [this, filePercent, i, totalFiles]() {
-                if (m_progressBar) {
-                    m_progressBar->setValue(filePercent);
-                    m_progressBar->setFormat(tr("PAK %1/%2: %p%").arg(i + 1).arg(totalFiles));
-                }
-            }, Qt::QueuedConnection);
-        }
-
-        // Determine output directory
-        QString targetDir;
-        if (isBatch && m_separateFoldersCheck->isChecked())
-            targetDir = QDir(outputDir).filePath(QFileInfo(pakPath).completeBaseName());
-        else
-            targetDir = outputDir.isEmpty() ? SettingsDialog::getExtractedOutputDir() : outputDir;
-
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^5Extracting PAK:^7 ^4%1^7 -> ^4%2^7").arg(pakPath, targetDir));
-
-        if (pakExtractor.ExtractSingle(pakPath.toStdString(), targetDir.toStdString())) {
-            ++successCount;
-        } else {
-            ExtractionError err;
-            err.filename = pakPath;
-            err.errorMessage = tr("Pak extraction failed or was incomplete");
-            m_extractionErrors.push_back(err);
-        }
-    }
-
-    PakExtractor::SetProgressFunc(nullptr);
-    Platform::restoreNormalPriority();
-
-    VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2PAK extraction complete.^7 ^3%1^7 of ^3%2^7 files processed.").arg(successCount).arg(totalFiles));
-}
-
-void MainWindow::extractArchiveXfs(const QStringList& paths, const QString& outputDir)
-{
-    if (paths.isEmpty())
-    {
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: No XFS files selected."));
-        return;
-    }
-
-    Platform::setHighPriority();
-
-    const int totalFiles = paths.size();
-    const bool isBatch = totalFiles > 1;
-    int successCount = 0;
-
-    // Set up progress callback
-    int lastProcessedPercent = -1;
-    XfsExtractor::SetProgressFunc([this, &lastProcessedPercent](int percent) {
-        if (percent != lastProcessedPercent)
-        {
-            lastProcessedPercent = percent;
-            updateProgressSafe(percent);
-
-            //QMetaObject::invokeMethod(this, [this, percent]() {
-            //    if (m_statusLabel) m_statusLabel->setText(tr("Extracting XFS: %1%").arg(percent));
-            //}, Qt::QueuedConnection);
-        }
-    });
-
-    // Removed status label update as requested
-
-    for (int i = 0; i < totalFiles; ++i)
-    {
-        const QString& xfsPath = paths.at(i);
-
-        if (isBatch)
-        {
-            int filePercent = ((i + 1) * 100) / totalFiles;
-            QMetaObject::invokeMethod(this, [this, filePercent, i, totalFiles]() {
-                if (m_progressBar) {
-                    m_progressBar->setValue(filePercent);
-                    m_progressBar->setFormat(tr("XFS %1/%2: %p%").arg(i + 1).arg(totalFiles));
-                }
-            }, Qt::QueuedConnection);
-
-            QMetaObject::invokeMethod(this, [this, i, totalFiles, xfsPath]() {
-                if (m_statusLabel)
-                    m_statusLabel->setText(tr("Extracting XFS %1/%2: %3").arg(i + 1).arg(totalFiles).arg(QFileInfo(xfsPath).fileName()));
-            }, Qt::QueuedConnection);
-        }
-
-        // Validate extension
-        if (grabFileExt(xfsPath) != "xfs")
-        {
-            VortigauntLog::Vortigaunt_Printf(QStringLiteral("ERROR: Input is not a .xfs file: %1").arg(xfsPath));
-            continue;
-        }
-
-        // Determine output directory
-        QString targetDir;
-        if (isBatch && m_separateFoldersCheck->isChecked())
-            targetDir = QDir(outputDir).filePath(QFileInfo(xfsPath).completeBaseName());
-        else
-            targetDir = outputDir.isEmpty() ? SettingsDialog::getExtractedOutputDir() : outputDir;
-
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^5Extracting XFS:^7 ^4%1^7 -> ^4%2^7").arg(xfsPath, targetDir));
-
-        XfsExtractor xfsExtractor;
-        bool loadSuccess = xfsExtractor.Load(xfsPath.toStdString());
-
-        if (loadSuccess)
-        {
-            VortigauntLog::Vortigaunt_Printf(QStringLiteral("  Found %1 files in archive").arg(xfsExtractor.GetEntries().size()));
-
-            bool xfsExtracted = xfsExtractor.ExtractAll(targetDir.toStdString());
-
-            if (xfsExtracted)
-            {
-                VortigauntLog::Vortigaunt_Printf(QStringLiteral("  ^2XFS extraction successful.^7"));
-                ++successCount;
-            }
-            else
-            {
-                VortigauntLog::Vortigaunt_Printf(QStringLiteral("ERROR:   XFS extraction failed."));
-            }
-        }
-        else
-        {
-            VortigauntLog::Vortigaunt_Printf(QStringLiteral("ERROR:   Failed to load XFS file."));
-        }
-
-    }
-
-    // Clear callbacks
-    XfsExtractor::SetProgressFunc(XfsExtractor::ProgressFunc());
-
-    Platform::restoreNormalPriority();
-
-    if (isBatch)
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2XFS extraction complete.^7 ^3%1^7 of ^3%2^7 files processed.").arg(successCount).arg(totalFiles));
-}
-
-void MainWindow::extractArchiveVpk(const QStringList& paths, const QString& outputDir)
-{
-    if (paths.isEmpty())
-    {
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("WARNING: No VPK/GMA files selected."));
-        return;
-    }
-
-    Platform::setHighPriority();
-
-    const int totalFiles = paths.size();
-    const bool isBatch = totalFiles > 1;
-    int successCount = 0;
-
-    VpkExtractor vpkExtractor;
-    GmaExtractor gmaExtractor;
-
-    VpkExtractor::SetProgressFunc([this](int percent) {
-        updateProgressSafe(percent);
-    });
-    GmaExtractor::SetProgressFunc([this](int percent) {
-        updateProgressSafe(percent);
-    });
-
-    for (int i = 0; i < totalFiles; ++i)
-    {
-        const QString& archivePath = paths.at(i);
-        const bool isGma = QFileInfo(archivePath).suffix().compare(QStringLiteral("gma"), Qt::CaseInsensitive) == 0;
-        const QString fmtName = isGma ? QStringLiteral("GMA") : QStringLiteral("VPK");
-
-        if (isBatch)
-        {
-            int filePercent = ((i + 1) * 100) / totalFiles;
-            QMetaObject::invokeMethod(this, [this, filePercent, i, totalFiles, fmtName]() {
-                if (m_progressBar) {
-                    m_progressBar->setValue(filePercent);
-                    m_progressBar->setFormat(tr("%1 %2/%3: %p%").arg(fmtName).arg(i + 1).arg(totalFiles));
-                }
-            }, Qt::QueuedConnection);
-        }
-
-        // Determine output directory
-        QString targetDir;
-        if (isBatch && m_separateFoldersCheck->isChecked())
-            targetDir = QDir(outputDir).filePath(QFileInfo(archivePath).completeBaseName());
-        else
-            targetDir = outputDir.isEmpty() ? SettingsDialog::getExtractedOutputDir() : outputDir;
-
-        VortigauntLog::Vortigaunt_Printf(QStringLiteral("^5Extracting %1:^7 ^4%2^7 -> ^4%3^7").arg(fmtName, archivePath, targetDir));
-
-        bool ok = isGma
-            ? gmaExtractor.ExtractSingle(archivePath.toStdString(), targetDir.toStdString())
-            : vpkExtractor.ExtractSingle(archivePath.toStdString(), targetDir.toStdString());
-
-        if (ok) {
-            ++successCount;
-        } else {
-            ExtractionError err;
-            err.filename = archivePath;
-            err.errorMessage = tr("%1 extraction failed or was incomplete").arg(fmtName);
-            m_extractionErrors.push_back(err);
-        }
-    }
-
-    VpkExtractor::SetProgressFunc(nullptr);
-    GmaExtractor::SetProgressFunc(nullptr);
-    Platform::restoreNormalPriority();
-
-    VortigauntLog::Vortigaunt_Printf(QStringLiteral("^2VPK/GMA extraction complete.^7 ^3%1^7 of ^3%2^7 files processed.").arg(successCount).arg(totalFiles));
-}
-
-
-
-
-
-
 
 bool MainWindow::convertGr2(const QString& inputPath, const QString& outputDir, bool withAnimations)
 {
@@ -2923,31 +2549,33 @@ void MainWindow::setupKeyboardShortcuts()
 void MainWindow::onLogFilterChanged(int index)
 {
     Q_UNUSED(index);
-    m_currentLogFilter = static_cast<LogLevel>(m_logFilterCombo->currentData().toInt());
-    
-    // Re-apply filter to existing log
-    QString allText = m_logEdit->toPlainText();
-    m_logEdit->clear();
-    
-    QStringList lines = allText.split('\n');
-    for (const QString& line : lines)
+    m_logFilter = m_logFilterCombo->currentData().toInt();
+    applyLogFilter(0);
+}
+
+void MainWindow::applyLogFilter(int fromBlock)
+{
+    m_filteringLog = true;
+    QTextDocument* document = m_logEdit->document();
+    for (QTextBlock block = document->findBlockByNumber(fromBlock); block.isValid(); block = block.next())
     {
-        LogLevel lineLevel = VortigauntLog::LogLevel::Info;
-        if (line.contains("[WARNING]", Qt::CaseInsensitive))
+        const QString line = block.text();
+        LogLevel level = VortigauntLog::LogLevel::Info;
+        if (line.contains(QLatin1String("ERROR:")) || line.contains(QLatin1String("[ERROR]")))
+            level = VortigauntLog::LogLevel::Error;
+        else if (line.contains(QLatin1String("WARNING:")) || line.contains(QLatin1String("[WARNING]")))
+            level = VortigauntLog::LogLevel::Warning;
+        const bool visible = m_logFilter < 0 || static_cast<int>(level) == m_logFilter;
+        if (block.isVisible() != visible)
         {
-            lineLevel = VortigauntLog::LogLevel::Warning;
-        }
-        else if (line.contains("[ERROR]", Qt::CaseInsensitive))
-        {
-            lineLevel = VortigauntLog::LogLevel::Error;
-        }
-        
-        // Show line if it matches filter
-        if (m_currentLogFilter == VortigauntLog::LogLevel::Info || lineLevel == m_currentLogFilter)
-        {
-            m_logEdit->appendPlainText(line);
+            block.setVisible(visible);
+            block.setLineCount(visible ? std::max(1, block.layout()->lineCount()) : 0);
         }
     }
+    const int from = document->findBlockByNumber(fromBlock).position();
+    document->markContentsDirty(from, std::max(0, document->characterCount() - from));
+    m_logEdit->viewport()->update();
+    m_filteringLog = false;
 }
 
 void MainWindow::onExportLog()

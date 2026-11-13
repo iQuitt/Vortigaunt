@@ -248,20 +248,6 @@ std::unique_ptr<ArchiveSource> ArchiveSource::open(const QString& path, QString&
 		error = QCoreApplication::translate("ArchiveSource", "Not an archive Vortigaunt can read.");
 		return nullptr;
 	}
-    {
-        // the numbered parts hold data only; their _dir.vpk has the file list
-        if (QRegularExpression("_\\d{3}$").match(info.completeBaseName()).hasMatch())
-        {
-            error = QCoreApplication::translate("ArchiveSource", "This is a data part of a VPK. Open the matching _dir.vpk instead.");
-            return nullptr;
-        }
-        source = load<VpkSource>(path);
-    }
-    else
-    {
-        error = QCoreApplication::translate("ArchiveSource", "Not an archive Vortigaunt can read.");
-        return nullptr;
-    }
 
     if (!source)
     {

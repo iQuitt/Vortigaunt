@@ -69,10 +69,13 @@ public:
     // shows the WAD tab with the WAD open in it
     void openWad(const QString& path);
 
-    // shows the P Model tab with the p_ model in the player's hands
+    // shows the Weapon Fit tab with the p_ model in the player's hands
     void openWeaponFit(const QString& path);
 
-    // each file where it belongs: archives, textures, sprites and WADs in their tabs, the rest in the Convert list
+    // shows the Model Viewer tab with the model open in it
+    void openModel(const QString& path);
+
+    // each file where it belongs: archives, textures, sprites, WADs and models in their tabs, the rest in the Convert list
     void openPaths(const QStringList& paths);
 
     // Drag & drop support
@@ -142,10 +145,6 @@ private:
         Mesh,
         Weapon,
         Dtx,
-        Rez,
-        Pak,
-        Xfs,
-        Vpk,
         Unity,
         Dff,
     };
@@ -194,6 +193,9 @@ private:
 
     static QString fileOpName(FileOp op);
 
+    // what else the file could be for, when its name does not say
+    static std::vector<FileOp> fileOpChoices(const QString& path);
+
     void addFileRow(const QString& path, const QString& outputSubfolder);
 
     // UI thread only
@@ -207,15 +209,6 @@ private:
     void updatePropertiesFor(FileOp op);
 
     void showPreview(const QString& path, FileOp op);
-
-    // Extract Archives
-    void extractArchiveRez(const QStringList& paths, const QString& outputDir);
-
-    void extractArchivePak(const QStringList& paths, const QString& outputDir);
-
-    void extractArchiveXfs(const QStringList& paths, const QString& outputDir);
-
-    void extractArchiveVpk(const QStringList& paths, const QString& outputDir);
 
     // Model/Texture Convert; true when every file converted
     bool convertLtb(const QString& inputPath, const QString& outputDir, const ltbConverterSetting& settings);
@@ -254,6 +247,8 @@ private:
     RibbonBar*     m_ribbon = nullptr;
     std::vector<Workspace> m_persistentWorkspaces;
     int            m_toolsRibbonTab = -1;
+    int            m_viewerRibbonTab = -1;
+    int            m_downloadRibbonTab = -1;
     QTabWidget*    m_workspaces = nullptr;
     ArchiveWorkspace* m_archiveWorkspace = nullptr;
     TextureWorkspace* m_textureWorkspace = nullptr;
@@ -278,8 +273,6 @@ private:
     QAction*       m_clearListAction = nullptr;
     QAction*       m_runAction = nullptr;
     QAction*       m_stopAction = nullptr;
-    QAction*       m_writeQCAction = nullptr;
-    QAction*       m_compileAction = nullptr;
     QAction*       m_outputFolderAction = nullptr;
     QAction*       m_openOutputAction = nullptr;
     QAction*       m_resetLayoutAction = nullptr;
@@ -291,11 +284,11 @@ private:
 
     // Properties panel
     QLabel*        m_selectedNameLabel = nullptr;
+    QWidget*       m_fileOpRow = nullptr;  // shown when the file has more than one operation
     QComboBox*     m_fileOpCombo = nullptr;
     QLabel*        m_noSelectionLabel = nullptr;
     QGroupBox*     m_weaponGroup = nullptr;
     QGroupBox*     m_modelGroup = nullptr;
-    QGroupBox*     m_archiveGroup = nullptr;
     QGroupBox*     m_unityGroup = nullptr;
     QGroupBox*     m_textureGroup = nullptr;
 
@@ -306,7 +299,6 @@ private:
     QLabel*        m_imagePreview = nullptr;
     StudioModelView* m_studioPreview = nullptr;  // GoldSrc .mdl
     QLabel*        m_previewInfo = nullptr;
-    QPushButton*   m_previewOpenButton = nullptr;
     QString        m_previewPath;
 
     QCheckBox*     m_ignoreMeshesCheck;
@@ -324,7 +316,6 @@ private:
     QPushButton*    m_weaponReferenceBrowse = nullptr;
     QCheckBox*      m_weaponUpsideDownCheck = nullptr;
     QPushButton*    m_showOnPlayerButton = nullptr;
-    QCheckBox*     m_separateFoldersCheck;  // For multiple extraction
     QCheckBox*     m_unityBmpCheck;         // Unity mode: convert textures to 8-bit BMP (unchecked = 32-bit PNG)
     QPlainTextEdit* m_logEdit;
 
@@ -345,7 +336,6 @@ private:
 #endif
     QAction*       m_audioConvertAction = nullptr;
     QAction*       m_hudSpriteAction = nullptr;
-    QAction*       m_modelViewerAction = nullptr;
     QAction*       m_retargetAction = nullptr;
     QAction*       m_steamWorkshopAction = nullptr;
     QAction*       m_settingsAction = nullptr;
@@ -361,7 +351,11 @@ private:
     QComboBox*     m_logFilterCombo;
     QPushButton*   m_saveLogButton;
     QPushButton*   m_clearLogButton;
-    VortigauntLog::LogLevel m_currentLogFilter;
+    int            m_logFilter = -1;       // a LogLevel, or every line
+    int            m_logBlocksSeen = 0;
+    bool           m_filteringLog = false;
+    // hides the lines of the log the filter leaves out, from that line on
+    void applyLogFilter(int fromBlock);
 
     // Status bar
     QLabel*        m_statusLabel;

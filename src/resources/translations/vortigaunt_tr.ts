@@ -221,6 +221,14 @@
         <source>Extracted %1 file(s) to %2</source>
         <translation>%1 dosya %2 konumuna çıkarıldı</translation>
     </message>
+    <message>
+        <source>... and %1 more.</source>
+        <translation>... ve %1 tane daha.</translation>
+    </message>
+    <message>
+        <source>Extracted %1 archive(s) to %2</source>
+        <translation>%1 arşiv %2 konumuna çıkarıldı</translation>
+    </message>
 </context>
 <context>
     <name>AudioConvertDialog</name>
@@ -1970,6 +1978,82 @@ The operation is picked from the file type.</source>
     <message>
         <source>GTA model. Convert writes its SMD, textures and QC; the TXD of the same name is read from its folder.</source>
         <translation>GTA modeli. Dönüştür; SMD, doku ve QC dosyalarını yazar; aynı adlı TXD kendi klasöründen okunur.</translation>
+    </message>
+    <message>
+        <source>Open REZ, PAK, XFS, VPK, GMA or IMG archives</source>
+        <translation>REZ, PAK, XFS, VPK, GMA veya IMG arşivlerini aç</translation>
+    </message>
+    <message>
+        <source>Extract
+all archives</source>
+        <translation>Tüm arşivleri
+çıkar</translation>
+    </message>
+    <message>
+        <source>Extract every open archive to the output folder, each into a folder of its name</source>
+        <translation>Açık olan her arşivi çıkış klasörüne, her birini kendi adındaki klasöre çıkar</translation>
+    </message>
+    <message>
+        <source>CSO
+sprite fix</source>
+        <translation>CSO sprite
+düzelt</translation>
+    </message>
+    <message>
+        <source>Convert MP3, OGG or WAV files to the WAV GoldSrc plays...</source>
+        <translation>MP3, OGG veya WAV dosyalarını GoldSrc&apos;nin çaldığı WAV&apos;a dönüştür...</translation>
+    </message>
+    <message>
+        <source>Audio
+to WAV</source>
+        <translation>Sesi WAV&apos;a
+dönüştür</translation>
+    </message>
+    <message>
+        <source>Open
+model</source>
+        <translation>Model
+aç</translation>
+    </message>
+    <message>
+        <source>Open GoldSrc models in the viewer: sequences, parts, textures, skeleton...</source>
+        <translation>GoldSrc modellerini görüntüleyicide aç: sequence&apos;lar, parçalar, dokular, iskelet...</translation>
+    </message>
+    <message>
+        <source>Open Models</source>
+        <translation>Model Aç</translation>
+    </message>
+    <message>
+        <source>Weapon Fit</source>
+        <translation>Silah Yerleşimi</translation>
+    </message>
+    <message>
+        <source>Restart</source>
+        <translation>Yeniden Başlat</translation>
+    </message>
+    <message>
+        <source>Drop files or folders here</source>
+        <translation>Dosya veya klasörleri buraya bırakın</translation>
+    </message>
+    <message>
+        <source>Models: LTB, GR2, FBX, GLB, OBJ and GTA DFF to SMD</source>
+        <translation>Modeller: LTB, GR2, FBX, GLB, OBJ ve GTA DFF&apos;ten SMD&apos;ye</translation>
+    </message>
+    <message>
+        <source>Weapons: v_ models to p_ and w_ models</source>
+        <translation>Silahlar: v_ modellerinden p_ ve w_ modellerine</translation>
+    </message>
+    <message>
+        <source>Textures: DTX to BMP</source>
+        <translation>Dokular: DTX&apos;ten BMP&apos;ye</translation>
+    </message>
+    <message>
+        <source>Unity: the meshes, textures and animations of bundles and assets</source>
+        <translation>Unity: bundle ve assets dosyalarının mesh, doku ve animasyonları</translation>
+    </message>
+    <message>
+        <source>Archives, sprites, WADs and other textures open in their own tabs.</source>
+        <translation>Arşivler, sprite&apos;lar, WAD&apos;lar ve diğer dokular kendi sekmelerinde açılır.</translation>
     </message>
 </context>
 <context>
