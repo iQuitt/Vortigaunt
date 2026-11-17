@@ -502,8 +502,8 @@ void MainWindow::setupRibbon()
     m_ribbon->addButton(wadTextureGroup, m_wadWorkspace->renameAction());
     m_ribbon->addButton(wadTextureGroup, m_wadWorkspace->replaceAction());
 
-    const int weaponTab = m_ribbon->addTab(tr("Weapon Fit"));
-    m_persistentWorkspaces.push_back({ m_weaponFitWorkspace, weaponTab, tr("Weapon Fit") });
+    const int weaponTab = m_ribbon->addTab(tr("P Model on Player"));
+    m_persistentWorkspaces.push_back({ m_weaponFitWorkspace, weaponTab, tr("P Model on Player") });
     QWidget* weaponFileGroup = m_ribbon->addGroup(weaponTab, tr("Model"));
     m_ribbon->addButton(weaponFileGroup, m_weaponFitWorkspace->openAction());
     m_ribbon->addButton(weaponFileGroup, m_weaponFitWorkspace->playerAction());

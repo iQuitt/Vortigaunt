@@ -310,6 +310,7 @@ if(BUILD_GUI)
             ui/windows/MseViewerWindow.h ui/windows/MseViewerWindow.cpp
             ui/widgets/MseViewerWidget.h ui/widgets/MseViewerWidget.cpp
             ui/widgets/MseSmdExporter.cpp
+            ui/widgets/MseFlipbookExporter.cpp
             ui/widgets/MseSprExporter.cpp
         )
         target_compile_definitions(VortigauntTool_gui PRIVATE METIN2_SCRIPT_EFFECT)

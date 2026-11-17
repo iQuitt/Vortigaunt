@@ -18,7 +18,7 @@ class QSpinBox;
 class StudioModel;
 class StudioModelView;
 
-// Weapon Fit tab: a p_ model in the hands of a player model, moved and turned there, and saved where it is shown
+// P Model on Player tab: a p_ model in the hands of a player model, moved and turned there, and saved where it is shown
 class WeaponFitWorkspace : public QWidget
 {
     Q_OBJECT

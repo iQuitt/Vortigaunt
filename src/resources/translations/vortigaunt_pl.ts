@@ -2026,8 +2026,8 @@ model</translation>
         <translation>Otwórz modele</translation>
     </message>
     <message>
-        <source>Weapon Fit</source>
-        <translation>Dopasowanie broni</translation>
+        <source>P Model on Player</source>
+        <translation>Model P na graczu</translation>
     </message>
     <message>
         <source>Restart</source>

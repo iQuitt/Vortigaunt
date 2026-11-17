@@ -169,16 +169,8 @@ void SteamWorkshopDownloaderDialog::showCard(const WorkshopItemDetails& details)
 
 QString SteamWorkshopDownloaderDialog::targetPath() const
 {
-    const QDir outDir(m_outputEdit->text().trimmed());
-    // without a file URL SteamCMD fetches the item, into a folder of its own
-    if (m_currentDetails.fileUrl.isEmpty())
-        return outDir.filePath(QString::number(m_currentDetails.publishedFileId));
-    QString fname = QFileInfo(m_currentDetails.fileName).fileName();
-    if (fname.isEmpty())
-        fname = QString("%1.bin").arg(m_currentDetails.publishedFileId);
-    if (m_currentDetails.appId == 4000 && QFileInfo(fname).suffix().compare(QStringLiteral("bin"), Qt::CaseInsensitive) == 0)
-        fname = QFileInfo(fname).completeBaseName() + QStringLiteral(".gma");
-    return outDir.filePath(fname);
+    // SteamCMD fetches every item into a folder of its own
+    return QDir(m_outputEdit->text().trimmed()).filePath(QString::number(m_currentDetails.publishedFileId));
 }
 
 void SteamWorkshopDownloaderDialog::startDownload()

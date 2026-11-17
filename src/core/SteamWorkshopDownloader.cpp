@@ -331,26 +331,25 @@ void SteamWorkshopDownloader::downloadFile(const QString& fileUrl, const QString
         }
         proc.waitForFinished(180000);
 
-        QString searchBase = QDir(QFileInfo(steamCmdExe).absolutePath()).filePath(QStringLiteral("steamapps/workshop/content"));
-        if (!QDir(searchBase).exists()) {
-            searchBase = QDir(QFileInfo(steamCmdExe).absolutePath()).filePath(QStringLiteral("content"));
-        }
+        // only this item's own folder: the items downloaded before stay in SteamCMD's content folder too
+        const QDir steamCmdDir(QFileInfo(steamCmdExe).absolutePath());
+        const QString itemPath = QStringLiteral("steamapps/workshop/content/%1/%2").arg(appId).arg(publishedFileId);
+        QString itemFolder = steamCmdDir.filePath(QStringLiteral("content/") + itemPath);
+        if (!QDir(itemFolder).exists())
+            itemFolder = steamCmdDir.filePath(itemPath);
 
         QStringList candidateFiles;
-        QDirIterator it(searchBase, QDir::Files, QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            QString fp = it.next();
-            if (fp.contains(QString::number(publishedFileId)) || fp.endsWith(QStringLiteral(".gma")) || fp.endsWith(QStringLiteral(".bin")) || fp.endsWith(QStringLiteral(".vpk"))) {
-                candidateFiles.append(fp);
-            }
-        }
+        QDirIterator it(itemFolder, QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext())
+            candidateFiles.append(it.next());
 
         if (!candidateFiles.isEmpty()) {
             bool copied = false;
+            const QDir source(itemFolder);
             QDir().mkpath(destinationPath);
             for (const QString& srcPath : candidateFiles) {
-                QFileInfo fi(srcPath);
-                QString destFilePath = QDir(destinationPath).filePath(fi.fileName());
+                const QString destFilePath = QDir(destinationPath).filePath(source.relativeFilePath(srcPath));
+                QDir().mkpath(QFileInfo(destFilePath).absolutePath());
                 QFile::remove(destFilePath);
                 if (QFile::copy(srcPath, destFilePath)) {
                     copied = true;

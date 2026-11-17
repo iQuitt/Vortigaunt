@@ -2025,8 +2025,8 @@ modelo</translation>
         <translation>Abrir modelos</translation>
     </message>
     <message>
-        <source>Weapon Fit</source>
-        <translation>Ajuste de arma</translation>
+        <source>P Model on Player</source>
+        <translation>Modelo P en el jugador</translation>
     </message>
     <message>
         <source>Restart</source>

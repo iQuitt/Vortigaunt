@@ -2024,8 +2024,8 @@ aç</translation>
         <translation>Model Aç</translation>
     </message>
     <message>
-        <source>Weapon Fit</source>
-        <translation>Silah Yerleşimi</translation>
+        <source>P Model on Player</source>
+        <translation>Oyuncuda P Model</translation>
     </message>
     <message>
         <source>Restart</source>

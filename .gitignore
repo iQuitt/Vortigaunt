@@ -24,6 +24,7 @@ src/ui/windows/MseViewerWindow.h
 src/ui/widgets/MseViewerWidget.cpp
 src/ui/widgets/MseViewerWidget.h
 src/ui/widgets/MseSmdExporter.cpp
+src/ui/widgets/MseFlipbookExporter.cpp
 src/ui/widgets/MseSprExporter.cpp
 
 # Auto-Rig not ready

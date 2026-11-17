@@ -2025,8 +2025,8 @@ model</translation>
         <translation>Open Models</translation>
     </message>
     <message>
-        <source>Weapon Fit</source>
-        <translation>Weapon Fit</translation>
+        <source>P Model on Player</source>
+        <translation>P Model on Player</translation>
     </message>
     <message>
         <source>Restart</source>

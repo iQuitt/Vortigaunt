@@ -69,7 +69,7 @@ public:
     // shows the WAD tab with the WAD open in it
     void openWad(const QString& path);
 
-    // shows the Weapon Fit tab with the p_ model in the player's hands
+    // shows the P Model on Player tab with the p_ model in the player's hands
     void openWeaponFit(const QString& path);
 
     // shows the Model Viewer tab with the model open in it
