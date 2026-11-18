@@ -3286,6 +3286,22 @@ aç</translation>
         <source>Split Oversized Parts</source>
         <translation>Büyük Parçaları Böl</translation>
     </message>
+    <message>
+        <source>Sequence Name</source>
+        <translation>Sequence Adı</translation>
+    </message>
+    <message>
+        <source>No sequence is selected.</source>
+        <translation>Seçili sequence yok.</translation>
+    </message>
+    <message>
+        <source>A sequence needs a name.</source>
+        <translation>Sequence&apos;ın bir adı olmalı.</translation>
+    </message>
+    <message>
+        <source>Sequence %1 already has this name.</source>
+        <translation>%1. sequence zaten bu adı taşıyor.</translation>
+    </message>
 </context>
 <context>
     <name>MseViewerWidget</name>

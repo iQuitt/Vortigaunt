@@ -710,6 +710,7 @@ bool StudioModel::Save(const std::string& path, std::string& error) const
     {
         const size_t at = sequenceIndex + i * kSequenceSize;
         const StudioSequence& s = sequences[i];
+        putName(head, at, 32, s.name);
         putFloat(head, at + 32, s.fps);
         putInt(head, at + 36, s.flags);
         putInt(head, at + 40, s.activity);

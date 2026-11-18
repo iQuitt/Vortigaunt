@@ -40,6 +40,7 @@
 #include <QSet>
 #include <QSoundEffect>
 #include <QRegularExpression>
+#include <QRegularExpressionValidator>
 #include <QScrollArea>
 #include <QSettings>
 #include <QSlider>
@@ -1073,25 +1074,31 @@ QWidget* ModelViewerWindow::buildSequences()
 
     auto* properties = new QGroupBox(tr("Properties"));
     grid = new QGridLayout(properties);
+    grid->addWidget(new QLabel(tr("Name")), 0, 0);
+    m_sequenceName = new QLineEdit();
+    m_sequenceName->setObjectName(QStringLiteral("sequenceName"));
+    m_sequenceName->setMaxLength(31);
+    m_sequenceName->setValidator(new QRegularExpressionValidator(QRegularExpression(QStringLiteral("[!-~]*")), m_sequenceName));
+    grid->addWidget(m_sequenceName, 0, 1);
     m_isLooping = new QCheckBox(tr("Is Looping"));
-    grid->addWidget(m_isLooping, 0, 0, 1, 2);
-    grid->addWidget(new QLabel(tr("FPS")), 1, 0);
+    grid->addWidget(m_isLooping, 1, 0, 1, 2);
+    grid->addWidget(new QLabel(tr("FPS")), 2, 0);
     m_sequenceFps = doubleSpin(0.0, 1000.0);
     m_sequenceFps->setObjectName(QStringLiteral("sequenceFps"));
-    grid->addWidget(m_sequenceFps, 1, 1);
-    grid->addWidget(new QLabel(tr("Activity")), 2, 0);
+    grid->addWidget(m_sequenceFps, 2, 1);
+    grid->addWidget(new QLabel(tr("Activity")), 3, 0);
     m_activity = new QSpinBox();
     m_activity->setRange(0, 100000);
     m_activity->setSpecialValueText(tr("None (0)"));
-    grid->addWidget(m_activity, 2, 1);
-    grid->addWidget(new QLabel(tr("Activity Weight")), 3, 0);
+    grid->addWidget(m_activity, 3, 1);
+    grid->addWidget(new QLabel(tr("Activity Weight")), 4, 0);
     m_activityWeight = new QSpinBox();
     m_activityWeight->setRange(-100000, 100000);
-    grid->addWidget(m_activityWeight, 3, 1);
-    grid->addWidget(new QLabel(tr("Linear Movement")), 4, 0);
+    grid->addWidget(m_activityWeight, 4, 1);
+    grid->addWidget(new QLabel(tr("Linear Movement")), 5, 0);
     m_linearMovement = vectorEdit(true);
-    grid->addWidget(m_linearMovement.widget, 4, 1);
-    grid->setRowStretch(5, 1);
+    grid->addWidget(m_linearMovement.widget, 5, 1);
+    grid->setRowStretch(6, 1);
     row->addWidget(properties, 1);
 
     auto* events = new QGroupBox(tr("Events"));
@@ -2498,6 +2505,22 @@ void ModelViewerWindow::connectEdits()
             connect(axis, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [&edit, apply]() { apply(edit.value()); });
     };
 
+    connect(m_sequenceName, &QLineEdit::textEdited, this, [this, onSequence](const QString& text) {
+        const QString problem = sequenceNameProblem(m_sequenceCombo->currentIndex(), text);
+        m_sequenceName->setToolTip(problem);
+        m_sequenceName->setStyleSheet(problem.isEmpty() ? QString() : QStringLiteral("QLineEdit { color: #d04040; }"));
+        if (!problem.isEmpty()) return;
+        const std::string name = text.toStdString();
+        onSequence(QT_TR_NOOP("Sequence Name"), [name](StudioSequence& s) { s.name = name; });
+    });
+    connect(m_sequenceName, &QLineEdit::editingFinished, this, [this]() {
+        const Asset* shown = asset();
+        const int i = m_sequenceCombo->currentIndex();
+        if (!shown || i < 0 || i >= static_cast<int>(shown->model->sequences.size())) return;
+        m_sequenceName->setToolTip(QString());
+        m_sequenceName->setStyleSheet(QString());
+        showText(m_sequenceName, QString::fromStdString(shown->model->sequences[i].name));
+    });
     connect(m_isLooping, &QCheckBox::toggled, this, [onSequence](bool on) {
         onSequence(QT_TR_NOOP("Is Looping"), [on](StudioSequence& s) { s.flags = on ? (s.flags | 1) : (s.flags & ~1); });
     });
@@ -2858,6 +2881,8 @@ void ModelViewerWindow::fillSequence(int index)
         m_blendSpin->setValue(degrees);
     }
     m_view->setAimPitch(0, degrees);
+    if (!m_sequenceName->hasFocus() || m_sequenceName->styleSheet().isEmpty())
+        showText(m_sequenceName, QString::fromStdString(sequence.name));
     m_isLooping->setChecked((sequence.flags & 1) != 0);
     m_sequenceFps->setValue(sequence.fps);
     m_activity->setValue(sequence.activity);
@@ -2870,6 +2895,20 @@ void ModelViewerWindow::fillSequence(int index)
     }
     m_eventCombo->setCurrentIndex(sequence.events.empty() ? -1 : 0);
     showSequenceEvent(m_eventCombo->currentIndex());
+}
+
+QString ModelViewerWindow::sequenceNameProblem(int sequence, const QString& name)
+{
+    const Asset* shown = asset();
+    if (!shown || sequence < 0 || sequence >= static_cast<int>(shown->model->sequences.size())) return tr("No sequence is selected.");
+    if (name.isEmpty()) return tr("A sequence needs a name.");
+    const std::vector<StudioSequence>& sequences = shown->model->sequences;
+    for (size_t i = 0; i < sequences.size(); ++i)
+    {
+        if (static_cast<int>(i) != sequence && QString::fromStdString(sequences[i].name).compare(name, Qt::CaseInsensitive) == 0)
+            return tr("Sequence %1 already has this name.").arg(i);
+    }
+    return QString();
 }
 
 void ModelViewerWindow::showSequenceEvent(int index)

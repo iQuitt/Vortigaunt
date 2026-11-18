@@ -3288,6 +3288,22 @@ model</translation>
         <source>Split Oversized Parts</source>
         <translation>Podziel zbyt duże części</translation>
     </message>
+    <message>
+        <source>Sequence Name</source>
+        <translation>Nazwa sekwencji</translation>
+    </message>
+    <message>
+        <source>No sequence is selected.</source>
+        <translation>Nie wybrano sekwencji.</translation>
+    </message>
+    <message>
+        <source>A sequence needs a name.</source>
+        <translation>Sekwencja musi mieć nazwę.</translation>
+    </message>
+    <message>
+        <source>Sequence %1 already has this name.</source>
+        <translation>Sekwencja %1 ma już tę nazwę.</translation>
+    </message>
 </context>
 <context>
     <name>MseViewerWidget</name>

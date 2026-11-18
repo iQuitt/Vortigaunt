@@ -401,13 +401,6 @@ void MainWindow::setupRibbon()
     m_hudSpriteAction = new QAction(tr("Make a weapon's 640hud sprite from its model..."), this);
     tool(m_hudSpriteAction, tr("HUD\nsprite"), kIconSprite);
     connect(m_hudSpriteAction, &QAction::triggered, this, &MainWindow::onOpenHudSprite);
-    QAction* openModelAction = command(tr("Open\nmodel"), tr("Open GoldSrc models in the viewer: sequences, parts, textures, skeleton..."), kIconOpen);
-    connect(openModelAction, &QAction::triggered, this, [this]() {
-        onOpenModelViewer();
-        const QStringList files = QFileDialog::getOpenFileNames(this, tr("Open Models"), QString(), tr("GoldSrc model (*.mdl);;All files (*.*)"));
-        for (const QString& file : files)
-            openModel(file);
-    });
     m_lolModelAction = new QAction(tr("League of Legends Models..."), this);
     tool(m_lolModelAction, tr("LoL\nmodels"), kIconDownload);
     connect(m_lolModelAction, &QAction::triggered, this, &MainWindow::onOpenLoLModelDownloader);
@@ -456,8 +449,6 @@ void MainWindow::setupRibbon()
 
     // the viewer is a tool tab, opened when its ribbon tab is
     m_viewerRibbonTab = m_ribbon->addTab(tr("Model Viewer"));
-    QWidget* viewerGroup = m_ribbon->addGroup(m_viewerRibbonTab, tr("Model"));
-    m_ribbon->addButton(viewerGroup, openModelAction);
 
     const int textureTab = m_ribbon->addTab(tr("Textures"));
     m_persistentWorkspaces.push_back({ m_textureWorkspace, textureTab, tr("Textures") });

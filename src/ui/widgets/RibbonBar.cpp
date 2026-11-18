@@ -45,9 +45,21 @@ RibbonBar::RibbonBar(QWidget* parent)
     bottom->setFrameShadow(QFrame::Plain);
     bottom->setForegroundRole(QPalette::Mid);
     layout->addWidget(bottom);
+    m_bottomLine = bottom;
 
-    connect(m_tabs, &QTabBar::currentChanged, m_pages, &QStackedWidget::setCurrentIndex);
+    connect(m_tabs, &QTabBar::currentChanged, this, [this](int tab) {
+        m_pages->setCurrentIndex(tab);
+        fitPages();
+    });
     connect(m_tabs, &QTabBar::currentChanged, this, &RibbonBar::currentTabChanged);
+}
+
+void RibbonBar::fitPages()
+{
+    QWidget* page = m_pages->currentWidget();
+    const bool empty = !page || page->layout()->count() <= 1;
+    m_pages->setVisible(!empty);
+    m_bottomLine->setVisible(!empty);
 }
 
 int RibbonBar::currentTab() const
@@ -103,6 +115,7 @@ QWidget* RibbonBar::addGroup(int tab, const QString& title)
     column->addWidget(label);
 
     row->insertWidget(insertAt, group);
+    fitPages();
     return group;
 }
 

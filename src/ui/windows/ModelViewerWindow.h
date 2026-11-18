@@ -281,6 +281,9 @@ private:
     QSlider* m_blendSlider = nullptr;
     QDoubleSpinBox* m_blendSpin = nullptr;
     QCheckBox* m_isLooping = nullptr;
+    QLineEdit* m_sequenceName = nullptr;
+    // why a sequence name cannot be used, empty when it can
+    QString sequenceNameProblem(int sequence, const QString& name);
     QDoubleSpinBox* m_sequenceFps = nullptr;
     QSpinBox* m_activity = nullptr;
     QSpinBox* m_activityWeight = nullptr;

@@ -35,5 +35,8 @@ signals:
 private:
     QTabBar* m_tabs = nullptr;
     QStackedWidget* m_pages = nullptr;
+    QWidget* m_bottomLine = nullptr;
+    // a tab without groups takes no height
+    void fitPages();
     QHBoxLayout* m_corner = nullptr;
 };
